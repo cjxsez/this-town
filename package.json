@@ -12,9 +12,10 @@
     "dev:glasses": "pnpm --filter @questline/glasses-web dev",
     "dev:kiosk": "pnpm --filter @questline/kiosk-web dev",
     "build": "pnpm -r --filter \"./apps/*-web\" build && node scripts/build-assets.mjs",
-    "deploy": "pnpm build && pnpm --filter @questline/worker deploy",
+    "deploy": "pnpm build && pnpm --filter @questline/worker run deploy",
     "typecheck": "pnpm -r typecheck",
     "db:migrate:local": "pnpm --filter @questline/worker db:migrate:local",
+    "db:migrate:remote": "pnpm --filter @questline/worker db:migrate:remote",
     "seed": "tsx scripts/seed.ts",
     "ghosts": "tsx scripts/ghost-riders.ts"
   },

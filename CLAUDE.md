@@ -34,7 +34,7 @@ pnpm install
 pnpm db:migrate:local
 pnpm dev            # worker + all three web apps
 pnpm build          # build web apps and copy into apps/worker/public
-pnpm deploy
+pnpm run deploy
 pnpm seed           # demo profiles
 pnpm ghosts         # fake riders on the demo train
 ```

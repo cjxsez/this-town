@@ -5,7 +5,10 @@
  * "why you two", private to the two riders, fine on the lens), meetAtCar / carDelta /
  * youWalk -> "Kiosk 1 car back", "Stay put, Maya is coming to you", etc.
  *
- * Input:
+ * Works with zero input: arriving is proven by tapping the meeting kiosk's tag, and the
+ * mission also auto-starts after MISSION_AUTOSTART_DELAY_MS. "Not now" is on the phone.
+ *
+ * Optional input (temple touch strip, no Neural Band):
  *   select on "I'm here" (default focus) -> onArrived -> App sends rider.arrived
  *   select on "Not now", or back         -> onNotNow  -> App sends rider.notNow
  *   arrows move focus between the two buttons
@@ -73,6 +76,7 @@ export function MatchCard({ match, arrived, onArrived, onNotNow }: MatchCardProp
       </div>
       <div className="hud-body hud-strong">{whereToGo(match)}</div>
       <div className="hud-body">{match.why}</div>
+      <div className="hud-hint">Tap the kiosk tag when you get there</div>
       <div className="hud-row">
         <div className={`hud-btn ${focus === "here" ? "is-focused" : ""}`} role="button" aria-pressed={arrived}>
           {arrived ? `Waiting for ${match.partner.firstName}…` : "I'm here"}

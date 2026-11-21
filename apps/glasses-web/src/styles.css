@@ -190,3 +190,8 @@ body {
     transform: scale(1);
   }
 }
+
+.hud-hint {
+  font-size: 24px;
+  color: #9ca3af;
+}

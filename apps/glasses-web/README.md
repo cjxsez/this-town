@@ -9,7 +9,7 @@ Served by the worker at `https://<domain>/g/` (Vite `base: "/g/"`).
 - Runs in the glasses' Chromium-based browser, as a developer preview Web App.
 - **Fixed 600x600 viewport.** `#root` is exactly 600x600; nothing scrolls.
 - **Additive waveguide display:** black is transparent, bright pixels are light. Backgrounds must be black. Use white or saturated text, no large bright fills.
-- **Input:** Neural Band arrow keys, Enter, Escape, plus temple swipe. All of it arrives as `keydown` events.
+- **Input:** we have **no Neural Band**, so the app works with zero input. The temple touch strip sends arrow keys (and Enter) as `keydown` events, which we treat as a bonus. A middle tap opens the system menu.
 - **Not available:** camera, mic, text input, offline support, notifications.
 - **Available:** `localStorage` (we wrap every access in try/catch).
 - **The page must stay open during the ride.** There are no notifications, so a closed page means no match card.
@@ -35,11 +35,13 @@ Served by the worker at `https://<domain>/g/` (Vite `base: "/g/"`).
 
 ## Input mapping
 
-| Gesture | Key | Action |
+Nothing here is required. Every screen is driven by server events, tapping the meeting kiosk's tag counts as arriving, the mission auto-starts, and "Not now" is a button on the phone.
+
+| Touch strip (expected) | Key | Action |
 |---|---|---|
-| swipe up / down / left / right (Neural Band or temple) | Arrow keys | move focus |
-| select pinch / temple tap | `Enter` | select |
-| back pinch | `Escape` | back |
+| swipe up / down / back / forward | Arrow keys | move focus |
+| tap (verify) | `Enter` | select |
+| back (verify) | `Escape` | back |
 
 On the match card: select on "I'm here" (default focus) sends `rider.arrived`. Back, or select on "Not now", sends `rider.notNow`. Gesture-to-key pairs need checking on device: open `/g/?debug=keys` and watch the console. Also check whether `Escape` reaches the page or closes the Web App. Per-screen details are in `src/lib/input.ts`.
 
@@ -74,7 +76,7 @@ pnpm dev:worker      # worker on :8787
 pnpm dev:glasses     # this app on :5174
 ```
 
-Open http://localhost:5174/g/. In dev the 600x600 lens area is outlined. To preview at the real size, use Chrome DevTools device toolbar with a custom 600x600 device, or a 600x600 window. Use arrow keys, Enter and Escape to simulate the Neural Band.
+Open http://localhost:5174/g/. In dev the 600x600 lens area is outlined. To preview at the real size, use Chrome DevTools device toolbar with a custom 600x600 device, or a 600x600 window. Use arrow keys, Enter and Escape to simulate the touch strip. The Meta Ray-Ban Display Simulator Chrome extension also previews the 600x600 display.
 
 To link in dev, run phone-web too (`pnpm dev:phone`), onboard, and enter the code from the glasses tab.
 
@@ -82,13 +84,18 @@ To link in dev, run phone-web too (`pnpm dev:phone`), onboard, and enter the cod
 
 ## Load it on the glasses
 
-The glasses need an HTTPS origin, so load the build the worker serves:
+Requirements: glasses software v125+, Meta AI app v272+, and a **public HTTPS URL** (HTTP and localhost don't work).
 
-1. `pnpm deploy` from the repo root (builds all web apps, copies them into `apps/worker/public/`, deploys the worker).
-2. In the Meta Ray-Ban Display developer preview, add a Web App pointing at `https://<domain>/g/`.
-3. Open it on the glasses, read the 4-digit code, enter it on the phone.
-4. Keep the Web App open for the whole ride.
+1. Deploy: `pnpm run deploy` from the repo root (builds the web apps, copies them into `apps/worker/public/`, deploys the worker). The glasses URL is `https://<worker-host>/g/`.
+2. Turn on Developer Mode once: Meta AI app > Settings > App Info, tap the app version 5 times, Enable.
+3. Add the Web App: Meta AI app > App Settings > Apps > Web Apps > Connect Web App, paste `https://<worker-host>/g/`, Save.
+4. On the glasses, the app shows at the bottom of the app grid (marked unverified). Pin it and open it.
+5. Read the 4-digit code on the lens and enter it on the phone. Keep the Web App open for the whole ride.
 
-For quick on-device testing against the dev server, an HTTPS tunnel (for example `cloudflared tunnel --url http://localhost:5174`) works; `*.trycloudflare.com` is already in `server.allowedHosts`. The URL is the tunnel host plus `/g/`.
+Alternative install: a QR link of the form `fb-viewapp://web_app_deep_link?appName=Questline&appUrl=https://<worker-host>/g/`, scanned with the glasses.
 
-TODO: write down the exact developer preview steps once we have done it once.
+Icons: Meta needs PNG icons (no SVG), 52x52 or larger, found via the manifest or page source. `public/manifest.webmanifest`, `public/icon-192.png` and `public/icon-512.png` cover that.
+
+First thing to test on device: open `/g/?debug=keys` (add it as a second Web App if needed) and swipe and tap the temple to see which keys reach the page. Update `src/lib/input.ts` with what you find.
+
+For quick testing against the dev server, an HTTPS tunnel (`cloudflared tunnel --url http://localhost:5174`) also works; `*.trycloudflare.com` is in `server.allowedHosts`. The tunnel URL changes every run, so you'd have to re-add the Web App each time.

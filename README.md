@@ -8,8 +8,8 @@ Questline turns your ride on the T into a quick game with the right stranger. Tu
 
 1. **Onboard once** on your phone: first name, 3 to 5 interests, social battery. Link your glasses with a 4-digit code.
 2. **Board and tap** the NFC tag on the car's kiosk. That checks you into the car and turns on Ride Mode.
-3. **Get matched** with the closest rider on the same train with shared interests. No accept step: Ride Mode is the consent. One pinch on the glasses for "Not now".
-4. **Meet at the kiosk.** The glasses say where ("kiosk 1 car back, look for orange") and the kiosk LEDs light up.
+3. **Get matched** with the closest rider on the same train with shared interests. No accept step: Ride Mode is the consent. "Not now" is one tap on your phone.
+4. **Meet at the kiosk.** The glasses say where ("kiosk 1 car back, look for orange") and the kiosk LEDs light up. Tapping that kiosk's tag when you arrive starts the mission.
 5. **Play** a short mission on the kiosk screen that ends before the next stop.
 6. **Tap to stamp.** Both tap the kiosk tag (fresh code each mission) and confirm.
 

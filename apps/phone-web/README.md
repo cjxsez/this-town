@@ -86,4 +86,4 @@ The design and the worker were built from different versions of the product. The
 - **Interests.** The design has 34 Boston-flavoured interests, the worker 25 tags and needs 3 to 5. `map.ts` folds one into the other and pads to three.
 - **Station names.** The worker sends stop names; the screens key art and stamps by catalog id. Unknown stops get a slug id and default art.
 - **No worker route yet:** photos and memories, stay in touch, block without a report, unblock, profile edits and delete, mood change mid-ride, new prompt, passport sync (`GET /api/passport` is not read; stamps live in `localStorage`), the 4-digit glasses link (`api.linkGlasses` exists, the Glasses screen still simulates).
-- **In `packages/protocol` but not routed by the worker yet:** `POST /api/ride/not-now` and `/arrived` (the adapter falls back to them when the socket is down).
+- **REST fallbacks:** `POST /api/ride/not-now` and `/arrived` are routed by the worker (`apps/worker/src/routes/ride.ts`); the adapter uses them when the socket is down. Like the rest of the worker, the `TrainRoom` methods behind them are still TODO.
