@@ -1,20 +1,24 @@
 /**
- * input.ts (glasses-web): Neural Band + temple input, mapped to HUD actions.
+ * input.ts (glasses-web): temple touch strip input, mapped to HUD actions.
  *
- * The glasses Web App has no pointer, no text input, no mic. Everything arrives as
- * keydown events on the page:
+ * WE HAVE NO NEURAL BAND. The app is designed to work with zero input: every screen is
+ * driven by server events, arrival is proven by tapping the kiosk tag, and "Not now" lives
+ * on the phone. Input here is a bonus.
  *
- *   Gesture (Neural Band / temple)        Key         InputAction
+ * Meta's docs: the temple touch strip "senses swipe gestures" and, like the Neural Band,
+ * "translates to standard arrow key (ArrowUp, ArrowDown, ArrowLeft, ArrowRight) and Enter
+ * events". A middle tap opens the system menu (Restart / Resume / Permissions), so we never
+ * rely on it. Which touch gesture sends Enter, and whether Back reaches the page as Escape,
+ * is not documented: verify on device with `?debug=keys` and fix this table.
+ *
+ *   Touch strip (expected)                 Key         InputAction
  *   ------------------------------------  ----------  -----------
- *   thumb swipe up / temple swipe          ArrowUp     "up"
- *   thumb swipe down / temple swipe        ArrowDown   "down"
- *   thumb swipe left / temple swipe back   ArrowLeft   "left"
- *   thumb swipe right / temple swipe fwd   ArrowRight  "right"
- *   select pinch / temple tap              Enter       "select"
- *   back pinch                             Escape      "back"
- *
- * The exact gesture -> key pairs are what we expect from the developer preview; verify
- * on device with `?debug=keys` (logs every keydown to the console) and fix this table.
+ *   swipe up                               ArrowUp     "up"
+ *   swipe down                             ArrowDown   "down"
+ *   swipe back                             ArrowLeft   "left"
+ *   swipe forward                          ArrowRight  "right"
+ *   tap (verify)                           Enter       "select"
+ *   back (verify, may close the app)       Escape      "back"
  *
  * What each action does per screen (screens own their handlers via useInput):
  *

@@ -14,7 +14,7 @@ Riders on the MBTA turn on **Ride Mode**. That is the consent: while it is on, Q
 |---|---|---|
 | `apps/worker` | Cloudflare Workers | Hono API, static asset hosting for all three web apps, D1 database, `TrainRoom` Durable Objects (one per MBTA trip) holding live state + WebSockets, matching, missions, MBTA polling, LLM "why you two" line |
 | `apps/phone-web` | Rider's phone browser | Onboarding, glasses linking, Ride Mode, the NFC landing page (`/k/:car`), passport |
-| `apps/glasses-web` | Meta Ray-Ban Display browser (Web App) | 600x600 HUD: link code, idle, match card, mission, stamp. Input is Neural Band arrows / Enter / Escape and temple swipe |
+| `apps/glasses-web` | Meta Ray-Ban Display browser (Web App) | 600x600 HUD: link code, idle, match card, mission, stamp. Works with zero input (we have no Neural Band); temple touch strip swipes are a bonus |
 | `apps/kiosk-web` | Chromium in kiosk mode on the Pi | Shared screen in the car: idle stats, incoming pair, mission + countdown, celebration |
 | `apps/kiosk-pi` | Raspberry Pi (Python) | Drives the LED strip and writes a fresh URL to the dynamic NFC tag per mission. Launches kiosk-web. |
 | `packages/protocol` | Shared TS | Types + zod schemas for REST bodies and every WebSocket event. **Change the contract here first.** |
@@ -91,7 +91,7 @@ Ride Mode on = consent. There is no accept step.
 5. **Meeting point:** the kiosk in the car of whichever rider has more time left before their stop stays put; the other walks. Same car means nobody walks.
 6. **Blurb:** Claude writes one line grounded in shared tags. Cached per pair. If the call fails or is slow (> 1.5 s), fall back to a template ("You both like ramen and books").
 
-Escape hatches: "Not now" on the glasses (back gesture, or the focused "Not now" button on the match card) drops you out for 10 minutes and rematches your partner. Select on the match card means "I'm here". Ghost mode hides you entirely. Verify on the device that the back gesture reaches the page as Escape and doesn't just close the Web App; if it closes the app, use the button only.
+**No Neural Band, so the glasses need zero input.** Arrival is proven by tapping the meeting kiosk's tag (a `moveCar` into `meetAtCar`), and the mission also auto-starts `MISSION_AUTOSTART_DELAY_MS` after the match. "Not now" is a button on the phone (`POST /api/ride/not-now`): it drops you out for 10 minutes and rematches your partner. The temple touch strip can also send "I'm here" / "Not now" as a bonus once we verify its key events. Ghost mode hides you entirely.
 
 **One pair per kiosk.** A kiosk has one tag and one screen, so it hosts at most one pair at a time. If the natural meeting kiosk is busy, use the other rider's car, or wait.
 

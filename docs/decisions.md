@@ -4,6 +4,7 @@ What we changed from the v1 spec (`docs/archive/questline-spec-v1.md`) and why. 
 
 | # | Decision | Replaces (v1) | Why |
 |---|---|---|---|
+| D13 | Glasses work with zero input. Arrival = tapping the meeting kiosk's tag, missions auto-start, "Not now" is on the phone. Temple touch strip is a bonus | Neural Band pinch for "I'm here" / "Not now" | We don't have the Neural Band. The touch strip sends arrow keys, but which gesture sends Enter / Back isn't documented |
 | D12 | Host everything on one Cloudflare Worker: static assets for the 3 web apps, Hono API, D1, one `TrainRoom` Durable Object per trip | Separate backend | One deploy, one HTTPS origin (needed for the glasses Web App and NFC links), DOs are a natural fit for per-train live state |
 | D11 | No native app. Phone is a web app, glasses are a Meta Ray-Ban Display **Web App** | iOS app + Device Access Toolkit | We dropped camera and voice, so the Web App covers everything we need. Cuts Swift, Xcode and Meta SDK setup. Tradeoff: the glasses page must stay open during the ride (no notifications) |
 | D10 | Glasses link via a 4-digit code shown on the lens and typed on the phone | n/a | Glasses Web Apps have no text input |

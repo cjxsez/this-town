@@ -15,7 +15,8 @@
  * - GET /api/me (glassesLinked) for the "link your glasses" nudge.
  *
  * TODO:
- * - Optional "Not now" button sending rider.notNow (glasses pinch is the primary path).
+ * - "Not now" on the match panel: POST /api/ride/not-now. This is the main way to skip a
+ *   match, since we have no Neural Band for the glasses.
  * - Toast for lastCleared reasons ("Maya had to go, finding someone else").
  * - Celebrate lastStamp when stamp.awarded arrives.
  * - Confirm dialog on End ride.
@@ -65,6 +66,16 @@ export function Home() {
     }
   }
 
+  async function notNow() {
+    setError(null);
+    try {
+      await api.notNow();
+      // match.cleared ("you-not-now") arrives over the socket and clears the panel.
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
+
   async function endRide() {
     setError(null);
     try {
@@ -80,7 +91,7 @@ export function Home() {
       <h1>{match ? `You're matched with ${match.partner.firstName}` : "Ride Mode is on"}</h1>
 
       {match ? (
-        <MatchPanel match={match} />
+        <MatchPanel match={match} onNotNow={() => void notNow()} />
       ) : (
         <p className="muted">
           {state.ghost
@@ -128,13 +139,17 @@ export function Home() {
   );
 }
 
-function MatchPanel({ match }: { match: CurrentMatch }) {
+function MatchPanel({ match, onNotNow }: { match: CurrentMatch; onNotNow: () => void }) {
   return (
     <article className="card stack">
       <p>
         Look for <PairColorBadge color={match.partner.color} /> at {whereToGo(match)}
       </p>
       <p className="muted">{match.why}</p>
+      <p className="small">Tap the kiosk tag when you get there and the mission starts.</p>
+      <button className="btn" onClick={onNotNow}>
+        Not now
+      </button>
       <Link className="small" to={`/report/${encodeURIComponent(match.matchId)}`}>
         Report or block
       </Link>

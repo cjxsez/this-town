@@ -14,6 +14,7 @@
  * - POST /api/glasses/link   GlassesLinkReq -> GlassesLinkRes
  * - POST /api/taps           TapReq -> TapRes
  * - POST /api/ride/end       -> (no body defined in protocol)
+ * - POST /api/ride/not-now   -> OkRes (Not now button on the match panel)
  * - PUT  /api/ride/ghost     GhostReq -> (no body defined in protocol)
  * - GET  /api/passport       -> PassportRes
  * - POST /api/report         ReportReq -> (no body defined in protocol)
@@ -134,6 +135,9 @@ export const api = {
   },
 
   endRide: () => request("POST", "/api/ride/end"),
+
+  /** Drop the current match (10 min cooldown, partner is rematched). Same as rider.notNow. */
+  notNow: () => request("POST", "/api/ride/not-now"),
 
   setGhost: (ghost: boolean) => {
     const body: GhostBody = { ghost };

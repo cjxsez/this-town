@@ -241,7 +241,7 @@ export class TrainRoom extends DurableObject<Env> {
     throw new Error("TODO: TrainRoom.checkOut (see header step 7)");
   }
 
-  /** rider.notNow from the glasses pinch. */
+  /** rider.notNow from the glasses, or POST /api/ride/not-now from the phone. */
   async notNow(userId: string): Promise<void> {
     throw new Error("TODO: TrainRoom.notNow (see header step 8)");
   }
@@ -333,7 +333,8 @@ export class TrainRoom extends DurableObject<Env> {
     throw new Error("TODO: see header step 2 (matching/pool, score, pair, colors; llm/why)");
   }
 
-  private async markArrived(userId: string, now: number): Promise<void> {
+  /** rider.arrived (glasses or POST /api/ride/arrived), or a tap on the meeting kiosk via moveCar. */
+  async markArrived(userId: string, now: number): Promise<void> {
     throw new Error("TODO: see header step 3");
   }
 

@@ -7,6 +7,10 @@
  * - PUT  /api/ride/ghost  body GhostReq { ghost } -> RideState. Ghost hides you from matching
  *   and kiosk counts; an active match is cleared with reason "ghost". Not riding: just saves
  *   the preference on users.ghost for the next check-in.
+ * - POST /api/ride/not-now -> OkRes. REST twin of rider.notNow. The phone's "Not now" button
+ *   uses it (there is no Neural Band, so the phone is the reliable path).
+ * - POST /api/ride/arrived -> OkRes. REST twin of rider.arrived. Optional: tapping the
+ *   meeting kiosk tag already counts as arriving.
  * - GET  /api/ride/state  -> RidePollRes { state, match, mission }. For glasses-web when
  *   WebSockets are not available in the glasses browser (decisions.md "Still open").
  *
@@ -46,6 +50,24 @@ rideRoutes.put("/ride/ghost", requireRider, async (c) => {
   if (active) return c.json(await roomFor(c.env, active.tripId).setGhost(userId, body.data.ghost));
   await setUserGhost(c.env.DB, userId, body.data.ghost);
   return c.json(offRideState(body.data.ghost));
+});
+
+rideRoutes.post("/ride/not-now", requireRider, async (c) => {
+  const userId = c.get("userId");
+  const active = await activeCheckin(c.env.DB, userId);
+  if (!active) return c.json({ error: "not riding" }, 409);
+  await roomFor(c.env, active.tripId).notNow(userId);
+  const res: OkRes = { ok: true };
+  return c.json(res);
+});
+
+rideRoutes.post("/ride/arrived", requireRider, async (c) => {
+  const userId = c.get("userId");
+  const active = await activeCheckin(c.env.DB, userId);
+  if (!active) return c.json({ error: "not riding" }, 409);
+  await roomFor(c.env, active.tripId).markArrived(userId, Date.now());
+  const res: OkRes = { ok: true };
+  return c.json(res);
 });
 
 rideRoutes.get("/ride/state", requireRider, async (c) => {

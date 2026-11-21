@@ -88,7 +88,7 @@ npx wrangler secret put KIOSK_KEY
 ## Deploy
 
 ```bash
-pnpm deploy        # root: builds the web apps into apps/worker/public, then wrangler deploy
+pnpm run deploy        # root: builds the web apps into apps/worker/public, then wrangler deploy
 ```
 
 Set `PUBLIC_ORIGIN` in `wrangler.toml` to the real domain first, and set `DEMO_MODE = "false"` for anything but the demo.

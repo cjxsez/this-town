@@ -5,7 +5,7 @@
   waveguide: black pixels are transparent, so the background must stay black.
   TODO:
   - Confirm on device whether the viewport meta is honored or ignored (viewport is fixed anyway).
-  - Add an app icon / manifest if the Web App developer preview asks for one.
+  - Icons: Meta requires PNG (no SVG), 52x52 or larger, found via the manifest or page source.
 -->
 <html lang="en">
   <head>
@@ -14,6 +14,9 @@
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#000000" />
     <title>Questline glasses</title>
+    <link rel="manifest" href="/g/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/g/icon-192.png" />
+    <link rel="apple-touch-icon" href="/g/icon-192.png" />
   </head>
   <body>
     <div id="root"></div>
