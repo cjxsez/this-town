@@ -1,0 +1,13 @@
+// phone-web TypeScript config. Strict settings come from tsconfig.base.json;
+// this adds DOM libs, the React JSX transform and Vite's client types
+// (import.meta.env, asset imports). vite.config.ts is not typechecked here
+// because Vite's own types expect @types/node, which this app does not need.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}
