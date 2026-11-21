@@ -1,0 +1,21 @@
+/* F1 mission screen. Only what inline styles can't do (media queries, placeholder). */
+.mission-ring { width: 200px; height: 200px; flex: none; }
+.mission-ring__num { font: 400 46px/1 var(--font-display); }
+.mission-art { position: relative; flex: none; height: 156px; }
+.mission-note::placeholder { color: var(--ink); opacity: .85; letter-spacing: .12em; }
+.mission-note:focus { outline: none; }
+.mission-note-box:focus-within { box-shadow: 0 0 0 3px var(--sky), 3px 5px 0 var(--shadow) !important; }
+@media (max-height: 760px) {
+  .mission-art { height: 72px; }
+  .mission-art__sign { display: none; }
+  .mission-art__note { top: 6px !important; }
+  .mission-ring { width: 168px; height: 168px; }
+  .mission-ring__num { font-size: 40px; }
+}
+@media (max-height: 660px) {
+  .mission-ring { width: 148px; height: 148px; }
+  .mission-ring__num { font-size: 34px; }
+}
+.mission-note-box:focus-within .mission-note-cursor { display: none; }
+.mission-swap:disabled { opacity: .5; cursor: not-allowed; text-decoration: none; }
+.mission-types summary::-webkit-details-marker { display: none; }

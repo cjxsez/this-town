@@ -1,0 +1,34 @@
+{
+  "name": "this-town",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@fontsource/bungee": "^5.3.0",
+    "@fontsource/bungee-shade": "^5.3.0",
+    "@fontsource/gaegu": "^5.3.0",
+    "hono": "^4.13.19",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router": "^8.5.2"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.70.1",
+    "@cloudflare/workers-types": "^5.20261121.1",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "wrangler": "^4.166.0"
+  }
+}

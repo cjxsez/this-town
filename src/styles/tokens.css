@@ -1,0 +1,53 @@
+/* Design tokens from the Questline hi-fi screens v2.
+   --sea/--foam/--foam2/--onsea are swapped by time of day (see fx/theme.ts);
+   --wob/--rag are the hand-drawn SVG filters, set to none when hand-drawn is off. */
+:root {
+  --sea: #62c1bc;
+  --foam: #9ae4d6;
+  --foam2: #7fd3c8;
+  --onsea: #26343b;
+  --ol: 2px;
+  --wob: none;
+  --rag: none;
+
+  --ink: #26343b;
+  --ink-deep: #16232a;
+  --ink-soft: #48606d;
+  --shadow: #557585;
+  --paper: #f4f5ec;
+  --paper-hi: #fbfbf5;
+  --paper-lo: #d5d9c7;
+  --stone: #b7bfb2;
+  --stone-dk: #8f9a8e;
+  --mint: #e2f6ec;
+  --page: #e7e9da;
+
+  --yellow: #f2c84b;
+  --yellow-dk: #c9982e;
+  --sky: #6bbde6;
+  --leaf: #8fcf95;
+  --green: #3f8f5a;
+  --green-dk: #2e6e46;
+  --red: #d9453b;
+  --rust: #c4472a;
+  --brick: #a8360f;
+  --orange: #e8893a;
+  --blue: #3b74c4;
+  --teal-dk: #17736f;
+  --ticket: #f3d9b1;
+
+  --font-hand: "Gaegu", "Comic Sans MS", cursive;
+  --font-display: "Bungee", "Arial Black", sans-serif;
+  --font-shade: "Bungee Shade", "Bungee", "Arial Black", sans-serif;
+
+  /* Four wobbly corner sets, so neighbouring boxes never look stamped out. */
+  --r1: 4px 7px 5px 8px;
+  --r2: 8px 5px 7px 4px;
+  --r3: 5px 8px 4px 7px;
+  --r4: 7px 4px 8px 5px;
+
+  --gutter: 16px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-max: 430px;
+}

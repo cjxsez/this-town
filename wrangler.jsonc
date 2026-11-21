@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "questline",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "assets": {
+    // Built SPA. Unknown paths fall back to index.html so client routes deep-link.
+    "not_found_handling": "single-page-application",
+    // /api/* always reaches the Worker, never the asset fallback.
+    "run_worker_first": ["/api/*"]
+  }
+  // Backend bindings go here when it is wired, e.g.
+  // "d1_databases": [{ "binding": "DB", "database_name": "questline", "database_id": "..." }],
+  // "durable_objects": { "bindings": [{ "name": "STATION", "class_name": "StationPool" }] },
+  // "kv_namespaces": [{ "binding": "MBTA_CACHE", "id": "..." }]
+}
