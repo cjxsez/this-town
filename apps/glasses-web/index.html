@@ -1,0 +1,22 @@
+<!doctype html>
+<!--
+  glasses-web entry HTML.
+  The Meta Ray-Ban Display browser renders a fixed 600x600 viewport on an additive
+  waveguide: black pixels are transparent, so the background must stay black.
+  TODO:
+  - Confirm on device whether the viewport meta is honored or ignored (viewport is fixed anyway).
+  - Add an app icon / manifest if the Web App developer preview asks for one.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=600, height=600, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
+    <title>Questline</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

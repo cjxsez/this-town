@@ -1,0 +1,192 @@
+/*
+ * styles.css (glasses-web): HUD styles for the Meta Ray-Ban Display.
+ *
+ * - Fixed 600x600 viewport. #root is exactly that size; nothing scrolls.
+ * - Additive waveguide: black (#000) is transparent, bright pixels are light. Keep the
+ *   background black, use white / saturated text, avoid large filled bright areas
+ *   (they block the rider's view and burn battery).
+ * - Large, high-contrast type: the rider glances at this while walking through a train.
+ * - Focus is drawn by .is-focused (state-managed) and :focus-visible as a fallback.
+ *
+ * TODO:
+ * - Tune sizes on device; 28-32px body is a starting guess.
+ * - Check whether the system font on the glasses has tabular numerals.
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fg: #fff;
+  --dim: #b3b3b3;
+  --accent: #38bdf8;
+  --warn: #fbbf24;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 600px;
+  height: 600px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+#root {
+  position: relative;
+  width: 600px;
+  height: 600px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* Dev only: outline the lens area in a desktop browser. */
+.dev-frame body {
+  width: auto;
+  height: auto;
+}
+.dev-frame #root {
+  outline: 1px dashed #333;
+}
+
+.hud {
+  width: 100%;
+  height: 100%;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+}
+
+.hud-center {
+  align-items: center;
+  text-align: center;
+}
+
+.hud-title {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.hud-body {
+  font-size: 30px;
+  line-height: 1.25;
+}
+
+.hud-strong {
+  font-weight: 700;
+}
+
+.hud-dim {
+  font-size: 24px;
+  color: var(--dim);
+}
+
+.hud-warn {
+  font-size: 24px;
+  color: var(--warn);
+}
+
+.hud-rare {
+  color: var(--warn);
+}
+
+.hud-code {
+  font-size: 160px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.hud-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.hud-row-between {
+  justify-content: space-between;
+}
+
+.hud-btn {
+  flex: 1;
+  padding: 14px 20px;
+  border: 3px solid #555;
+  border-radius: 16px;
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.hud-btn.is-focused {
+  border-color: var(--fg);
+  outline: 4px solid var(--accent);
+  outline-offset: 4px;
+}
+
+:focus-visible {
+  outline: 4px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.match-head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.swatch-chip {
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.swatch-label {
+  font-size: 24px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.countdown {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.countdown-md {
+  font-size: 56px;
+}
+
+.stamp-pop {
+  font-size: 64px;
+  font-weight: 800;
+  color: var(--accent);
+  animation: pop 600ms ease-out;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}

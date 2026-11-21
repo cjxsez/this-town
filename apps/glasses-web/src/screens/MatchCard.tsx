@@ -1,0 +1,86 @@
+/**
+ * MatchCard.tsx (glasses-web): who your match is and where to go.
+ *
+ * Driven by match.found: partner.firstName, partner.color (ColorSwatch), why (the one-line
+ * "why you two", private to the two riders, fine on the lens), meetAtCar / carDelta /
+ * youWalk -> "Kiosk 1 car back", "Stay put, Maya is coming to you", etc.
+ *
+ * Input:
+ *   select on "I'm here" (default focus) -> onArrived -> App sends rider.arrived
+ *   select on "Not now", or back         -> onNotNow  -> App sends rider.notNow
+ *   arrows move focus between the two buttons
+ * Buttons are not real <button>s with DOM focus, so a select pinch never double-fires
+ * (native click + our keydown handler).
+ *
+ * TODO:
+ * - carDelta is assumed relative to the rider's current car toward meetAtCar; confirm.
+ * - Animate in, and maybe a short haptic-free "new match" flash (no notifications exist).
+ * - Truncate long why lines to two lines at this font size.
+ */
+import { useState } from "react";
+import { ColorSwatch } from "../components/ColorSwatch";
+import { useInput } from "../lib/input";
+import type { MatchFound } from "../lib/socket";
+
+export function whereToGo(m: MatchFound): string {
+  const name = m.partner.firstName;
+  if (!m.youWalk) {
+    return m.carDelta === 0 ? "Same car. Head to the kiosk" : `Stay put. ${name} is coming to your kiosk`;
+  }
+  if (m.carDelta === 0) return "Same car. Head to the kiosk";
+  const n = Math.abs(m.carDelta);
+  const dir = m.carDelta < 0 ? "back" : "forward";
+  return `Kiosk ${n} car${n === 1 ? "" : "s"} ${dir}`;
+}
+
+interface MatchCardProps {
+  match: MatchFound;
+  arrived: boolean;
+  onArrived: () => void;
+  onNotNow: () => void;
+}
+
+type Focus = "here" | "notNow";
+
+export function MatchCard({ match, arrived, onArrived, onNotNow }: MatchCardProps) {
+  const [focus, setFocus] = useState<Focus>("here");
+
+  useInput((action) => {
+    switch (action) {
+      case "left":
+      case "up":
+        setFocus("here");
+        return;
+      case "right":
+      case "down":
+        setFocus("notNow");
+        return;
+      case "select":
+        if (focus === "notNow") onNotNow();
+        else if (!arrived) onArrived();
+        return;
+      case "back":
+        onNotNow();
+        return;
+    }
+  });
+
+  return (
+    <main className="hud">
+      <div className="match-head">
+        <ColorSwatch color={match.partner.color} />
+        <div className="hud-title">{match.partner.firstName}</div>
+      </div>
+      <div className="hud-body hud-strong">{whereToGo(match)}</div>
+      <div className="hud-body">{match.why}</div>
+      <div className="hud-row">
+        <div className={`hud-btn ${focus === "here" ? "is-focused" : ""}`} role="button" aria-pressed={arrived}>
+          {arrived ? `Waiting for ${match.partner.firstName}…` : "I'm here"}
+        </div>
+        <div className={`hud-btn ${focus === "notNow" ? "is-focused" : ""}`} role="button">
+          Not now
+        </div>
+      </div>
+    </main>
+  );
+}
