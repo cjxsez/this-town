@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "questline-kiosk"
+version = "0.1.0"
+description = "Questline kiosk agent for the Raspberry Pi: LED strip, dynamic NFC tag, kiosk socket, Chromium launcher"
+readme = "README.md"
+requires-python = ">=3.11"
+# Config is read with the stdlib tomllib (3.11+), so no TOML dependency.
+dependencies = [
+  "websockets>=13",   # uses the websockets.asyncio.client API
+  "smbus2>=0.5",      # pure Python, imports fine on a laptop; only touches /dev/i2c-* when used
+]
+
+[project.optional-dependencies]
+# Install on the Pi only. rpi_ws281x does not build on macOS/Windows.
+pi = [
+  "rpi_ws281x>=5.0; platform_system == 'Linux'",                       # Pi 4, GPIO18 PWM (needs root) or GPIO10 SPI
+  "adafruit-circuitpython-neopixel-spi>=1.0; platform_system == 'Linux'", # Pi 5 (and Pi 4) over SPI, no root
+]
+dev = ["pytest>=8"]
+
+[project.scripts]
+questline-kiosk = "questline_kiosk.__main__:main"
+
+[tool.setuptools]
+packages = ["questline_kiosk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

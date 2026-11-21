@@ -1,0 +1,65 @@
+# Questline kiosk agent config.
+# Copy to config.toml (gitignored) and fill in. scripts/setup.sh does the copy.
+# Loaded and validated by questline_kiosk/config.py.
+
+# Host only, no scheme, no path. For `wrangler dev` on a laptop: "localhost:8787" with tls = false.
+domain = "questline.example.com"
+tls = true
+
+# MBTA carriage label printed on the car. Must match CarId in packages/protocol/src/models.ts.
+car = "1412"
+
+# Shared kiosk secret (KIOSK_KEY on the Worker). Same value kiosk-web uses.
+kiosk_key = "change-me"
+
+[leds]
+enabled = true
+# ws281x       Pi 4, data on GPIO18 (PWM). rpi_ws281x needs root for PWM, see docs/hardware.md.
+# neopixel_spi Pi 5 (or Pi 4 without root), data on GPIO10 / SPI0 MOSI. pin is ignored.
+# fake         prints colors to the terminal (laptops)
+driver = "ws281x"
+pin = 18
+count = 30
+brightness = 0.4      # 0.0 to 1.0. Also caps current draw: 30 LEDs at full white is ~1.8 A.
+order = "GRB"         # WS2812B is GRB
+idle_color = "#8fb4ff"
+
+[nfc]
+# dynamic  Pi rewrites the tag per mission (stamp proof with a fresh nonce)
+# static   NTAG215 sticker with https://<domain>/k/<car>; the agent ignores nfc.write
+# none     no tag on this kiosk
+mode = "dynamic"
+# ntag_i2c_plus  NXP NT3H2111/NT3H2211, I2C address 0x55
+# st25dv         ST25DV04K/16K/64K, user memory at 0x53 (system area at 0x57)
+# fake           in-memory tag that prints writes (laptops)
+chip = "ntag_i2c_plus"
+i2c_bus = 1
+i2c_address = 0x55
+write_retries = 3
+
+[agent]
+ping_interval_s = 20.0
+reconnect_min_s = 1.0
+reconnect_max_s = 30.0
+celebrate_s = 4.0     # how long the burst/rainbow runs before falling back to the pair color
+log_level = "INFO"
+
+[browser]
+enabled = true        # false on a screenless kiosk (tag + LEDs only)
+# Raspberry Pi OS Bookworm: "chromium-browser". Trixie and later: "chromium".
+binary = "chromium-browser"
+flags = [
+  "--kiosk",
+  "--noerrdialogs",
+  "--disable-infobars",
+  "--no-first-run",
+  "--disable-session-crashed-bubble",
+  "--disable-features=Translate",
+  "--overscroll-history-navigation=0",
+  "--disable-pinch",
+  "--check-for-update-interval=31536000",
+  "--autoplay-policy=no-user-gesture-required",
+  "--password-store=basic",
+  "--user-data-dir=/home/pi/.config/questline-chromium",
+  "--ozone-platform-hint=auto",
+]
