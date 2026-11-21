@@ -1,0 +1,55 @@
+# Questline worker: API + static assets for phone-web, glasses-web, kiosk-web,
+# D1, and one TrainRoom Durable Object per MBTA trip. See README.md.
+
+name = "questline"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+# public/ is produced by `pnpm build` at the repo root (scripts/build-assets.mjs
+# copies the three Vite dist/ folders in). It is gitignored. For a fresh clone,
+# run `pnpm build` or `mkdir -p apps/worker/public` before `wrangler dev`.
+#
+# not_found_handling is left at its default ("none") on purpose: the worker does
+# per-prefix SPA fallback itself (/g/* -> /g/, /kiosk/* -> /kiosk/, else /).
+# With "single-page-application" every miss would get the phone index.html.
+#
+# run_worker_first takes route patterns (wrangler 4.x). These paths always hit
+# the worker before asset matching. /api and /ws are the important ones; the
+# SPA prefixes are listed so client routes never collide with a stray asset.
+# If your wrangler rejects the array form, set `run_worker_first = true` (the
+# worker then serves every request and calls env.ASSETS itself, which index.ts
+# already handles).
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/ws/*", "/g/*", "/kiosk/*", "/k/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "questline"
+# Replace with the id printed by `wrangler d1 create questline`.
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[durable_objects.bindings]]
+name = "TRAIN_ROOM"
+class_name = "TrainRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TrainRoom"]
+
+# Non-secret config. Values are strings; src/env.ts readConfig() parses them.
+# Override any of these locally in .dev.vars (e.g. PUBLIC_ORIGIN).
+# Secrets (ANTHROPIC_API_KEY, MBTA_API_KEY, KIOSK_KEY): see .dev.vars.example.
+[vars]
+PUBLIC_ORIGIN = "https://questline.example.com"
+MIN_SHARED_TAGS = "1"
+LATE_BONUS_MIN_DELAY_S = "180"
+NOT_NOW_COOLDOWN_S = "600"
+DEMO_MODE = "true"
+DEMO_CAR_TRIPS = '{"1412":"demo-trip-1","1413":"demo-trip-1"}'
