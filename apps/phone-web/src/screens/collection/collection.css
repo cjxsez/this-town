@@ -1,0 +1,165 @@
+/* Collection loop (H2–H6). Local to src/screens/collection; prefixed cl-. */
+
+/* Paper back button: the kit's BackLink, dressed the way the hi-fi draws it. */
+.cl-back { align-self: flex-start; rotate: -0.4deg; }
+.cl-back .q-back {
+  padding: 0 12px;
+  background: var(--paper); color: var(--ink);
+  border: var(--ol) solid var(--ink); border-radius: var(--r3);
+  box-shadow: 3px 5px 0 var(--shadow);
+  filter: var(--wob);
+}
+
+.cl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cl-h1 { font: 400 28px/1.02 var(--font-display); margin: 0; }
+.cl-sub { font: 700 20px/1.08 var(--font-hand); }
+
+/* ---------- H2 passport ---------- */
+.q-card.cl-map { padding: 8px 12px 4px; gap: 0; }
+.cl-map svg { display: block; width: 100%; height: auto; overflow: visible; filter: var(--wob); }
+
+.cl-filter { display: flex; gap: 6px; }
+.cl-filter__opt {
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 2px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  background: var(--paper); color: var(--ink);
+  border: var(--ol) solid var(--ink);
+  font: 700 18px var(--font-hand); white-space: nowrap; cursor: pointer;
+}
+.cl-filter__opt:nth-child(4n+1) { border-radius: var(--r4); }
+.cl-filter__opt:nth-child(4n+2) { border-radius: var(--r1); }
+.cl-filter__opt:nth-child(4n+3) { border-radius: var(--r2); }
+.cl-filter__opt:nth-child(4n) { border-radius: var(--r3); }
+.cl-filter__opt[aria-checked="true"] { color: var(--paper); box-shadow: 2px 3px 0 var(--shadow); }
+.cl-filter__dot { flex: none; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink); }
+@media (max-width: 400px) {
+  .cl-filter { gap: 4px; }
+  .cl-filter__opt { font-size: 16px; gap: 3px; }
+  .cl-filter__dot { width: 7px; height: 7px; }
+}
+@media (max-width: 370px) { .cl-filter__opt { font-size: 15px; } }
+
+.q-card.cl-line { padding: 12px 12px 8px; gap: 6px; }
+.cl-line__title { font: 700 20px/1.08 var(--font-hand); }
+.cl-group { position: relative; }
+.cl-group__rail {
+  position: absolute; left: 0; right: 0; top: 5px; height: 8px;
+  border: var(--ol) solid var(--ink); border-radius: 4px;
+}
+.cl-group__row { position: relative; display: flex; gap: 5px; padding: 3px 2px 4px; align-items: flex-start; }
+.cl-stop { flex: 0 1 52px; min-width: 44px; display: flex; flex-direction: column; align-items: center; }
+.cl-stop__dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); }
+.cl-stop__dot[data-on="true"] { background: var(--yellow); }
+.cl-stop__stem { width: 2px; height: 10px; margin-top: -1px; background: var(--ink); }
+.cl-more { flex: none; align-self: center; margin: 10px 0 0 6px; font: 400 22px var(--font-display); }
+.cl-foot { font-size: 16px; line-height: 1.2; text-wrap: pretty; color: var(--ink-soft); margin: 0; }
+
+/* Ticket: cream stub with perforated top/bottom edges and a barcode. */
+.cl-ticket { display: block; width: 100%; height: 74px; text-decoration: none; color: var(--ink); }
+.cl-ticket__tilt { height: 100%; filter: var(--wob); }
+.cl-ticket__ol {
+  height: 100%;
+  filter: drop-shadow(1.5px 0 0 var(--ink)) drop-shadow(-1.5px 0 0 var(--ink)) drop-shadow(0 1.5px 0 var(--ink))
+    drop-shadow(0 -1.5px 0 var(--ink)) drop-shadow(3px 4px 0 var(--shadow));
+}
+.cl-ticket__paper {
+  height: 100%; padding: 10px 3px 0; text-align: center; background: var(--ticket);
+  -webkit-mask: radial-gradient(circle at 5.2px 0, #0000 3px, #000 3.5px) 0 0/10.4px 100%,
+    radial-gradient(circle at 5.2px 100%, #0000 3px, #000 3.5px) 0 0/10.4px 100%;
+  -webkit-mask-composite: source-in;
+  mask: radial-gradient(circle at 5.2px 0, #0000 3px, #000 3.5px) 0 0/10.4px 100%,
+    radial-gradient(circle at 5.2px 100%, #0000 3px, #000 3.5px) 0 0/10.4px 100%;
+  mask-composite: intersect;
+}
+.cl-ticket--rare .cl-ticket__paper { background: var(--yellow); }
+.cl-ticket__name { font: 400 10px/1.15 var(--font-display); }
+.cl-ticket__bars {
+  height: 11px; margin: 5px 6px 0;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 2px, #0000 2px 4px, var(--ink) 4px 5px, #0000 5px 7px, var(--ink) 7px 10px, #0000 10px 12px);
+}
+.cl-ticket__tag { font: 400 9px var(--font-display); margin-top: 4px; color: var(--brick); white-space: nowrap; }
+.cl-ticket--empty {
+  border: 2px dashed var(--stone-dk); border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font: 400 10px/1.15 var(--font-display); color: var(--ink-soft);
+}
+
+/* ---------- H3 stamp detail ---------- */
+.cl-bigstamp { position: relative; flex: none; height: 178px; }
+.cl-bigstamp__pos { position: absolute; left: 9px; right: 0; top: 8px; height: 160px; max-width: 350px; }
+.cl-bigstamp__tilt { height: 100%; rotate: -3deg; filter: var(--wob); }
+.cl-bigstamp__ol {
+  height: 100%;
+  filter: drop-shadow(2px 0 0 var(--ink)) drop-shadow(-2px 0 0 var(--ink)) drop-shadow(0 2px 0 var(--ink))
+    drop-shadow(0 -2px 0 var(--ink)) drop-shadow(5px 7px 0 var(--shadow));
+}
+.cl-bigstamp__paper {
+  --cut: 70.3%;
+  height: 100%; display: flex; background: var(--ticket); color: var(--ink);
+  -webkit-mask: radial-gradient(circle at 0 10px, #0000 6px, #000 6.5px) 0 0/100% 20px,
+    radial-gradient(circle at 100% 10px, #0000 6px, #000 6.5px) 0 0/100% 20px,
+    radial-gradient(circle at var(--cut) 0, #0000 9px, #000 9.5px),
+    radial-gradient(circle at var(--cut) 100%, #0000 9px, #000 9.5px);
+  -webkit-mask-composite: source-in;
+  mask: radial-gradient(circle at 0 10px, #0000 6px, #000 6.5px) 0 0/100% 20px,
+    radial-gradient(circle at 100% 10px, #0000 6px, #000 6.5px) 0 0/100% 20px,
+    radial-gradient(circle at var(--cut) 0, #0000 9px, #000 9.5px),
+    radial-gradient(circle at var(--cut) 100%, #0000 9px, #000 9.5px);
+  mask-composite: intersect;
+}
+.cl-bigstamp--rare .cl-bigstamp__paper { background: var(--yellow); }
+.cl-bigstamp__main { flex: none; width: var(--cut); padding: 14px 12px 0 24px; min-width: 0; }
+.cl-bigstamp__top { display: flex; justify-content: space-between; gap: 6px; font: 400 10px var(--font-display); letter-spacing: .06em; white-space: nowrap; }
+.cl-bigstamp__name { font: 400 30px/1 var(--font-display); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-bigstamp__row { display: flex; align-items: flex-end; gap: 10px; margin-top: 12px; }
+.cl-bigstamp__when { font: 700 16px/1.15 var(--font-hand); white-space: nowrap; }
+.cl-bigstamp__stub { flex: 1; min-width: 0; border-left: 2.5px dashed var(--ink); padding: 16px 16px 0 14px; }
+.cl-bigstamp__bars {
+  height: 70px;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 3px, #0000 3px 5px, var(--ink) 5px 6px, #0000 6px 9px, var(--ink) 9px 12px, #0000 12px 14px);
+}
+.cl-bigstamp__rare { font: 400 11px var(--font-display); letter-spacing: .06em; margin-top: 8px; white-space: nowrap; }
+.cl-bigstamp__no { font: 700 15px var(--font-hand); white-space: nowrap; }
+
+.cl-photo { flex: none; border: var(--ol) solid var(--ink); border-radius: 4px; overflow: hidden; background: #c9d6cf; color: var(--ink); }
+.cl-photo > * { width: 100%; height: 100%; }
+.cl-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.cl-with { display: flex; align-items: center; gap: 10px; min-height: 48px; color: var(--ink); text-decoration: none; font: 700 23px/1.08 var(--font-hand); }
+
+/* ---------- H4 people ---------- */
+.q-card.cl-people { padding: 4px 16px; gap: 0; }
+.cl-person {
+  min-height: 78px; display: flex; align-items: center; gap: 12px;
+  color: var(--ink); text-decoration: none; border-bottom: 2px dashed var(--stone);
+}
+.cl-person__text { flex: 1; min-width: 0; }
+.cl-person__name { display: block; font: 700 27px/1 var(--font-hand); }
+.cl-person__where { display: block; font-size: 18px; color: var(--ink-soft); margin-top: 3px; }
+.cl-person__handle { flex: none; font: 700 21px/1.08 var(--font-hand); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- H5 person ---------- */
+.cl-hero { display: flex; align-items: center; gap: 16px; }
+.cl-hero__art {
+  flex: none; width: 112px; height: 112px; border-radius: 50%; overflow: hidden;
+  border: 3px solid var(--ink); box-shadow: 3px 5px 0 var(--shadow); color: var(--paper);
+}
+.cl-hero__name { font: 400 38px/1.02 var(--font-display); margin: 0; overflow-wrap: anywhere; }
+.cl-hero__meta { font-size: 20px; line-height: 1.2; text-wrap: pretty; margin: 6px 0 0; }
+.cl-q { font: 700 28px/1.08 var(--font-hand); }
+.cl-touch { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cl-touch__label { font: 700 25px/1.08 var(--font-hand); }
+
+/* ---------- H6 memories ---------- */
+.cl-eyebrow { font: 400 11px/1.3 var(--font-display); letter-spacing: .06em; margin: 0; }
+.cl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.q-card.cl-tile { padding: 8px 8px 10px; gap: 6px; min-width: 0; }
+.cl-tile__cap { font: 700 20px/1.08 var(--font-hand); }
+.cl-tile__note { font-size: 16px; line-height: 1.15; color: var(--ink-soft); margin: 0; }
+.cl-vote { display: flex; gap: 6px; }
+.cl-vote button {
+  flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center;
+  border: var(--ol) solid var(--ink); font: 400 13px var(--font-display); cursor: pointer;
+}
+.cl-vote button:active { translate: 0 2px; }
+@media (max-width: 400px) { .cl-line__title { font-size: 18px; } }

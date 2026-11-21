@@ -1,13 +1,22 @@
-// phone-web TypeScript config. Strict settings come from tsconfig.base.json;
-// this adds DOM libs, the React JSX transform and Vite's client types
-// (import.meta.env, asset imports). vite.config.ts is not typechecked here
-// because Vite's own types expect @types/node, which this app does not need.
+// phone-web TypeScript config. Strict, with DOM libs, the React JSX transform and Vite's
+// client types. It does not extend tsconfig.base.json yet: the screens were written without
+// noUncheckedIndexedAccess. vite.config.ts is not typechecked here.
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "shared"]
 }

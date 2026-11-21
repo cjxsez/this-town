@@ -8,7 +8,7 @@
  * - Reconnecting with capped exponential backoff + jitter, and immediately when the tab
  *   becomes visible again or the network comes back.
  * - Validating incoming messages against the ServerToRider schema and handing typed events
- *   to the caller (useRide.ts). Unknown/invalid messages are dropped (logged in dev).
+ *   to the caller (api/backend/ride.ts). Unknown/invalid messages are dropped (logged in dev).
  *
  * Events received (ServerToRider): ride.state, match.found, match.cleared, mission.start,
  * mission.end, stamp.awarded.
@@ -18,7 +18,7 @@
  * TODO:
  * - Agree on a close code for "bad token" with the worker and stop reconnecting on it.
  * - Confirm how the worker routes /ws/rider to a TrainRoom before the rider is checked in
- *   (see README "Protocol gaps"); until then, useRide reconnects after a check-in.
+ *   (see README "Protocol gaps"); until then, api/backend/ride.ts only opens the socket once checked in.
  */
 import { ServerToRider, type RiderToServer } from "@questline/protocol";
 
@@ -30,7 +30,8 @@ export interface RiderSocketHandlers {
 }
 
 export interface RiderSocket {
-  send: (msg: RiderToServer) => void;
+  /** False when the socket is not open; the caller then uses the REST twin. */
+  send: (msg: RiderToServer) => boolean;
   /** Drop the current connection and open a fresh one now (e.g. after checking in to a new trip). */
   reconnect: () => void;
   /** Close for good (sign out). */
@@ -54,7 +55,9 @@ export function connectRiderSocket(token: string, handlers: RiderSocketHandlers)
   let pingTimer: ReturnType<typeof setInterval> | null = null;
 
   const send = (msg: RiderToServer) => {
-    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    if (ws?.readyState !== WebSocket.OPEN) return false;
+    ws.send(JSON.stringify(msg));
+    return true;
   };
 
   const clearTimers = () => {

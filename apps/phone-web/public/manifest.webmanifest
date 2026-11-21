@@ -1,0 +1,11 @@
+{
+  "name": "Questline",
+  "short_name": "Questline",
+  "description": "Side quests while you wait for the T.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#62C1BC",
+  "theme_color": "#62C1BC",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

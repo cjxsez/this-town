@@ -1,19 +1,17 @@
 <!doctype html>
-<!--
-  phone-web entry HTML. Mobile viewport (covers the notch via viewport-fit=cover;
-  styles.css pads with safe-area insets). Vite injects the bundle from src/main.tsx.
-  Served at "/" and as the SPA fallback for every client route, including /k/:car.
--->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#0b0b0f" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="format-detection" content="telephone=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#62C1BC" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Questline" />
+    <meta name="description" content="Short games with one other rider while you wait for the T." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
     <title>Questline</title>
   </head>
   <body>

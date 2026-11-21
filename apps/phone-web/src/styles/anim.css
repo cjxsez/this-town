@@ -1,0 +1,85 @@
+/* The design's named animations (data-anim in the hi-fi file), as classes.
+   Use: className="anim-float" style={{ animationDelay: "600ms" }}.
+   :root.no-motion pauses them all (Me > Motion off). */
+@keyframes q-float { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+@keyframes q-bob { from { transform: rotate(1deg); } to { transform: rotate(4deg); } }
+@keyframes q-drift { from { transform: translateX(-8px); } to { transform: translateX(12px); } }
+@keyframes q-pulse { from { transform: scale(0.8); opacity: 0.8; } to { transform: scale(2); opacity: 0; } }
+@keyframes q-flash { from { opacity: 1; } to { opacity: 0.25; } }
+@keyframes q-blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+@keyframes q-spin { to { transform: rotate(360deg); } }
+@keyframes q-hop { 0% { transform: translateY(0); } 25% { transform: translateY(-12px); } 50%, 100% { transform: translateY(0); } }
+@keyframes q-scanY { from { top: 10%; } to { top: 86%; } }
+@keyframes q-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes q-walk { from { left: 0%; } to { left: calc(100% - 16px); } }
+@keyframes q-trainUp {
+  0% { transform: translateY(120px); animation-timing-function: cubic-bezier(.2,.7,.2,1); }
+  55%, 100% { transform: translateY(0); }
+}
+@keyframes q-trainIn {
+  0% { transform: translateX(-120%); animation-timing-function: cubic-bezier(.1,.6,.2,1); }
+  42% { transform: translateX(0); }
+  84% { transform: translateX(0); animation-timing-function: cubic-bezier(.6,0,.9,.4); }
+  100% { transform: translateX(120%); }
+}
+@keyframes q-arrive {
+  0% { transform: translateY(115%) rotate(6deg); animation-timing-function: cubic-bezier(.2,.9,.3,1.25); }
+  10% { transform: translateY(0) rotate(0); }
+  93% { transform: translateY(0) rotate(0); animation-timing-function: ease-in; }
+  100% { transform: translateY(115%) rotate(-4deg); }
+}
+@keyframes q-bumpL {
+  0% { transform: rotate(9deg); animation-timing-function: cubic-bezier(.5,0,.9,.5); }
+  50% { transform: rotate(-7deg); animation-timing-function: cubic-bezier(.1,.5,.5,1); }
+  100% { transform: rotate(9deg); }
+}
+@keyframes q-bumpR {
+  0% { transform: rotate(-9deg); animation-timing-function: cubic-bezier(.5,0,.9,.5); }
+  50% { transform: rotate(7deg); animation-timing-function: cubic-bezier(.1,.5,.5,1); }
+  100% { transform: rotate(-9deg); }
+}
+@keyframes q-burst {
+  0%, 46% { transform: scale(.2); opacity: 0; }
+  52% { transform: scale(.8); opacity: 1; }
+  78%, 100% { transform: scale(1.5); opacity: 0; }
+}
+/* One-shot versions for real interactions: the stamp lands once, not on loop. */
+@keyframes q-stamp {
+  0% { transform: scale(2.4) rotate(-24deg); opacity: 0; animation-timing-function: cubic-bezier(.6,0,.9,.4); }
+  60% { transform: scale(.94) rotate(-8deg); opacity: 1; }
+  75% { transform: scale(1.05) rotate(-8deg); }
+  100% { transform: scale(1) rotate(-8deg); opacity: 1; }
+}
+@keyframes q-ink { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes q-ticketIn {
+  0% { transform: translateY(90px) scale(.9); opacity: 0; animation-timing-function: cubic-bezier(.2,.9,.3,1.2); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes q-sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes q-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.anim-float { animation: q-float 2.4s ease-in-out infinite alternate; }
+.anim-bob { animation: q-bob 2.2s ease-in-out infinite alternate; }
+.anim-drift { animation: q-drift 7s ease-in-out infinite alternate; }
+.anim-pulse { animation: q-pulse 1.8s ease-out infinite; }
+.anim-flash { animation: q-flash .7s linear infinite alternate; }
+.anim-blink { animation: q-blink 1s linear infinite; }
+.anim-spin { animation: q-spin 48s linear infinite; }
+.anim-orbit { animation: q-spin 111s linear infinite; }
+.anim-hop { animation: q-hop 1.3s ease-in-out infinite; }
+.anim-scanY { animation: q-scanY 1.7s ease-in-out infinite alternate; }
+.anim-drain { animation: q-drain 15s linear infinite; transform-origin: left; }
+.anim-walk { animation: q-walk 2.8s ease-in-out infinite; }
+.anim-trainUp { animation: q-trainUp 9s infinite; }
+.anim-trainIn { animation: q-trainIn 8s infinite; }
+.anim-arrive { animation: q-arrive 9s infinite; }
+.anim-bumpL { animation: q-bumpL 1.6s infinite; }
+.anim-bumpR { animation: q-bumpR 1.6s infinite; }
+.anim-burst { animation: q-burst 1.6s infinite; }
+.anim-stamp { animation: q-stamp .9s both; }
+.anim-ink { animation: q-ink .8s .55s both; }
+.anim-ticketIn { animation: q-ticketIn .5s both; }
+.anim-sheetUp { animation: q-sheetUp .32s cubic-bezier(.2,.9,.3,1) both; }
+.anim-fadeIn { animation: q-fadeIn .25s both; }
+
+:root.no-motion [class*="anim-"] { animation-play-state: paused !important; }

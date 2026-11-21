@@ -1,0 +1,49 @@
+@import "@fontsource/gaegu/latin-400.css";
+@import "@fontsource/gaegu/latin-700.css";
+@import "@fontsource/bungee/latin-400.css";
+@import "@fontsource/bungee-shade/latin-400.css";
+
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 400 19px/1.2 var(--font-hand);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; text-align: inherit; }
+a { color: inherit; }
+img, svg { display: block; max-width: 100%; }
+:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+/* One phone-width column. On a desktop it sits centred like a device so the
+   demo still reads as a phone; on a phone it is simply the whole viewport. */
+.app-shell {
+  height: 100dvh;
+  max-width: var(--app-max);
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background: var(--sea);
+}
+@media (min-width: 600px) {
+  body { display: flex; align-items: center; justify-content: center; min-height: 100dvh; }
+  #root { height: auto; }
+  .app-shell {
+    width: 402px;
+    height: min(874px, calc(100dvh - 32px));
+    border: 10px solid var(--ink-deep);
+    border-radius: 48px;
+    box-shadow: 0 30px 60px rgba(22, 35, 42, 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

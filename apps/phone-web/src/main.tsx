@@ -1,25 +1,12 @@
-/**
- * main.tsx: phone-web entry point.
- *
- * Responsible for: mounting <App /> (the router) into #root inside StrictMode and loading
- * the global stylesheet. Nothing else lives here; the rider socket opens lazily from
- * useRide.ts the first time a screen subscribes.
- *
- * Uses: no routes or events directly.
- *
- * TODO:
- * - Register a service worker only if we decide we need offline (we probably do not; a
- *   home-screen install would split localStorage from Safari on iOS, see README).
- */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
-import "./styles.css";
+import App from "./App";
+import "./styles/tokens.css";
+import "./styles/base.css";
+import "./styles/ui.css";
+import "./styles/anim.css";
 
-const rootEl = document.getElementById("root");
-if (!rootEl) throw new Error("#root missing from index.html");
-
-createRoot(rootEl).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
   </StrictMode>,

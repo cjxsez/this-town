@@ -15,6 +15,9 @@
  * - POST /api/taps           TapReq -> TapRes
  * - POST /api/ride/end       -> (no body defined in protocol)
  * - PUT  /api/ride/ghost     GhostReq -> (no body defined in protocol)
+ * - GET  /api/ride/state     -> RideStateRes (= RideSnapshot)
+ * - POST /api/ride/not-now   REST twin of rider.notNow
+ * - POST /api/ride/arrived   REST twin of rider.arrived
  * - GET  /api/passport       -> PassportRes
  * - POST /api/report         ReportReq -> (no body defined in protocol)
  *
@@ -28,6 +31,7 @@ import {
   GlassesLinkRes,
   MeRes,
   PassportRes,
+  RideStateRes,
   TapRes,
   type Profile,
 } from "@questline/protocol";
@@ -132,6 +136,12 @@ export const api = {
       throw e;
     }
   },
+
+  getRideState: () => request("GET", "/api/ride/state", { schema: RideStateRes }),
+
+  notNow: () => request("POST", "/api/ride/not-now"),
+
+  arrived: () => request("POST", "/api/ride/arrived"),
 
   endRide: () => request("POST", "/api/ride/end"),
 
