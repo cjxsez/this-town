@@ -23,7 +23,7 @@ const inFlight = new Map<string, Promise<TapResult>>();
 
 type View =
   | { step: "working" }
-  | { step: "destination"; stops: string[] }
+  | { step: "destination"; stops: { id: string; name: string }[] }
   | { step: "error"; message: string }
   | { step: "done" };
 
@@ -95,8 +95,8 @@ export default function Tap() {
           <Card>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {view.stops.map((stop) => (
-                <Button key={stop} variant="secondary" onClick={() => send(stop)}>
-                  {stop}
+                <Button key={stop.id} variant="secondary" onClick={() => send(stop.id)}>
+                  {stop.name}
                 </Button>
               ))}
             </div>

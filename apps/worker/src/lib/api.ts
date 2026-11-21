@@ -24,9 +24,8 @@ import type {
   GlassesCodeRes,
   GlassesLinkRes,
   MeRes,
-  Mission,
   PassportRes,
-  RideState,
+  RideSnapshot,
   ServerToRider,
   TapRes,
 } from "@questline/protocol";
@@ -44,12 +43,8 @@ export type MatchClearedT = Extract<ServerToRider, { type: "match.cleared" }>;
 /** match.found without the `type` tag, for snapshots. */
 export type MatchPayload = Omit<MatchFoundT, "type">;
 
-/** GET /api/ride/state. Everything the glasses need to render without a socket. */
-export interface RidePollRes {
-  state: RideState;
-  match: MatchPayload | null;
-  mission: Mission | null;
-}
+/** GET /api/ride/state. Same shape as protocol RideStateRes (RideSnapshot). */
+export type RidePollRes = RideSnapshot;
 
 export interface OkRes {
   ok: true;

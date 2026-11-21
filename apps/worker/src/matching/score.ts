@@ -27,7 +27,7 @@ export interface PairScore {
 }
 
 const UNKNOWN_CAR_DISTANCE = 99;
-const BATTERY_ORDER: readonly SocialBattery[] = ["nod", "quick-chat", "lets-talk"];
+const BATTERY_ORDER: readonly SocialBattery[] = ["nod", "chat", "talk"];
 
 export function carDistance(carOrder: readonly CarId[], a: CarId, b: CarId): number {
   if (a === b) return 0;

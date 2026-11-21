@@ -16,16 +16,14 @@
  * Protocol types: InterestTag, MatchFoundEvent.why.
  *
  * TODO:
- * - Set WHY_MODEL to the model id we pick (a small, fast model). Until then the template
- *   fallback is always used.
  * - askMeAbout is user-written free text: it is passed as quoted data only, and the output
  *   is checked to stay a single short line. Consider dropping it entirely if outputs drift.
  */
-import type { InterestTag } from "@questline/protocol";
+import { interestLabel, type InterestTag } from "@questline/protocol";
 import type { Env } from "../env";
 
-/** TODO: fill in the Claude model id. Placeholder values starting with "TODO" skip the call. */
-export const WHY_MODEL = "TODO-model-id";
+/** Small, fast model for one line. Without ANTHROPIC_API_KEY the template line is used. */
+export const WHY_MODEL = "claude-haiku-5-5";
 export const WHY_TIMEOUT_MS = 1500;
 export const WHY_MAX_CHARS = 90;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -42,10 +40,8 @@ export interface WhyInput {
   sharedTags: InterestTag[];
 }
 
-const TAG_LABEL: Partial<Record<InterestTag, string>> = { ai: "AI", tech: "tech", startups: "startups" };
-
 function label(tag: InterestTag): string {
-  return TAG_LABEL[tag] ?? tag;
+  return interestLabel(tag);
 }
 
 function joinList(items: string[]): string {

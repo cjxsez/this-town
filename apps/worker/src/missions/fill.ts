@@ -31,8 +31,26 @@ export function fillTemplate(t: MissionTemplate, values: SlotValues): { title: s
   return { title: fillText(t.title, values), prompt: fillText(t.prompt, values) };
 }
 
+const LINE_NAME: Record<string, string> = {
+  Red: "Red",
+  Orange: "Orange",
+  Blue: "Blue",
+  "Green-B": "Green",
+  "Green-C": "Green",
+  "Green-D": "Green",
+  "Green-E": "Green",
+};
+
 export function slotValuesFor(state: RoomState, color: PairColor): SlotValues {
-  throw new Error("TODO: station / lastStation / line / terminus from state, color from pair");
+  const name = (i: number | null) => (i === null || i < 0 ? null : (state.stops[i]?.name ?? null));
+  const station = name(state.nextStopIdx) ?? name(state.currentStopIdx) ?? "this station";
+  return {
+    station,
+    lastStation: name(state.currentStopIdx) ?? station,
+    line: state.trip ? (LINE_NAME[state.trip.line] ?? state.trip.line) : "T",
+    terminus: name(state.stops.length - 1) ?? station,
+    color,
+  };
 }
 
 export function toMission(

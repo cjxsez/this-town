@@ -4,6 +4,7 @@ What we changed from the v1 spec (`docs/archive/questline-spec-v1.md`) and why. 
 
 | # | Decision | Replaces (v1) | Why |
 |---|---|---|---|
+| D14 | One vocabulary, the phone's: its 34 interest ids are the protocol's `InterestTag`, social battery is `nod/chat/talk`, status `local/student/visiting`, and stops carry ids that match the phone's station catalog. The demo trip moved to the Green Line D branch (Kenmore to Government Ctr) to match the phone's station art | 25 worker tags folded from the phone's list; stop names only; Orange Line demo | Kenny's phone design and the worker were built from different specs. One source of truth beats an adapter that pads interests and guesses station ids |
 | D13 | Glasses work with zero input. Arrival = tapping the meeting kiosk's tag, missions auto-start, "Not now" is on the phone. Temple touch strip is a bonus | Neural Band pinch for "I'm here" / "Not now" | We don't have the Neural Band. The touch strip sends arrow keys, but which gesture sends Enter / Back isn't documented |
 | D12 | Host everything on one Cloudflare Worker: static assets for the 3 web apps, Hono API, D1, one `TrainRoom` Durable Object per trip | Separate backend | One deploy, one HTTPS origin (needed for the glasses Web App and NFC links), DOs are a natural fit for per-train live state |
 | D11 | No native app. Phone is a web app, glasses are a Meta Ray-Ban Display **Web App** | iOS app + Device Access Toolkit | We dropped camera and voice, so the Web App covers everything we need. Cuts Swift, Xcode and Meta SDK setup. Tradeoff: the glasses page must stay open during the ride (no notifications) |
@@ -23,4 +24,4 @@ What we changed from the v1 spec (`docs/archive/questline-spec-v1.md`) and why. 
 - Domain name.
 - Can we get an NTAG I2C plus or ST25DV board this weekend, or do we ship static stickers?
 - Confirm WebSockets work in the glasses browser. If not, glasses-web falls back to polling `GET /api/ride/state`.
-- Demo line: Orange is safest for car-level MBTA data.
+- Live MBTA: only Orange and new Red Line cars report car-level data, so live check-in will start there. The demo runs on a scripted Green Line trip (D14).

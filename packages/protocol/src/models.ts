@@ -3,24 +3,37 @@
 import { z } from "zod";
 import { PAIR_COLORS } from "./colors";
 
+/**
+ * Interest ids. Same ids as the phone's catalog (apps/phone-web/shared/catalog.ts INTERESTS),
+ * which owns the labels and categories. Add an interest in both places.
+ */
 export const InterestTag = z.enum([
-  "music", "food", "coffee", "sports", "running", "climbing", "hiking",
-  "startups", "tech", "ai", "design", "art", "photography", "film",
-  "books", "writing", "gaming", "anime", "fashion", "cooking",
-  "travel", "languages", "science", "history", "pets",
+  "ramen", "red-sox", "thrifting", "running", "live-music", "coffee", "board-games",
+  "museums", "hiking", "anime", "photography", "cooking", "dumplings", "baking",
+  "cannoli", "celtics", "bruins", "soccer", "marathon", "theater", "comics", "film",
+  "climbing", "cycling", "rowing", "chess", "video-games", "trivia", "ai",
+  "hackathons", "robotics", "history", "bookstores", "architecture",
 ]);
 export type InterestTag = z.infer<typeof InterestTag>;
 
-export const SocialBattery = z.enum(["nod", "quick-chat", "lets-talk"]);
+/** Same names as the phone design: "just a nod" / "quick chat" / "let's talk". */
+export const SocialBattery = z.enum(["nod", "chat", "talk"]);
 export type SocialBattery = z.infer<typeof SocialBattery>;
 
-export const RiderStatus = z.enum(["local", "student", "visitor"]);
+export const RiderStatus = z.enum(["local", "student", "visiting"]);
 export type RiderStatus = z.infer<typeof RiderStatus>;
+
+/**
+ * Stop ids are slugs that match the phone's station catalog ids ("kenmore", "park-st",
+ * "gov-ctr"), so stamps and art line up. Names are for display.
+ */
+export const Stop = z.object({ id: z.string(), name: z.string() });
+export type Stop = z.infer<typeof Stop>;
 
 /** What a rider fills in during onboarding. */
 export const Profile = z.object({
   firstName: z.string().min(1).max(24),
-  interests: z.array(InterestTag).min(3).max(5),
+  interests: z.array(InterestTag).min(3).max(8),
   askMeAbout: z.string().max(80).default(""),
   socialBattery: SocialBattery,
   status: RiderStatus,
@@ -50,8 +63,10 @@ export const RideState = z.object({
   tripId: z.string().nullable(),
   line: Line.nullable(),
   car: CarId.nullable(),
-  destinationStop: z.string().nullable(),
-  nextStop: z.string().nullable(),
+  destinationStop: z.string().nullable(),   // display name
+  destinationStopId: z.string().nullable(),
+  nextStop: z.string().nullable(),          // display name
+  nextStopId: z.string().nullable(),
   nextStopEtaSec: z.number().int().nullable(),
   ridersOnTrain: z.number().int(),
   ghost: z.boolean(),
@@ -78,6 +93,7 @@ export type Mission = z.infer<typeof Mission>;
 
 export const Stamp = z.object({
   id: z.string(),
+  stationId: z.string(), // stop id, matches the phone catalog
   station: z.string(),
   line: Line,
   partnerFirstName: z.string(),

@@ -2,7 +2,7 @@
 // Auth: `Authorization: Bearer <token>` except where noted.
 // Errors: any non-2xx response has an ErrorRes body.
 import { z } from "zod";
-import { CarId, Line, MatchInfo, Profile, RideSnapshot, RideState, Stamp } from "./models";
+import { CarId, Line, MatchInfo, Profile, RideSnapshot, RideState, Stamp, Stop } from "./models";
 
 export const OkRes = z.object({ ok: z.literal(true) });
 export type OkRes = z.infer<typeof OkRes>;
@@ -40,11 +40,11 @@ export type GlassesLinkRes = OkRes;
 export const TapReq = z.object({
   car: CarId,
   nonce: z.string().optional(),
-  destinationStop: z.string().optional(), // required on first check-in of a ride
+  destinationStop: z.string().optional(), // stop id; required on first check-in of a ride
 });
 export type TapReq = z.infer<typeof TapReq>;
 export const TapRes = z.discriminatedUnion("result", [
-  z.object({ result: z.literal("need-destination"), line: Line, stops: z.array(z.string()) }),
+  z.object({ result: z.literal("need-destination"), line: Line, stops: z.array(Stop) }),
   z.object({ result: z.literal("checked-in"), state: RideState }),
   z.object({ result: z.literal("moved-car"), state: RideState }),
   z.object({ result: z.literal("stamp-pending") }), // you tapped, waiting on partner

@@ -44,52 +44,77 @@
  * Kiosk screen is public: pair.incoming and mission.show carry first names, colors and the
  * mission prompt only. Never interests or the why line.
  *
- * TODO (in order of the happy path):
- * 1. checkIn: ensureTrip, load profile + met/blocked/recent templates from D1, insert
- *    checkins row, add RoomRider, persist, send ride.state, broadcastKioskIdle, runMatching,
- *    scheduleAlarm. Return { result: "checked-in", state }.
- * 2. runMatching: buildPool -> greedyPairs -> for each: assignColor (skip if null), why from
- *    whyCache or writeWhy, insertMatch, create RoomPair with autoStartAt = now +
- *    MISSION_AUTOSTART_DELAY_MS, send match.found to both (carDelta/youWalk per rider),
- *    pair.incoming to kiosks in meetAtCar, ride.state to both.
- * 3. markArrived (rider.arrived, or moveCar into meetAtCar): start the mission once the
- *    walker has arrived (same car, walker === null: start right away), or when autoStartAt
- *    passes in the alarm.
- * 4. startMission: availableSec = (nextStopEtaMs - MISSION_END_BUFFER_MS - now)/1000;
- *    selectMission (late-bonus if delaySec > LATE_BONUS_MIN_DELAY_S); if null, leave
- *    autoStartAt for the next segment. Else newNonce() (unless kiosk nfc != dynamic),
- *    insertMissionSession, recordMet, send mission.start to both riders, mission.show to
- *    the kiosk, nfc.write tagUrl(origin, car, nonce) to the Pi.
- * 5. stampTap: valid nonce (or static tag) within endsAt + STAMP_GRACE_MS -> record tap;
- *    first tap returns stamp-pending, second awards: insertStamps (two rows), stamp.awarded
- *    to each rider, celebrate to kiosk, mission.end "stamped", then clearPair
- *    "mission-done". Return { result: "stamp-awarded", stamp } to the second tapper.
- *    TODO(protocol): the first tapper only learns about the award via stamp.awarded.
- * 6. endMission "time-up": mission.end to riders, pair.cleared to kiosk, nfc.write plain
- *    tagUrl(origin, car) to the Pi, clearPair "mission-done", eligibleFromStopIdx = next.
- * 7. checkOut: clear pair (partner gets match.cleared "partner-left" or "stop-reached"),
- *    closeCheckin, remove rider, close their sockets (code 4000 "checked-out"), rematch.
- * 8. notNow: notNowUntil = now + NOT_NOW_COOLDOWN_S, add pairKey to declinedPairs, partner
- *    gets match.cleared "partner-not-now", rematch the partner.
- *    TODO(protocol): no match.cleared reason for the rider who pressed "Not now"; they get
- *    ride.state only.
- * 9. Trip end (no predictions for ~2 polls, or last stop reached): check everyone out with
- *    "trip-ended", close kiosk sockets with 4002 so they reconnect to their next trip.
+ * Happy path (docs/architecture.md "Flow"):
+ * 1. checkIn (first tap): load the rider from D1, insert a checkins row, add to the room,
+ *    run matching.
+ * 2. runMatching: pool -> gate (shared interests, not blocked/declined/met recently) ->
+ *    closest car wins -> greedy pairs. Each pair gets a color, a "why" line, a meeting
+ *    kiosk; both riders get match.found, the kiosk gets pair.incoming. No accept step.
+ * 3. markArrived (tap on the meeting kiosk, rider.arrived, or autoStartAt in the alarm)
+ *    starts the mission once the walker is there.
+ * 4. startMission: pick from the deck to fit before the next stop minus 30 s, fresh nonce
+ *    on dynamic tags, mission.start to riders, mission.show to the kiosk, nfc.write to the Pi.
+ * 5. stampTap: first tap -> stamp.progress, second -> two stamps, celebrate, clear the pair.
+ * 6. time-up / not now / ghost / check-out / report all end the mission and clear the pair.
+ * 7. The alarm advances stops, checks riders out at their destination, ends missions on
+ *    time, starts missions whose autostart is due, and rematches.
+ *
+ * Live MBTA timelines are not wired yet: only the demo trip (DEMO_MODE) has stops and ETAs.
  */
 import { DurableObject } from "cloudflare:workers";
 import {
+  WS_CLOSE,
   WS_PING,
   WS_PONG,
   KioskToServer,
   RiderToServer,
   type CarId,
+  type Mission,
+  type RideSnapshot,
   type RideState,
   type ServerToKiosk,
   type ServerToRider,
+  type Stamp,
+  type Stop,
 } from "@questline/protocol";
-import { readConfig, type Env } from "../env";
-import type { MatchPayload, RidePollRes, TapResT } from "../lib/api";
-import { ALARM_INTERVAL_MS, secondsUntil } from "../lib/time";
+import { readConfig, type Config, type Env } from "../env";
+import {
+  blockedEither,
+  closeCheckin,
+  endMatch,
+  endMissionSession,
+  getUser,
+  insertCheckin,
+  insertMatch,
+  insertMissionSession,
+  insertStamps,
+  metSince,
+  recentTemplatesForUser,
+  recordMet,
+  setUserGhost,
+  templatesForPair,
+  updateCheckinCar,
+  type MatchEndReason,
+} from "../db/queries";
+import type { MatchPayload, TapResT } from "../lib/api";
+import { newId, pairKey } from "../lib/ids";
+import {
+  ALARM_INTERVAL_MS,
+  MET_RECENTLY_WINDOW_MS,
+  MISSION_AUTOSTART_DELAY_MS,
+  MISSION_END_BUFFER_MS,
+  SECOND,
+  STAMP_GRACE_MS,
+  secondsUntil,
+} from "../lib/time";
+import { writeWhy } from "../llm/why";
+import { advanceDemoClock, demoTimeline, newDemoClock } from "../mbta/demo";
+import { assignColor, colorsInUse } from "../matching/colors";
+import { carDelta, greedyPairs } from "../matching/pair";
+import { buildPool, stopIndex } from "../matching/pool";
+import { slotValuesFor, toMission } from "../missions/fill";
+import { selectMission } from "../missions/select";
+import { newNonce, nonceMatches, tagUrl } from "../nfc";
 import { INTERNAL_HEADERS } from "./stub";
 import {
   emptyRoomState,
@@ -100,19 +125,30 @@ import {
   tagsFor,
   type CheckInInput,
   type CheckOutReason,
+  type KioskHw,
   type KioskRole,
+  type MissionSessionState,
+  type RoomPair,
   type RoomState,
   type SocketAttachment,
   type TripInfo,
 } from "./state";
 
 const STATE_KEY = "state";
+/** How long the kiosk gets to celebrate before pair.cleared sends it back to idle. */
+const CELEBRATE_MS = 6 * SECOND;
+/** Longest a mission runs, even with a long segment ahead. */
+const MAX_MISSION_SEC = 180;
+const DEFAULT_KIOSK_HW: KioskHw = { leds: false, nfc: "static" };
 
 type RiderAttachment = Extract<SocketAttachment, { kind: "rider" }>;
 type KioskAttachment = Extract<SocketAttachment, { kind: "kiosk" }>;
+type ClearReason = Extract<ServerToRider, { type: "match.cleared" }>["reason"];
 
 export class TrainRoom extends DurableObject<Env> {
   private state: RoomState = emptyRoomState();
+  private matchingRun: Promise<void> | null = null;
+  private matchingAgain = false;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -122,6 +158,10 @@ export class TrainRoom extends DurableObject<Env> {
     });
     // Answer keepalives without waking the hibernated DO. Clients send exactly WS_PING.
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(WS_PING, WS_PONG));
+  }
+
+  private get cfg(): Config {
+    return readConfig(this.env);
   }
 
   // ======================================================================
@@ -137,7 +177,7 @@ export class TrainRoom extends DurableObject<Env> {
     if (!att) return new Response("bad internal request", { status: 400 });
 
     const tripHeader = request.headers.get(INTERNAL_HEADERS.trip);
-    if (tripHeader) await this.ensureTrip(JSON.parse(tripHeader) as TripInfo);
+    if (tripHeader) await this.ensureTrip(JSON.parse(tripHeader) as TripInfo, Date.now());
 
     const pair = new WebSocketPair();
     const client = pair[0];
@@ -145,11 +185,11 @@ export class TrainRoom extends DurableObject<Env> {
     this.ctx.acceptWebSocket(server, tagsFor(att));
     server.serializeAttachment(att);
 
-    if (att.kind === "kiosk") {
-      // TODO: replay current view for this car (pair.incoming / mission.show, else kiosk.idle).
-      await this.scheduleAlarm(Date.now());
+    // Riders get their snapshot on rider.hello, kiosks their view on kiosk.hello.
+    if (att.kind === "rider" && !this.state.riders[att.userId]) {
+      server.close(WS_CLOSE.noRide, "not riding");
     }
-    // Riders get their snapshot on rider.hello.
+    await this.scheduleAlarm(Date.now());
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -172,8 +212,8 @@ export class TrainRoom extends DurableObject<Env> {
     }
   }
 
-  async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): Promise<void> {
-    // A closed socket never checks a rider out; check-out comes from MBTA or /api/ride/end.
+  async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
+    // A closed socket never checks a rider out; check-out comes from the trip or /api/ride/end.
     try {
       ws.close(code, reason);
     } catch {
@@ -181,15 +221,15 @@ export class TrainRoom extends DurableObject<Env> {
     }
   }
 
-  async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
-    // TODO: log. Same as close: no state change.
+  async webSocketError(_ws: WebSocket, error: unknown): Promise<void> {
+    console.warn("[TrainRoom] socket error", error);
   }
 
   private async onRiderMessage(ws: WebSocket, att: RiderAttachment, msg: RiderToServer): Promise<void> {
     switch (msg.type) {
       case "rider.hello":
         ws.serializeAttachment({ ...att, client: msg.client } satisfies RiderAttachment);
-        this.replayToRider(ws, att.userId);
+        send([ws], { type: "ride.snapshot", snapshot: this.snapshotFor(att.userId) });
         return;
       case "rider.notNow":
         await this.notNow(att.userId);
@@ -206,17 +246,25 @@ export class TrainRoom extends DurableObject<Env> {
     switch (msg.type) {
       case "kiosk.hello":
         if (msg.car !== att.car) {
-          ws.close(4003, "car mismatch");
+          ws.close(WS_CLOSE.forbidden, "car mismatch");
           return;
         }
-        if (msg.hw) {
-          this.state.kioskHw[att.car] = msg.hw;
+        if (att.role === "pi") {
+          this.state.kioskHw[att.car] = msg.hw ?? DEFAULT_KIOSK_HW;
           await this.persist();
         }
-        // TODO: replay current view for this car.
+        this.replayToKiosk(ws, att.car, att.role);
         return;
-      case "nfc.written":
-        // TODO: find the mission at att.car whose tag URL equals msg.url, set nonceWrittenAt.
+      case "nfc.written": {
+        const m = this.state.missions[msg.writeId];
+        if (m) {
+          m.nonceWrittenAt = Date.now();
+          await this.persist();
+        }
+        return;
+      }
+      case "nfc.failed":
+        console.warn(`[TrainRoom] kiosk ${att.car} could not write the tag: ${msg.reason}`);
         return;
       case "ping":
         return;
@@ -227,69 +275,220 @@ export class TrainRoom extends DurableObject<Env> {
   // RPC methods (routes -> room)
   // ======================================================================
 
-  /** First tap of a ride on this trip. Route has already validated destinationStop. */
+  /** First tap of a ride on this trip. The route has validated destinationStop (a stop id). */
   async checkIn(input: CheckInInput): Promise<TapResT> {
-    throw new Error("TODO: TrainRoom.checkIn (see header step 1)");
+    const now = Date.now();
+    await this.ensureTrip(input.trip, now);
+    const s = this.state;
+    if (s.riders[input.userId]) return { result: "checked-in", state: this.rideStateFor(input.userId) };
+
+    const user = await getUser(this.env.DB, input.userId);
+    if (!user) return { result: "error", message: "We couldn't find your profile. Set it up again." };
+    const destIdx = stopIndex(s, input.destinationStop);
+    if (destIdx <= s.currentStopIdx) return { result: "error", message: "That stop is behind us." };
+
+    const ignoreMet = this.cfg.demoMode;
+    const [met, blocked, recent] = await Promise.all([
+      ignoreMet ? Promise.resolve([]) : metSince(this.env.DB, input.userId, now - MET_RECENTLY_WINDOW_MS),
+      blockedEither(this.env.DB, input.userId),
+      recentTemplatesForUser(this.env.DB, input.userId),
+    ]);
+    const boarded = s.stops[Math.max(0, s.currentStopIdx)]?.stopId ?? input.destinationStop;
+    const checkinId = newId("chk");
+    await insertCheckin(this.env.DB, {
+      id: checkinId,
+      userId: input.userId,
+      tripId: input.trip.tripId,
+      line: input.trip.line,
+      car: input.car,
+      boardedStop: boarded,
+      destinationStop: input.destinationStop,
+      checkedInAt: now,
+    });
+    s.riders[input.userId] = {
+      userId: input.userId,
+      car: input.car,
+      boardedStop: boarded,
+      destinationStop: input.destinationStop,
+      ghost: user.ghost,
+      notNowUntil: 0,
+      checkinId,
+      checkedInAt: now,
+      profile: {
+        firstName: user.profile.firstName,
+        interests: user.profile.interests,
+        askMeAbout: user.profile.askMeAbout,
+        socialBattery: user.profile.socialBattery,
+      },
+      metRecently: met,
+      blocked,
+      recentTemplates: recent,
+      eligibleFromStopIdx: 0,
+      pairId: null,
+    };
+    await this.persist();
+    await this.runMatching(now);
+    this.broadcastRideStates();
+    this.broadcastKioskIdle();
+    await this.scheduleAlarm(now);
+    return { result: "checked-in", state: this.rideStateFor(input.userId) };
   }
 
-  /** Tap on a different car's kiosk on the same trip. Counts as arrival if it is meetAtCar. */
+  /** Tap on a different car's kiosk on the same trip. Counts as arrival if it is the meeting kiosk. */
   async moveCar(userId: string, car: CarId): Promise<TapResT> {
-    throw new Error("TODO: TrainRoom.moveCar (update car, updateCheckinCar, markArrived, rematch)");
+    const now = Date.now();
+    const r = this.state.riders[userId];
+    if (!r) return { result: "error", message: "You're not checked in on this train." };
+    r.car = car;
+    await updateCheckinCar(this.env.DB, r.checkinId, car);
+    await this.persist();
+    const pair = r.pairId ? this.state.pairs[r.pairId] : undefined;
+    if (pair) {
+      // Partner's carDelta/youWalk view doesn't change; ours does.
+      const payload = this.matchPayloadFor(userId);
+      if (payload) this.sendToRider(userId, { type: "match.found", ...payload });
+      if (pair.meetAtCar === car) await this.markArrived(userId, now);
+    } else {
+      await this.runMatching(now);
+    }
+    this.broadcastRideStates();
+    this.broadcastKioskIdle();
+    await this.scheduleAlarm(now);
+    return { result: "moved-car", state: this.rideStateFor(userId) };
   }
 
   async checkOut(userId: string, reason: CheckOutReason): Promise<void> {
-    throw new Error("TODO: TrainRoom.checkOut (see header step 7)");
+    const now = Date.now();
+    await this.checkOutInner(userId, reason, now);
+    await this.persist();
+    await this.runMatching(now);
+    this.broadcastRideStates();
+    this.broadcastKioskIdle();
+    await this.scheduleAlarm(now);
   }
 
   /** rider.notNow from the glasses, or POST /api/ride/not-now from the phone. */
   async notNow(userId: string): Promise<void> {
-    throw new Error("TODO: TrainRoom.notNow (see header step 8)");
+    const now = Date.now();
+    const r = this.state.riders[userId];
+    if (!r?.pairId) return;
+    const pair = this.state.pairs[r.pairId];
+    if (!pair) return;
+    r.notNowUntil = now + this.cfg.notNowCooldownSec * SECOND;
+    this.state.declinedPairs.push(pair.pairKey);
+    await this.clearPair(pair.matchId, "partner-not-now", now, { [userId]: "you-not-now" }, "partner-not-now");
+    await this.persist();
+    await this.runMatching(now);
+    this.broadcastRideStates();
+    this.broadcastKioskIdle();
+    await this.scheduleAlarm(now);
   }
 
   /**
-   * A tap at `car` by a checked-in rider. Returns null when it is not a stamp attempt (no
-   * mission for this rider at this car), so the route falls through to move-car / re-tap.
+   * A tap at `car` by a checked-in rider. Returns null when it is not a stamp attempt, so the
+   * route falls through to move-car / "already checked in". A tap on your own meeting kiosk
+   * before the mission starts counts as arriving.
    */
   async stampTap(input: { userId: string; car: CarId; nonce?: string }): Promise<TapResT | null> {
-    throw new Error("TODO: TrainRoom.stampTap (see header step 5)");
+    const now = Date.now();
+    const r = this.state.riders[input.userId];
+    const pair = r?.pairId ? this.state.pairs[r.pairId] : undefined;
+    if (!r || !pair) return null;
+    if (!pair.sessionId) {
+      if (pair.meetAtCar === input.car) {
+        if (r.car !== input.car) return null; // moveCar handles it, then marks arrival
+        await this.markArrived(input.userId, now);
+      }
+      return null;
+    }
+    const m = this.state.missions[pair.sessionId];
+    if (!m || m.car !== input.car) return null;
+    if (now > m.endsAt + STAMP_GRACE_MS) return { result: "error", message: "That mission already ended." };
+    if (m.nonce && !nonceMatches(m.nonce, input.nonce)) {
+      return { result: "error", message: "The tag just changed. Tap it again." };
+    }
+    m.stampTaps[input.userId] = now;
+    const tapped = Object.keys(m.stampTaps).length;
+    if (tapped < 2) {
+      await this.persist();
+      for (const uid of [pair.a, pair.b]) this.sendToRider(uid, { type: "stamp.progress", sessionId: m.sessionId, tapped });
+      this.sendToKiosks(m.car, { type: "stamp.progress", matchId: pair.matchId, tapped });
+      return { result: "stamp-pending" };
+    }
+    const stamps = await this.awardStamps(pair, m, now);
+    await this.persist();
+    await this.scheduleAlarm(now);
+    const mine = stamps[input.userId];
+    return mine ? { result: "stamp-awarded", stamp: mine } : { result: "stamp-pending" };
   }
 
   async setGhost(userId: string, ghost: boolean): Promise<RideState> {
-    throw new Error("TODO: set rider.ghost, setUserGhost, clear pair with reason 'ghost', rematch, broadcast");
+    const now = Date.now();
+    const r = this.state.riders[userId];
+    await setUserGhost(this.env.DB, userId, ghost);
+    if (!r) return offRideState(ghost);
+    r.ghost = ghost;
+    if (ghost && r.pairId) await this.clearPair(r.pairId, "partner-left", now, { [userId]: "ghost" }, "ghost");
+    await this.persist();
+    await this.runMatching(now);
+    this.broadcastRideStates();
+    this.broadcastKioskIdle();
+    await this.scheduleAlarm(now);
+    return this.rideStateFor(userId);
   }
 
-  /** GET /api/ride/state polling fallback for the glasses. */
-  async snapshot(userId: string): Promise<RidePollRes> {
-    return {
-      state: this.rideStateFor(userId),
-      match: this.matchPayloadFor(userId),
-      mission: null, // TODO: current Mission for this rider's pair
-    };
+  /** GET /api/ride/state: the same snapshot riders get after rider.hello. */
+  async snapshot(userId: string): Promise<RideSnapshot> {
+    return this.snapshotFor(userId);
   }
 
-  /** Stop names a rider can pick as destination (after the next stop is reached, on). */
-  async upcomingStops(trip: TripInfo): Promise<string[]> {
-    await this.ensureTrip(trip);
-    // TODO: if stops are empty, refreshTimeline first.
+  /** Stops a rider can pick as destination: the next stop onward. */
+  async upcomingStops(trip: TripInfo): Promise<Stop[]> {
+    await this.ensureTrip(trip, Date.now());
     const from = this.state.nextStopIdx ?? this.state.stops.length;
-    return this.state.stops.slice(from).map((s) => s.name);
+    return this.state.stops.slice(from).map((s) => ({ id: s.stopId, name: s.name }));
   }
 
   /** POST /api/report while the match is live: end it now. */
   async clearForReport(matchId: string, reporterId: string): Promise<void> {
-    throw new Error("TODO: end mission (cancelled), clear pair, endMatch 'reported', both get match.cleared");
+    const now = Date.now();
+    if (!this.state.pairs[matchId]) return;
+    await this.clearPair(matchId, "reported", now, { [reporterId]: "reported" }, "reported");
+    await this.persist();
+    await this.runMatching(now);
+    this.broadcastRideStates();
+    this.broadcastKioskIdle();
+    await this.scheduleAlarm(now);
   }
 
   async demoTriggerDelay(seconds: number): Promise<void> {
-    throw new Error("TODO: state.demo.delaySec += seconds, refreshTimeline, broadcast, runMatching");
+    if (!this.state.demo) return;
+    this.state.demo.delaySec += seconds;
+    await this.tick(Date.now());
+    await this.scheduleAlarm(Date.now());
   }
 
   async demoAdvance(): Promise<void> {
-    throw new Error("TODO: state.demo = advanceDemoClock(state.demo, now), then tick");
+    if (!this.state.demo) return;
+    this.state.demo = advanceDemoClock(this.state.demo, Date.now());
+    await this.tick(Date.now());
+    await this.scheduleAlarm(Date.now());
   }
 
   async demoReset(): Promise<void> {
-    throw new Error("TODO: check everyone out, close sockets, state = emptyRoomState(), persist");
+    const now = Date.now();
+    for (const userId of Object.keys(this.state.riders)) await this.checkOutInner(userId, "trip-ended", now);
+    for (const ws of this.ctx.getWebSockets()) {
+      const att = ws.deserializeAttachment() as SocketAttachment | null;
+      try {
+        if (att?.kind === "kiosk") ws.close(WS_CLOSE.tripChanged, "trip reset");
+      } catch {
+        // already closed
+      }
+    }
+    this.state = emptyRoomState();
+    await this.persist();
+    await this.ctx.storage.deleteAlarm();
   }
 
   // ======================================================================
@@ -302,58 +501,383 @@ export class TrainRoom extends DurableObject<Env> {
   }
 
   private async tick(now: number): Promise<void> {
-    throw new Error("TODO: refreshTimeline, advance stops, check-outs, mission end/start, runMatching, broadcast");
+    const s = this.state;
+    if (!s.trip) return;
+    const before = s.currentStopIdx;
+    this.refreshTimeline(now);
+
+    // Riders whose stop was reached get off.
+    if (s.currentStopIdx !== before) {
+      for (const r of Object.values(s.riders)) {
+        if (stopIndex(s, r.destinationStop) <= s.currentStopIdx) await this.checkOutInner(r.userId, "destination", now);
+      }
+    }
+    // End of the line: everyone off.
+    if (s.nextStopIdx === null) {
+      for (const userId of Object.keys(s.riders)) await this.checkOutInner(userId, "trip-ended", now);
+    }
+    // Missions out of time.
+    for (const m of Object.values(s.missions)) {
+      if (now >= m.endsAt) await this.finishMission(m.sessionId, "time-up", now);
+    }
+    // Missions whose autostart is due.
+    for (const p of Object.values(s.pairs)) {
+      if (p.sessionId === null && p.autoStartAt !== null && p.autoStartAt <= now) await this.startMission(p.matchId, now);
+    }
+    // Held-back pair.cleared for kiosks that were celebrating.
+    const due = (s.pendingKioskClears ?? []).filter((c) => c.at <= now);
+    if (due.length > 0) {
+      s.pendingKioskClears = (s.pendingKioskClears ?? []).filter((c) => c.at > now);
+      for (const c of due) this.sendToKiosks(c.car, { type: "pair.cleared", matchId: c.matchId });
+    }
+
+    await this.persist();
+    await this.runMatching(now);
+    this.broadcastRideStates();
+    this.broadcastKioskIdle();
   }
 
   private async scheduleAlarm(now: number): Promise<void> {
+    const s = this.state;
     const deadlines: number[] = [];
-    if (Object.keys(this.state.riders).length > 0 || this.ctx.getWebSockets().length > 0) {
-      deadlines.push(now + ALARM_INTERVAL_MS);
-    }
-    for (const p of Object.values(this.state.pairs)) if (p.autoStartAt !== null) deadlines.push(p.autoStartAt);
-    for (const m of Object.values(this.state.missions)) deadlines.push(m.endsAt);
-    if (this.state.nextStopEtaMs !== null && deadlines.length > 0) deadlines.push(this.state.nextStopEtaMs);
+    if (Object.keys(s.riders).length > 0 || this.ctx.getWebSockets().length > 0) deadlines.push(now + ALARM_INTERVAL_MS);
+    for (const p of Object.values(s.pairs)) if (p.autoStartAt !== null) deadlines.push(p.autoStartAt);
+    for (const m of Object.values(s.missions)) deadlines.push(m.endsAt);
+    for (const c of s.pendingKioskClears ?? []) deadlines.push(c.at);
+    if (s.nextStopEtaMs !== null && deadlines.length > 0) deadlines.push(s.nextStopEtaMs);
     if (deadlines.length === 0) {
       await this.ctx.storage.deleteAlarm();
       return;
     }
-    await this.ctx.storage.setAlarm(Math.max(now + 1000, Math.min(...deadlines)));
+    await this.ctx.storage.setAlarm(Math.max(now + SECOND, Math.min(...deadlines)));
   }
 
-  /** MBTA predictions (live) or demoTimeline (demo). Updates stops/next/eta/delay. */
-  private async refreshTimeline(now: number): Promise<void> {
-    throw new Error("TODO: trip.demo ? demoTimeline(state.demo, now) : fetchTripTimeline(env, tripId, stops, now)");
+  /** Demo clock for demo trips. Live MBTA predictions are not wired yet (mbta/predictions.ts). */
+  private refreshTimeline(now: number): void {
+    const s = this.state;
+    if (s.trip?.demo && s.demo) Object.assign(s, demoTimeline(s.demo, now));
+    s.lastPolledAt = now;
   }
 
   // ======================================================================
   // Matching + missions
   // ======================================================================
 
+  /** Serialized: a run in flight (it awaits the why line) picks up changes with one more pass. */
   private async runMatching(now: number): Promise<void> {
-    throw new Error("TODO: see header step 2 (matching/pool, score, pair, colors; llm/why)");
+    if (this.matchingRun) {
+      this.matchingAgain = true;
+      return this.matchingRun;
+    }
+    this.matchingRun = (async () => {
+      do {
+        this.matchingAgain = false;
+        await this.matchOnce(now);
+      } while (this.matchingAgain);
+    })();
+    try {
+      await this.matchingRun;
+    } finally {
+      this.matchingRun = null;
+    }
   }
 
-  /** rider.arrived (glasses or POST /api/ride/arrived), or a tap on the meeting kiosk via moveCar. */
+  private async matchOnce(now: number): Promise<void> {
+    const s = this.state;
+    if (!s.trip) return;
+    const proposals = greedyPairs(buildPool(s, now), s, {
+      minSharedTags: this.cfg.minSharedTags,
+      ignoreMetRecently: this.cfg.demoMode,
+    });
+    for (const p of proposals) {
+      // Someone may have left or been paired while we awaited a why line.
+      if (!s.riders[p.a.userId] || !s.riders[p.b.userId] || p.a.pairId || p.b.pairId) continue;
+      const color = assignColor(colorsInUse(s));
+      if (!color) return; // every color is in use on this train
+      const key = pairKey(p.a.userId, p.b.userId);
+      const why =
+        s.whyCache[key] ??
+        (await writeWhy(this.env, {
+          a: { firstName: p.a.profile.firstName, askMeAbout: p.a.profile.askMeAbout },
+          b: { firstName: p.b.profile.firstName, askMeAbout: p.b.profile.askMeAbout },
+          sharedTags: p.sharedTags,
+        }));
+      s.whyCache[key] = why;
+      if (!s.riders[p.a.userId] || !s.riders[p.b.userId] || p.a.pairId || p.b.pairId) continue;
+
+      const matchId = newId("mat");
+      const pair: RoomPair = {
+        matchId,
+        a: p.a.userId,
+        b: p.b.userId,
+        pairKey: key,
+        color,
+        meetAtCar: p.meetAtCar,
+        walker: p.walker,
+        sharedTags: p.sharedTags,
+        why,
+        createdAt: now,
+        arrived: [],
+        autoStartAt: now + MISSION_AUTOSTART_DELAY_MS,
+        sessionId: null,
+      };
+      s.pairs[matchId] = pair;
+      p.a.pairId = matchId;
+      p.b.pairId = matchId;
+      await insertMatch(this.env.DB, {
+        id: matchId,
+        tripId: s.trip.tripId,
+        line: s.trip.line,
+        userA: pair.a,
+        userB: pair.b,
+        pairKey: key,
+        color,
+        meetAtCar: pair.meetAtCar,
+        walkerId: pair.walker,
+        sharedTags: pair.sharedTags,
+        why,
+        createdAt: now,
+      });
+      await this.persist();
+      for (const uid of [pair.a, pair.b]) {
+        const payload = this.matchPayloadFor(uid);
+        if (payload) this.sendToRider(uid, { type: "match.found", ...payload });
+        this.sendRideState(uid);
+      }
+      this.sendToKiosks(pair.meetAtCar, this.pairIncoming(pair));
+    }
+  }
+
+  /** rider.arrived (glasses or POST /api/ride/arrived), or a tap on the meeting kiosk. */
   async markArrived(userId: string, now: number): Promise<void> {
-    throw new Error("TODO: see header step 3");
+    const r = this.state.riders[userId];
+    const pair = r?.pairId ? this.state.pairs[r.pairId] : undefined;
+    if (!r || !pair || pair.sessionId) return;
+    if (!pair.arrived.includes(userId)) pair.arrived.push(userId);
+    this.sendToKiosks(pair.meetAtCar, this.pairIncoming(pair));
+    const walkerHere = pair.walker === null ? pair.arrived.length > 0 : pair.arrived.includes(pair.walker);
+    if (walkerHere) await this.startMission(pair.matchId, now);
+    await this.persist();
+    await this.scheduleAlarm(now);
   }
 
   private async startMission(matchId: string, now: number): Promise<void> {
-    throw new Error("TODO: see header step 4 (missions/select, fill; nfc)");
+    const s = this.state;
+    const pair = s.pairs[matchId];
+    if (!pair || pair.sessionId || !s.trip) return;
+    const etaMs = s.nextStopEtaMs;
+    const availableSec = etaMs === null ? 0 : Math.floor((etaMs - MISSION_END_BUFFER_MS - now) / SECOND);
+    const template = selectMission({
+      availableSec,
+      lateBonusUnlocked: s.delaySec >= this.cfg.lateBonusMinDelaySec,
+      userHistories: [s.riders[pair.a]?.recentTemplates ?? [], s.riders[pair.b]?.recentTemplates ?? []],
+      pairHistory: await templatesForPair(this.env.DB, pair.pairKey),
+    });
+    if (!template || etaMs === null) {
+      // Not enough time before the next stop: try again just after it.
+      pair.autoStartAt = etaMs === null ? null : etaMs + 5 * SECOND;
+      await this.persist();
+      return;
+    }
+
+    const durationSec = Math.min(Math.max(template.minSeconds, availableSec), MAX_MISSION_SEC);
+    const endsAt = now + durationSec * SECOND;
+    const sessionId = newId("ses");
+    const hw = s.kioskHw[pair.meetAtCar] ?? DEFAULT_KIOSK_HW;
+    const nonce = hw.nfc === "dynamic" ? newNonce() : null;
+    const mission = toMission(template, slotValuesFor(s, pair.color), sessionId, endsAt);
+    const station = s.stops[s.nextStopIdx ?? s.currentStopIdx];
+
+    s.missions[sessionId] = {
+      sessionId,
+      matchId,
+      templateId: template.id,
+      category: template.category,
+      title: mission.title,
+      prompt: mission.prompt,
+      rare: template.rare,
+      car: pair.meetAtCar,
+      startedAt: now,
+      endsAt,
+      nonce,
+      nonceWrittenAt: null,
+      stampTaps: {},
+    };
+    pair.sessionId = sessionId;
+    pair.autoStartAt = null;
+    for (const uid of [pair.a, pair.b]) s.riders[uid]?.recentTemplates.unshift(template.id);
+
+    await insertMissionSession(this.env.DB, {
+      id: sessionId,
+      matchId,
+      pairKey: pair.pairKey,
+      templateId: template.id,
+      category: template.category,
+      rare: template.rare,
+      car: pair.meetAtCar,
+      station: station?.stopId ?? null,
+      startedAt: now,
+      endsAt,
+    });
+    await recordMet(this.env.DB, pair.a, pair.b, now);
+    await this.persist();
+
+    for (const uid of [pair.a, pair.b]) {
+      this.sendToRider(uid, { type: "mission.start", mission, serverNow: now });
+      this.sendRideState(uid);
+    }
+    this.sendToKiosks(pair.meetAtCar, { type: "mission.show", matchId, color: pair.color, mission, serverNow: now });
+    if (nonce) {
+      this.sendToKiosks(
+        pair.meetAtCar,
+        { type: "nfc.write", writeId: sessionId, url: tagUrl(this.cfg.publicOrigin, pair.meetAtCar, nonce) },
+        "pi",
+      );
+    }
   }
 
-  private async endMission(sessionId: string, reason: "stamped" | "time-up" | "cancelled", now: number): Promise<void> {
-    throw new Error("TODO: see header step 6");
+  private async awardStamps(pair: RoomPair, m: MissionSessionState, now: number): Promise<Record<string, Stamp>> {
+    const s = this.state;
+    const where = this.stampStation();
+    const out: Record<string, Stamp> = {};
+    const rows = [pair.a, pair.b].map((uid) => {
+      const partner = uid === pair.a ? pair.b : pair.a;
+      const stamp: Stamp = {
+        id: newId("stp"),
+        stationId: where.stationId,
+        station: where.stationName,
+        line: s.trip?.line ?? "Green-D",
+        partnerFirstName: s.riders[partner]?.profile.firstName ?? "",
+        rare: m.rare,
+        awardedAt: now,
+      };
+      out[uid] = stamp;
+      return {
+        ...stamp,
+        userId: uid,
+        partnerUserId: partner,
+        matchId: pair.matchId,
+        sessionId: m.sessionId,
+      };
+    });
+    await insertStamps(this.env.DB, rows);
+    for (const uid of [pair.a, pair.b]) {
+      const stamp = out[uid];
+      if (stamp) this.sendToRider(uid, { type: "stamp.awarded", stamp });
+    }
+    this.sendToKiosks(m.car, { type: "celebrate", matchId: pair.matchId, color: pair.color, rare: m.rare });
+    await this.finishMission(m.sessionId, "stamped", now);
+    return out;
+  }
+
+  /** Where a stamp is from: the stop the train is heading to. */
+  private stampStation(): { stationId: string; stationName: string } {
+    const s = this.state;
+    const idx = s.nextStopIdx ?? s.currentStopIdx;
+    const stop = s.stops[idx];
+    return { stationId: stop?.stopId ?? "", stationName: stop?.name ?? "" };
+  }
+
+  /** Ends a mission, then clears its pair. Riders can be matched again after the next stop. */
+  private async finishMission(sessionId: string, reason: "stamped" | "time-up" | "cancelled", now: number): Promise<void> {
+    const s = this.state;
+    const m = s.missions[sessionId];
+    if (!m) return;
+    const pair = s.pairs[m.matchId];
+    delete s.missions[sessionId];
+    await endMissionSession(this.env.DB, sessionId, reason, now);
+    if (pair) {
+      pair.sessionId = null;
+      for (const uid of [pair.a, pair.b]) {
+        this.sendToRider(uid, { type: "mission.end", sessionId, reason });
+        const r = s.riders[uid];
+        if (r) r.eligibleFromStopIdx = (s.nextStopIdx ?? s.stops.length) + 1;
+      }
+      await this.clearPair(pair.matchId, "mission-done", now, {}, "mission-done", reason === "stamped");
+    }
+    this.resetTag(m.car);
+  }
+
+  /**
+   * Removes a pair. `reason` goes to both riders unless `perRider` overrides it for one of
+   * them; `dbReason` is stored on the match. A stamped pair's kiosk gets pair.cleared after
+   * the celebration instead of right away.
+   */
+  private async clearPair(
+    matchId: string,
+    reason: ClearReason,
+    now: number,
+    perRider: Record<string, ClearReason>,
+    dbReason: MatchEndReason,
+    celebrating = false,
+  ): Promise<void> {
+    const s = this.state;
+    const pair = s.pairs[matchId];
+    if (!pair) return;
+    if (pair.sessionId) {
+      const sessionId = pair.sessionId;
+      const m = s.missions[sessionId];
+      delete s.missions[sessionId];
+      pair.sessionId = null;
+      await endMissionSession(this.env.DB, sessionId, "cancelled", now);
+      for (const uid of [pair.a, pair.b]) this.sendToRider(uid, { type: "mission.end", sessionId, reason: "cancelled" });
+      if (m) this.resetTag(m.car);
+    }
+    delete s.pairs[matchId];
+    for (const uid of [pair.a, pair.b]) {
+      const r = s.riders[uid];
+      if (r?.pairId === matchId) r.pairId = null;
+      this.sendToRider(uid, { type: "match.cleared", matchId, reason: perRider[uid] ?? reason });
+    }
+    if (celebrating) {
+      s.pendingKioskClears = [...(s.pendingKioskClears ?? []), { car: pair.meetAtCar, matchId, at: now + CELEBRATE_MS }];
+    } else {
+      this.sendToKiosks(pair.meetAtCar, { type: "pair.cleared", matchId });
+    }
+    await endMatch(this.env.DB, matchId, dbReason, now);
+  }
+
+  /** Puts the plain check-in URL back on a dynamic tag. */
+  private resetTag(car: CarId): void {
+    if ((this.state.kioskHw[car] ?? DEFAULT_KIOSK_HW).nfc !== "dynamic") return;
+    this.sendToKiosks(car, { type: "nfc.write", writeId: newId("ses"), url: tagUrl(this.cfg.publicOrigin, car) }, "pi");
+  }
+
+  /** Removes a rider without rematching or broadcasting (callers do that once). */
+  private async checkOutInner(userId: string, reason: CheckOutReason, now: number): Promise<void> {
+    const r = this.state.riders[userId];
+    if (!r) return;
+    if (r.pairId) {
+      const why = reason === "destination" ? "stop-reached" : "partner-left";
+      await this.clearPair(r.pairId, why, now, {}, why);
+    }
+    await closeCheckin(this.env.DB, r.checkinId, reason, now);
+    delete this.state.riders[userId];
+    this.sendToRider(userId, { type: "ride.state", state: offRideState(r.ghost), serverNow: now });
+    for (const ws of this.ctx.getWebSockets(riderTag(userId))) {
+      try {
+        ws.close(4000, "checked-out");
+      } catch {
+        // already closed
+      }
+    }
   }
 
   // ======================================================================
   // State helpers
   // ======================================================================
 
-  private async ensureTrip(trip: TripInfo): Promise<void> {
-    if (this.state.trip) return;
-    this.state.trip = trip;
-    // TODO: if trip.demo, this.state.demo = newDemoClock(Date.now()).
+  private async ensureTrip(trip: TripInfo, now: number): Promise<void> {
+    const s = this.state;
+    const ended = s.trip?.demo && s.nextStopIdx === null && Object.keys(s.riders).length === 0;
+    if (s.trip && !ended) return;
+    // New trip, or a finished demo trip with nobody on it: start (again) from the first stop.
+    s.trip = trip;
+    s.demo = trip.demo ? newDemoClock(now) : null;
+    s.pairs = {};
+    s.missions = {};
+    s.declinedPairs = [];
+    this.refreshTimeline(now);
     await this.persist();
   }
 
@@ -365,19 +889,27 @@ export class TrainRoom extends DurableObject<Env> {
     return Object.values(this.state.riders).filter((r) => !r.ghost).length;
   }
 
+  private stopName(stopId: string | null | undefined): string | null {
+    if (!stopId) return null;
+    return this.state.stops.find((s) => s.stopId === stopId)?.name ?? stopId;
+  }
+
   private rideStateFor(userId: string): RideState {
     const s = this.state;
     const r = s.riders[userId];
     if (!r || !s.trip) return offRideState();
     const pair = r.pairId ? s.pairs[r.pairId] : undefined;
     const status = !pair ? "riding" : pair.sessionId ? "in-mission" : "matched";
+    const next = s.nextStopIdx === null ? undefined : s.stops[s.nextStopIdx];
     return {
       status,
       tripId: s.trip.tripId,
       line: s.trip.line,
       car: r.car,
-      destinationStop: r.destinationStop,
-      nextStop: s.nextStopIdx === null ? null : (s.stops[s.nextStopIdx]?.name ?? null),
+      destinationStop: this.stopName(r.destinationStop),
+      destinationStopId: r.destinationStop,
+      nextStop: next?.name ?? null,
+      nextStopId: next?.stopId ?? null,
       nextStopEtaSec: s.nextStopEtaMs === null ? null : secondsUntil(s.nextStopEtaMs),
       ridersOnTrain: this.ridersOnTrain(),
       ghost: r.ghost,
@@ -386,8 +918,60 @@ export class TrainRoom extends DurableObject<Env> {
 
   /** match.found payload from this rider's point of view, or null. */
   private matchPayloadFor(userId: string): MatchPayload | null {
-    // TODO: partner firstName/color/sharedTags, why, meetAtCar, carDelta (pair.ts), youWalk.
-    return null;
+    const s = this.state;
+    const r = s.riders[userId];
+    const pair = r?.pairId ? s.pairs[r.pairId] : undefined;
+    if (!r || !pair) return null;
+    const partner = s.riders[pair.a === userId ? pair.b : pair.a];
+    if (!partner) return null;
+    return {
+      matchId: pair.matchId,
+      partner: { firstName: partner.profile.firstName, color: pair.color, sharedTags: pair.sharedTags },
+      why: pair.why,
+      meetAtCar: pair.meetAtCar,
+      carDelta: carDelta(s.trip?.carOrder ?? [], r.car, pair.meetAtCar),
+      youWalk: pair.walker === userId,
+    };
+  }
+
+  private missionFor(userId: string): Mission | null {
+    const s = this.state;
+    const r = s.riders[userId];
+    const pair = r?.pairId ? s.pairs[r.pairId] : undefined;
+    const m = pair?.sessionId ? s.missions[pair.sessionId] : undefined;
+    return m ? this.toWireMission(m) : null;
+  }
+
+  private toWireMission(m: MissionSessionState): Mission {
+    return {
+      sessionId: m.sessionId,
+      templateId: m.templateId,
+      category: m.category,
+      title: m.title,
+      prompt: m.prompt,
+      endsAt: m.endsAt,
+      rare: m.rare,
+    };
+  }
+
+  private snapshotFor(userId: string): RideSnapshot {
+    return {
+      state: this.rideStateFor(userId),
+      match: this.matchPayloadFor(userId),
+      mission: this.missionFor(userId),
+      serverNow: Date.now(),
+    };
+  }
+
+  private pairIncoming(pair: RoomPair): ServerToKiosk {
+    const name = (uid: string) => this.state.riders[uid]?.profile.firstName ?? "";
+    return {
+      type: "pair.incoming",
+      matchId: pair.matchId,
+      color: pair.color,
+      firstNames: [name(pair.a), name(pair.b)],
+      arrived: Math.min(2, pair.arrived.length),
+    };
   }
 
   // ======================================================================
@@ -402,38 +986,44 @@ export class TrainRoom extends DurableObject<Env> {
     send(this.ctx.getWebSockets(role ? kioskRoleTag(car, role) : kioskTag(car)), event);
   }
 
-  /** ride.state snapshot plus match.found / mission.start replay after (re)connect. */
-  private replayToRider(ws: WebSocket, userId: string): void {
-    send([ws], {
-      type: "ride.snapshot",
-      snapshot: {
-        state: this.rideStateFor(userId),
-        match: this.matchPayloadFor(userId),
-        mission: null, // TODO: current Mission for this rider's pair
-        serverNow: Date.now(),
-      },
-    });
+  private sendRideState(userId: string): void {
+    this.sendToRider(userId, { type: "ride.state", state: this.rideStateFor(userId), serverNow: Date.now() });
   }
 
-  /** kiosk.idle to every car with no active pair meeting there. */
-  private broadcastKioskIdle(): void {
+  private broadcastRideStates(): void {
+    for (const userId of Object.keys(this.state.riders)) this.sendRideState(userId);
+  }
+
+  private kioskIdle(car: CarId): ServerToKiosk {
     const s = this.state;
-    const busy = new Set(Object.values(s.pairs).map((p) => p.meetAtCar));
-    const cars = new Set<CarId>([...(s.trip?.carOrder ?? []), ...Object.keys(s.kioskHw)]);
-    const nextStop = s.nextStopIdx === null ? null : (s.stops[s.nextStopIdx]?.name ?? null);
-    const nextStopEtaSec = s.nextStopEtaMs === null ? null : secondsUntil(s.nextStopEtaMs);
-    const ridersOnTrain = this.ridersOnTrain();
-    for (const car of cars) {
-      if (busy.has(car)) continue;
-      const ridersInCar = Object.values(s.riders).filter((r) => !r.ghost && r.car === car).length;
-      this.sendToKiosks(car, {
-        type: "kiosk.idle",
-        ridersInCar,
-        ridersOnTrain,
-        nextStop,
-        nextStopEtaSec,
-        serverNow: Date.now(),
-      });
+    const next = s.nextStopIdx === null ? undefined : s.stops[s.nextStopIdx];
+    return {
+      type: "kiosk.idle",
+      ridersInCar: Object.values(s.riders).filter((r) => !r.ghost && r.car === car).length,
+      ridersOnTrain: this.ridersOnTrain(),
+      nextStop: next?.name ?? null,
+      nextStopEtaSec: s.nextStopEtaMs === null ? null : secondsUntil(s.nextStopEtaMs),
+      serverNow: Date.now(),
+    };
+  }
+
+  /** kiosk.idle (stats) to every connected kiosk; screens only show idle when no pair is there. */
+  private broadcastKioskIdle(): void {
+    const cars = new Set<CarId>([...(this.state.trip?.carOrder ?? []), ...Object.keys(this.state.kioskHw)]);
+    for (const car of cars) this.sendToKiosks(car, this.kioskIdle(car));
+  }
+
+  /** After kiosk.hello: stats, then the pair and mission at this car, then (Pi) the tag URL. */
+  private replayToKiosk(ws: WebSocket, car: CarId, role: KioskRole): void {
+    const s = this.state;
+    send([ws], this.kioskIdle(car));
+    const pair = Object.values(s.pairs).find((p) => p.meetAtCar === car);
+    const m = pair?.sessionId ? s.missions[pair.sessionId] : undefined;
+    if (pair) send([ws], this.pairIncoming(pair));
+    if (pair && m) send([ws], { type: "mission.show", matchId: pair.matchId, color: pair.color, mission: this.toWireMission(m), serverNow: Date.now() });
+    if (role === "pi" && (s.kioskHw[car] ?? DEFAULT_KIOSK_HW).nfc === "dynamic") {
+      const url = tagUrl(this.cfg.publicOrigin, car, m?.nonce ?? null);
+      send([ws], { type: "nfc.write", writeId: m?.sessionId ?? newId("ses"), url });
     }
   }
 }
