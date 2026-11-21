@@ -16,27 +16,8 @@ import type { ServerEvent } from "../../state/ride";
 import type { RideChannel, RideContext } from "../types";
 import { toCheckIn, toMatch, toMeetSpot, toMission, toOpener, toStamp, toWireProfile } from "./map";
 
-/** The worker never expires a match on its own before the stop; the offer card needs a clock. */
-const OFFER_MS = 60_000;
 /** Shown when the worker has no prediction for the next stop. */
 const FALLBACK_ETA_S = 120;
-/** The match this device said Yes to, so a reload or an NFC tap in a new tab does not ask again. */
-const ACCEPTED_KEY = "questline.accepted";
-
-const readAccepted = () => {
-  try {
-    return localStorage.getItem(ACCEPTED_KEY);
-  } catch {
-    return null;
-  }
-};
-const writeAccepted = (matchId: string) => {
-  try {
-    localStorage.setItem(ACCEPTED_KEY, matchId);
-  } catch {
-    // Storage blocked: the rider is asked again after a reload.
-  }
-};
 
 const warn = (what: string, e?: unknown) => console.warn(`[questline] ${what}`, e ?? "");
 const noRoute = (what: string) => {
@@ -58,7 +39,6 @@ export class BackendRide implements RideChannel {
   /** serverNow - Date.now(), for countdowns. */
   private skew = 0;
   private stampIds = new Set<string>();
-  private offerTimer: ReturnType<typeof setTimeout> | undefined;
   private creating: Promise<void> | null = null;
   private watching = false;
 
@@ -186,33 +166,26 @@ export class BackendRide implements RideChannel {
   }
 
   private onMatch(m: MatchInfo) {
-    clearTimeout(this.offerTimer);
     this.match = m;
     this.mission = null;
     this.hasMet = false;
     this.stamped = false;
     this.selfTapped = false;
     this.accepted = false;
-    if (readAccepted() === m.matchId) return this.accept();
-    this.emit({
-      type: "offer",
-      offer: { id: m.matchId, why: m.why, minutes: 3, rare: false, expiresAt: Date.now() + OFFER_MS },
-    });
-    // An unanswered offer falls through like a skip.
-    this.offerTimer = setTimeout(() => this.decline(), OFFER_MS);
+    // Ride Mode is the consent (docs/decisions.md D5): a match goes straight to "meet".
+    // No offer card and no timeout: the phone is usually in a pocket while the glasses show
+    // the match, so an unanswered offer must never decline it. "Not now" is decline().
+    this.accept();
   }
 
   private accept() {
     const m = this.match;
     if (!m || this.accepted) return;
-    clearTimeout(this.offerTimer);
     this.accepted = true;
-    writeAccepted(m.matchId);
     this.emit({ type: "matched", match: toMatch(m), meetSpot: toMeetSpot(m), opener: toOpener(m) });
   }
 
   private decline() {
-    clearTimeout(this.offerTimer);
     if (this.match && !(this.socket?.send({ type: "rider.notNow" }) ?? false)) {
       rest.notNow().catch((e) => warn("could not send Not now", e));
     }
@@ -223,7 +196,6 @@ export class BackendRide implements RideChannel {
 
   private clearMatch(quiet = this.stamped) {
     if (!this.match) return;
-    clearTimeout(this.offerTimer);
     const met = this.hasMet;
     this.match = null;
     this.mission = null;
@@ -262,7 +234,6 @@ export class BackendRide implements RideChannel {
   }
 
   private reset() {
-    clearTimeout(this.offerTimer);
     this.socket?.close();
     this.socket = null;
     this.wire = null;
@@ -293,7 +264,7 @@ export class BackendRide implements RideChannel {
     if (!car) return warn("check in by tapping the kiosk tag in your car (or set VITE_DEMO_CAR)");
     try {
       const res = await this.tap({ car }, profile);
-      if (res.result === "need-destination") await this.tap({ car, destinationStop: res.stops.at(-1) }, profile);
+      if (res.result === "need-destination") await this.tap({ car, destinationStop: res.stops.at(-1)?.id }, profile);
       else if (res.result === "error") warn(res.message);
     } catch (e) {
       warn("check-in failed", e);

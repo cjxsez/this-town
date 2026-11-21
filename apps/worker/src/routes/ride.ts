@@ -26,7 +26,7 @@ import { Hono } from "hono";
 import { GhostReq } from "@questline/protocol";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
-import { activeCheckin, setUserGhost } from "../db/queries";
+import { activeCheckin, getUser, setUserGhost } from "../db/queries";
 import type { OkRes, RidePollRes } from "../lib/api";
 import { readJson } from "../lib/http";
 import { roomFor } from "../rooms/stub";
@@ -74,6 +74,7 @@ rideRoutes.get("/ride/state", requireRider, async (c) => {
   const userId = c.get("userId");
   const active = await activeCheckin(c.env.DB, userId);
   if (active) return c.json(await roomFor(c.env, active.tripId).snapshot(userId));
-  const res: RidePollRes = { state: offRideState(), match: null, mission: null };
+  const user = await getUser(c.env.DB, userId);
+  const res: RidePollRes = { state: offRideState(user?.ghost ?? false), match: null, mission: null, serverNow: Date.now() };
   return c.json(res);
 });

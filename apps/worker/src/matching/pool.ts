@@ -28,8 +28,9 @@ export interface GateOptions {
   ignoreMetRecently: boolean;
 }
 
-export function stopIndex(state: RoomState, stopName: string): number {
-  return state.stops.findIndex((s) => s.name === stopName);
+/** Index of a stop by id (riders' boarded/destination stops are stored as ids). */
+export function stopIndex(state: RoomState, stopId: string): number {
+  return state.stops.findIndex((s) => s.stopId === stopId);
 }
 
 /** Segments left before this rider's destination (1 = getting off at the next stop). */

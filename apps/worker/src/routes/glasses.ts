@@ -34,7 +34,9 @@ glassesRoutes.post("/glasses/code", async (c) => {
 glassesRoutes.get("/glasses/code/:code", async (c) => {
   const code = c.req.param("code");
   if (!/^\d{4}$/.test(code)) return c.json({ error: "bad code" }, 400);
-  const res: GlassesCodePollResT = await pollGlassesCode(c.env.DB, code, Date.now());
+  const secret = c.req.query("secret") ?? "";
+  const res: GlassesCodePollResT | null = await pollGlassesCode(c.env.DB, code, secret, Date.now());
+  if (!res) return c.json({ error: "code expired, request a new one" }, 410);
   return c.json(res);
 });
 

@@ -62,7 +62,7 @@ tapsRoutes.post("/taps", requireRider, async (c) => {
 
   const stops = await room.upcomingStops(trip);
   const dest = destinationStop ?? (await lastDestination(c.env.DB, userId, trip.line));
-  if (!dest || !stops.includes(dest)) {
+  if (!dest || !stops.some((s) => s.id === dest)) {
     const res: TapResT = { result: "need-destination", line: trip.line, stops };
     return c.json(res);
   }

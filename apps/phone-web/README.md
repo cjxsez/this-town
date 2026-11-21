@@ -31,7 +31,7 @@ pnpm dev:phone
 
 Vite proxies `/api` and `/ws` to `http://localhost:8787`, so the app always uses same-origin relative URLs.
 
-**The worker is still a scaffold.** Every query in `apps/worker/src/db/queries.ts` and most of `TrainRoom` throw `TODO`, so today `GET /api/health` answers and everything else returns 500. In `http` mode onboarding completes on the phone but the rider is not created, and a tap shows "That tap didn't take". The adapter is written against `packages/protocol` and has not run against a live worker yet.
+The worker's happy path works on the demo trip (`pnpm smoke` checks it). For a match in http mode, run `pnpm seed && pnpm ghosts --car 1413 --auto` and onboard with an interest Maya has (ramen, film, bookstores).
 
 Other scripts (here, or `pnpm --filter @questline/phone-web <script>`):
 
@@ -63,7 +63,7 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 | `GET /api/ride/state` (load, tab focus, socket drop), `ride.snapshot` | rebuilds the ride |
 | `ride.state` riding | `checkedIn` the first time, then `trainEta` (next stop ETA) |
 | `ride.state` off | `trainDeparted`, socket closed |
-| `match.found` | `offer` (D1). Yes -> `matched` (E1). Skip, "never mind", or 60 s unanswered -> `rider.notNow` + `cancelled` (D3) |
+| `match.found` | `matched` (E1). "Never mind" / call-off -> `rider.notNow` + `cancelled` (D3) |
 | `match.cleared` | `cancelled` before a mission started, `ended` (recap) after |
 | `mission.start` | `matched` if not yet, then `missionAssigned` (F1) |
 | `mission.end` time-up / cancelled | `ended` |
@@ -77,13 +77,16 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 
 ## Frontend and worker differences
 
-The design and the worker were built from different versions of the product. The adapter bridges what it can; these need a product decision.
+The worker runs the v2 product (kiosk check-in, no accept step, meet at a kiosk, tag-tap stamp). What the screens still need is in `docs/handoff-phone-v2.md`.
 
-- **Where it happens.** The design is on the platform (scan a station QR, pick line and direction on C1, countdown to the train). The worker is on the train (tap the kiosk tag in your car, countdown to the next stop). In `http` mode C1's toggle only works with `VITE_DEMO_CAR`, which taps that car and rides to the last stop; real check-in is the kiosk tag.
-- **Consent.** The worker has no accept step (`docs/decisions.md`: Ride Mode is the consent). The design asks Yes / Skip. Yes stays on the phone; Skip sends "Not now". The other rider and the kiosk already see the match before Yes.
-- **Badges and passwords.** The worker has pair colors, not animal badges. The partner's color is real; the animal is picked from the match id, and the E3 password lines are made from the color.
+Already aligned:
+
+- **Consent.** `match.found` goes straight to `matched`; there is no offer timer. Skip / "Not now" sends `rider.notNow`.
+- **Interests, battery, rider kind.** The protocol uses this app's ids and names (decision D14), so `map.ts` passes them through.
+- **Stations.** `RideState.nextStopId` and `Stamp.stationId` are catalog ids; the demo trip is Kenmore to Government Ctr.
+
+Still bridged in `map.ts` until the screens change:
+
+- **Badges and passwords.** The worker has pair colors, not animal badges. The animal is picked from the match id and the E3 password lines are made from the color.
 - **Stamp.** The design bumps phones; the worker stamps when both tap the kiosk tag. G1 shows after your own tap.
-- **Interests.** The design has 34 Boston-flavoured interests, the worker 25 tags and needs 3 to 5. `map.ts` folds one into the other and pads to three.
-- **Station names.** The worker sends stop names; the screens key art and stamps by catalog id. Unknown stops get a slug id and default art.
-- **No worker route yet:** photos and memories, stay in touch, block without a report, unblock, profile edits and delete, mood change mid-ride, new prompt, passport sync (`GET /api/passport` is not read; stamps live in `localStorage`), the 4-digit glasses link (`api.linkGlasses` exists, the Glasses screen still simulates).
-- **REST fallbacks:** `POST /api/ride/not-now` and `/arrived` are routed by the worker (`apps/worker/src/routes/ride.ts`); the adapter uses them when the socket is down. Like the rest of the worker, the `TrainRoom` methods behind them are still TODO.
+- **No worker route yet:** photos and memories (out of scope: no camera), stay in touch, block without a report, unblock, profile edits and delete, mood change mid-ride, new prompt, passport sync (`GET /api/passport` exists, not read yet), the glasses link screen.

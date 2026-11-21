@@ -45,7 +45,33 @@ export function effectiveWeight(t: MissionTemplate): number {
   return t.rare && t.category !== "late-bonus" ? t.weight * RARE_WEIGHT_FACTOR : t.weight;
 }
 
+function weightedPick(items: readonly MissionTemplate[], random: () => number): MissionTemplate | null {
+  const total = items.reduce((sum, t) => sum + effectiveWeight(t), 0);
+  if (total <= 0) return items[0] ?? null;
+  let r = random() * total;
+  for (const t of items) {
+    r -= effectiveWeight(t);
+    if (r <= 0) return t;
+  }
+  return items[items.length - 1] ?? null;
+}
+
+/**
+ * When the late-train bonus is unlocked, a fitting late-bonus mission wins. Otherwise pick
+ * from the regular categories. Repeats are avoided, but if every fitting template is a
+ * repeat we allow one rather than leave the pair with nothing.
+ */
 export function selectMission(input: SelectInput): MissionTemplate | null {
   const deck = input.deck ?? DECK;
-  throw new Error("TODO: filter deck by fitsBefore / late-bonus unlock / isRepeat, weighted pick");
+  const random = input.random ?? Math.random;
+  const fitting = deck.filter((t) => fitsBefore(t, input.availableSec));
+  const fresh = (ts: MissionTemplate[]) => ts.filter((t) => !isRepeat(t, input));
+  const pick = (ts: MissionTemplate[]) => weightedPick(fresh(ts).length > 0 ? fresh(ts) : ts, random);
+
+  if (input.lateBonusUnlocked) {
+    const bonus = fitting.filter((t) => t.category === "late-bonus");
+    if (bonus.length > 0) return pick(bonus);
+  }
+  const regular = fitting.filter((t) => t.category !== "late-bonus");
+  return regular.length > 0 ? pick(regular) : null;
 }

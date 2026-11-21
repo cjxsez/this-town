@@ -20,13 +20,13 @@
  * - One pair per kiosk at a time: a car has one tag and one screen, so a car already hosting
  *   a pair (busyKiosks) cannot be the meeting point. If the preferred car is busy, use the
  *   other rider's car; if both are busy, skip the pair this round.
- * - Tie on remaining segments: earlier check-in stays put (stable, and the demo has Maya
- *   staying).
+ * - Tie on remaining segments: the later check-in stays put (they just sat down; the rider
+ *   who has been waiting walks over). In the demo Maya boards second and stays.
  */
 import type { CarId, InterestTag } from "@questline/protocol";
 import type { RoomRider, RoomState } from "../rooms/state";
-import { remainingSegments, type GateOptions } from "./pool";
-import type { PairScore } from "./score";
+import { passesGate, remainingSegments, sharedTags, type GateOptions } from "./pool";
+import { comparePairScores, scorePair, type PairScore } from "./score";
 
 export interface ProposedPair {
   a: RoomRider;
@@ -50,10 +50,13 @@ export function meetingPoint(
   if (a.car === b.car) return { meetAtCar: a.car, walker: null };
   const ra = remainingSegments(a, state);
   const rb = remainingSegments(b, state);
-  const aStays = ra > rb || (ra === rb && a.checkedInAt <= b.checkedInAt);
+  // More stops left = stays put. Tie: whoever just sat down stays; the one already waiting walks over.
+  const aStays = ra > rb || (ra === rb && a.checkedInAt >= b.checkedInAt);
   const stayer = aStays ? a : b;
   const walker = aStays ? b : a;
-  // TODO: busyKiosks check (see header).
+  // A kiosk hosts one pair at a time. If the stayer's kiosk is busy, meet at the other one.
+  const busy = busyKiosks(state);
+  if (busy.has(stayer.car) && !busy.has(walker.car)) return { meetAtCar: walker.car, walker: stayer.userId };
   return { meetAtCar: stayer.car, walker: walker.userId };
 }
 
@@ -67,5 +70,31 @@ export function carDelta(carOrder: readonly CarId[], fromCar: CarId, toCar: CarI
 }
 
 export function greedyPairs(pool: RoomRider[], state: RoomState, opts: GateOptions): ProposedPair[] {
-  throw new Error("TODO: all allowed pairs -> scorePair -> sort by comparePairScores -> take greedily");
+  const candidates: ProposedPair[] = [];
+  for (let i = 0; i < pool.length; i++) {
+    for (let j = i + 1; j < pool.length; j++) {
+      const a = pool[i]!;
+      const b = pool[j]!;
+      if (!passesGate(a, b, state, opts)) continue;
+      candidates.push({ a, b, score: scorePair(a, b, state), sharedTags: sharedTags(a, b), meetAtCar: a.car, walker: null });
+    }
+  }
+  candidates.sort((x, y) => comparePairScores(x.score, y.score));
+
+  const taken = new Set<string>();
+  const kiosks = busyKiosks(state);
+  const out: ProposedPair[] = [];
+  for (const c of candidates) {
+    if (taken.has(c.a.userId) || taken.has(c.b.userId)) continue;
+    // Meeting point is decided against kiosks already claimed in this round too.
+    const view: RoomState = { ...state, pairs: { ...state.pairs } };
+    for (const car of kiosks) view.pairs[`claimed:${car}`] = { meetAtCar: car } as RoomState["pairs"][string];
+    const { meetAtCar, walker } = meetingPoint(c.a, c.b, view);
+    if (kiosks.has(meetAtCar)) continue; // both kiosks busy: wait for one to free up
+    taken.add(c.a.userId);
+    taken.add(c.b.userId);
+    kiosks.add(meetAtCar);
+    out.push({ ...c, meetAtCar, walker });
+  }
+  return out;
 }

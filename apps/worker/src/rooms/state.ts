@@ -47,8 +47,9 @@ export interface TripInfo {
 }
 
 export interface StopInfo {
+  /** Protocol stop id (phone catalog slug, e.g. "park-st"). Riders' stops are stored by id. */
   stopId: string;
-  /** Parent station name, e.g. "Downtown Crossing". Destinations are stored by name. */
+  /** Display name, e.g. "Park St". */
   name: string;
   sequence: number;
   /** Predicted arrival, epoch ms. Null for stops already passed or with no prediction. */
@@ -204,6 +205,11 @@ export interface RoomState extends TripTimeline {
   kioskHw: Record<CarId, KioskHw>;
   lastPolledAt: number;
   demo: DemoClock | null;
+  /**
+   * pair.cleared sends held back so the kiosk can finish its celebration. Optional so rooms
+   * persisted before this field existed still load.
+   */
+  pendingKioskClears?: { car: CarId; matchId: string; at: number }[];
 }
 
 export function emptyRoomState(): RoomState {
@@ -233,7 +239,9 @@ export function offRideState(ghost = false): RideState {
     line: null,
     car: null,
     destinationStop: null,
+    destinationStopId: null,
     nextStop: null,
+    nextStopId: null,
     nextStopEtaSec: null,
     ridersOnTrain: 0,
     ghost,

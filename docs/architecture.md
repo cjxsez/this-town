@@ -88,7 +88,7 @@ Ride Mode on = consent. There is no accept step.
 2. **Interest gate:** shared interest tags >= 1 (tunable `MIN_SHARED_TAGS`), not met in the last 7 days, not blocked either way.
 3. **Rank by closeness first:** car distance (0 = same car, 1 = adjacent, ...). Ties broken by interest score (shared tags + "ask me about" similarity), then social battery match, then novelty.
 4. **Pair greedily:** take the best-scoring pair overall, lock both, repeat. Everyone gets at most one partner at a time.
-5. **Meeting point:** the kiosk in the car of whichever rider has more time left before their stop stays put; the other walks. Same car means nobody walks.
+5. **Meeting point:** the rider with more stops left stays put and the other walks to their kiosk. On a tie, whoever checked in last stays (they just sat down; the rider already waiting walks over). Same car means nobody walks.
 6. **Blurb:** Claude writes one line grounded in shared tags. Cached per pair. If the call fails or is slow (> 1.5 s), fall back to a template ("You both like ramen and books").
 
 **No Neural Band, so the glasses need zero input.** Arrival is proven by tapping the meeting kiosk's tag (a `moveCar` into `meetAtCar`), and the mission also auto-starts `MISSION_AUTOSTART_DELAY_MS` after the match. "Not now" is a button on the phone (`POST /api/ride/not-now`): it drops you out for 10 minutes and rematches your partner. The temple touch strip can also send "I'm here" / "Not now" as a bonus once we verify its key events. Ghost mode hides you entirely.

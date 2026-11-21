@@ -11,6 +11,24 @@ The Cloudflare Worker behind Questline. One deploy, one HTTPS origin:
 
 Contract: `packages/protocol`. Architecture: `docs/architecture.md`.
 
+## Status
+
+The happy path works on the demo trip and is covered by `pnpm smoke` (see "Run locally"):
+
+- onboarding (`POST /api/users`, `GET /api/me`) and the 4-digit glasses link with a poll secret
+- check-in from a kiosk tap, destination picker, moving cars, ending the ride, ghost mode
+- matching with no accept step: same trip, shared interests, closest car first, one pair per kiosk
+- arrival (tap on the meeting kiosk, `rider.arrived`, `POST /api/ride/arrived`, or 20 s autostart)
+- missions from the deck that fit before the next stop, late-train bonus after a delay
+- two-tap stamp with a fresh nonce on dynamic tags, celebration, passport
+- "Not now" (socket or `POST /api/ride/not-now`), report, check-out at the destination stop
+- demo controls: `POST /api/demo/delay | advance | reset` (header `x-kiosk-key`)
+
+Not done yet:
+
+- **Live MBTA.** `resolveLiveCarTrip` and live predictions are still stubs, so only cars in `DEMO_CAR_TRIPS` work. Fine for the demo.
+- `GET /api/matches/recent`, block/unblock without a report, deleting a rider, "stay in touch".
+
 ## File map
 
 ```
@@ -60,7 +78,10 @@ cp apps/worker/.dev.vars.example apps/worker/.dev.vars   # fill in keys
 mkdir -p apps/worker/public                               # or `pnpm build` to fill it
 pnpm db:migrate:local                                     # applies migrations/ to local D1
 pnpm dev:worker                                           # wrangler dev on :8787
+pnpm smoke                                                # in another terminal: end-to-end check
 ```
+
+`pnpm smoke` (`scripts/smoke.ts`) plays two riders, a pair of glasses and the car 1413 kiosk through onboarding, glasses link, check-in, match, mission and stamp, then "Not now", the late-train bonus and check-out at a stop. It needs `KIOSK_KEY` in `.dev.vars` and resets the demo trip first.
 
 `wrangler dev` needs `public/` to exist. It is gitignored and filled by `pnpm build` (root), which builds the three web apps and copies their `dist/` folders in. During development the web apps run on their own Vite servers and should proxy `/api` and `/ws` to `http://localhost:8787`.
 
@@ -109,16 +130,7 @@ In `src/index.ts`:
 - A rider socket or `/api/ride/*` call uses the rider's open check-in row in D1 (`checkins.checked_out_at IS NULL`).
 - A kiosk socket resolves its car to a trip on connect. When the trip ends the room closes kiosk sockets (code 4002) so they reconnect to the car's next trip.
 
-## Protocol follow-ups (contract updated, worker code still to adopt)
+## Migrations
 
-The gaps found while scaffolding are now in `packages/protocol`. Still to do in the worker:
-- Replace the local `RidePollRes` in `src/lib/api.ts` with `RideStateRes` (`RideSnapshot`) from the protocol.
-- Add `POST /api/ride/not-now`, `POST /api/ride/arrived` (REST twins of the socket actions) and `GET /api/matches/recent`.
-- Glasses codes: return `pollSecret` from `POST /api/glasses/code`, require `?secret=` on the poll, return 410 when expired.
-- Close rider sockets with `WS_CLOSE.noRide` before check-in, `WS_CLOSE.badAuth` on bad tokens/keys, `WS_CLOSE.tripChanged` for kiosks.
-- `nfc.write` now carries a `writeId`; track it and handle `nfc.failed`.
-- Send `stamp.progress` after the first tap, and `pair.incoming.arrived` as riders say "I'm here".
-- Use `you-not-now` / `reported` reasons in `match.cleared`.
-- Default a missing `kiosk.hello.hw` to `{ leds: false, nfc: "static" }`.
-- Ping/pong already uses `setWebSocketAutoResponse` with `WS_PING` / `WS_PONG`.
-
+- `0001_init.sql`: the original schema.
+- `0002_phone_vocab.sql`: the phone's vocabulary (decision D14). Rebuilds `users` with the new `social_battery` / `status` values, adds `stamps.station_id` and `glasses_codes.poll_secret_hash`. Users created before it have old interest tags and won't load; recreate test users.
