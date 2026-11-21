@@ -127,7 +127,11 @@ async function main() {
   const first = await api<TapRes>("POST", "/api/taps", { car: "1412" }, andres.token);
   if (first.result !== "need-destination") fail(`first tap should ask for a destination, got ${first.result}`);
   if (!first.stops.some((s) => s.id === DEST)) fail(`destinations missing ${DEST}: ${JSON.stringify(first.stops)}`);
-  const checkin = await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST }, andres.token);
+  // Ride Mode is the consent: a destination alone must not check anyone in.
+  const noConsent = await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST }, andres.token);
+  if (noConsent.result !== "need-destination") fail(`check-in without rideMode should be refused, got ${noConsent.result}`);
+  ok("no check-in without Ride Mode consent");
+  const checkin = await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST, rideMode: true }, andres.token);
   if (checkin.result !== "checked-in") fail(`expected checked-in, got ${JSON.stringify(checkin)}`);
   ok(`Andres checked in: car ${checkin.state.car}, next stop ${checkin.state.nextStop} (${checkin.state.nextStopId})`);
 
@@ -137,7 +141,7 @@ async function main() {
   ok("phone and glasses sockets open");
 
   // Maya boards car 1413: they should be matched with no accept step.
-  const mayaTap = await api<TapRes>("POST", "/api/taps", { car: "1413", destinationStop: DEST }, maya.token);
+  const mayaTap = await api<TapRes>("POST", "/api/taps", { car: "1413", destinationStop: DEST, rideMode: true }, maya.token);
   if (mayaTap.result !== "checked-in") fail(`Maya: expected checked-in, got ${JSON.stringify(mayaTap)}`);
   const mayaSock = new Sock<ServerToRider>(`${WS_BASE}/ws/rider?token=${maya.token}`, { type: "rider.hello", client: "phone" }, "Maya phone");
   const match = await glasses.wait("match.found");
@@ -178,7 +182,7 @@ async function main() {
 
   // Not now from the phone on a fresh rider, then end the ride.
   const lena = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Lena", ["film", "coffee", "chess"]));
-  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST }, lena.token);
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST, rideMode: true }, lena.token);
   // Andres and Maya just played, so they're not eligible until the next stop: no match yet.
   await api("POST", "/api/ride/end", undefined, lena.token);
   await api("POST", "/api/ride/end", undefined, maya.token);
@@ -187,11 +191,21 @@ async function main() {
   if (off.state.status !== "off") fail(`after ride/end, status should be off, got ${off.state.status}`);
   ok("rides ended");
 
+  // History, profile edits, mood.
+  const recent = await api<{ matches: { partnerFirstName: string; color: string; stamped: boolean }[] }>("GET", "/api/matches/recent", undefined, andres.token);
+  if (recent.matches[0]?.partnerFirstName !== "Maya" || !recent.matches[0]?.stamped) fail(`recent matches: ${JSON.stringify(recent)}`);
+  const edited = await api<{ profile: { firstName: string; interests: string[] } }>("PATCH", "/api/me", { firstName: "Dre", interests: ["ramen", "film", "chess"] }, andres.token);
+  if (edited.profile.firstName !== "Dre" || !edited.profile.interests.includes("chess")) fail(`PATCH /api/me: ${JSON.stringify(edited)}`);
+  await api("POST", "/api/ride/mood", { mood: "talk" }, andres.token);
+  const meNow = await api<{ profile: { socialBattery: string } }>("GET", "/api/me", undefined, andres.token);
+  if (meNow.profile.socialBattery !== "talk") fail("mood did not stick");
+  ok("recent matches, profile edit and mood work");
+
   // Same car + "I'm here" from the phone + Not now.
   const kai = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Kai", ["chess", "anime", "coffee"]));
   const zoe = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Zoe", ["chess", "anime", "baking"]));
-  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST }, kai.token);
-  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST }, zoe.token);
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST, rideMode: true }, kai.token);
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST, rideMode: true }, zoe.token);
   const kaiSock = new Sock<ServerToRider>(`${WS_BASE}/ws/rider?token=${kai.token}`, { type: "rider.hello", client: "phone" }, "Kai phone");
   const zoeSock = new Sock<ServerToRider>(`${WS_BASE}/ws/rider?token=${zoe.token}`, { type: "rider.hello", client: "phone" }, "Zoe phone");
   const snap = await kaiSock.wait("ride.snapshot");
@@ -212,8 +226,8 @@ async function main() {
   if (!(await demo("delay", { seconds: 240 })).ok) fail("demo delay failed");
   const ana = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Ana", ["rowing", "trivia", "comics"]));
   const ben = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Ben", ["rowing", "trivia", "museums"]));
-  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: "copley" }, ana.token);
-  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: "copley" }, ben.token);
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: "copley", rideMode: true }, ana.token);
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: "copley", rideMode: true }, ben.token);
   const anaSock = new Sock<ServerToRider>(`${WS_BASE}/ws/rider?token=${ana.token}`, { type: "rider.hello", client: "phone" }, "Ana phone");
   await anaSock.wait("ride.snapshot");
   await api("POST", "/api/ride/arrived", undefined, ana.token);
@@ -227,6 +241,12 @@ async function main() {
   const gone = await api<{ state: { status: string } }>("GET", "/api/ride/state", undefined, ana.token);
   if (gone.state.status !== "off") fail(`Ana should be off at Copley, got ${gone.state.status}`);
   ok("riders are checked out at their stop");
+
+  // Delete my data: signs out every device.
+  await api("DELETE", "/api/me", undefined, kai.token);
+  const afterDelete = await fetch(`${BASE}/api/me`, { headers: { authorization: `Bearer ${kai.token}` } });
+  if (afterDelete.status !== 401) fail(`deleted rider's token should stop working, got ${afterDelete.status}`);
+  ok("delete my data signs the rider out");
 
   for (const s of [phone, glasses, mayaSock, screen, pi, kaiSock, zoeSock, anaSock]) s.close();
   await demo("reset");

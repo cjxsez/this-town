@@ -70,10 +70,12 @@ import {
   RiderToServer,
   type CarId,
   type Mission,
+  type Profile,
   type RideSnapshot,
   type RideState,
   type ServerToKiosk,
   type ServerToRider,
+  type SocialBattery,
   type Stamp,
   type Stop,
 } from "@questline/protocol";
@@ -435,6 +437,25 @@ export class TrainRoom extends DurableObject<Env> {
     this.broadcastKioskIdle();
     await this.scheduleAlarm(now);
     return this.rideStateFor(userId);
+  }
+
+  /** POST /api/ride/mood: new social battery for matching from now on. */
+  async setMood(userId: string, mood: SocialBattery): Promise<void> {
+    const r = this.state.riders[userId];
+    if (!r) return;
+    r.profile.socialBattery = mood;
+    await this.persist();
+  }
+
+  /** PATCH /api/me while riding: matching and the kiosk use the new name and interests. */
+  async updateRiderProfile(userId: string, p: Profile): Promise<void> {
+    const r = this.state.riders[userId];
+    if (!r) return;
+    r.profile = { firstName: p.firstName, interests: p.interests, askMeAbout: p.askMeAbout, socialBattery: p.socialBattery };
+    await this.persist();
+    await this.runMatching(Date.now());
+    this.broadcastRideStates();
+    await this.scheduleAlarm(Date.now());
   }
 
   /** GET /api/ride/state: the same snapshot riders get after rider.hello. */
