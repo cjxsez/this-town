@@ -5,3 +5,8 @@ packages:
   - "apps/kiosk-web"
   - "packages/*"
 # apps/kiosk-pi is Python and is not part of the pnpm workspace.
+
+# Allow the native build steps wrangler (workerd) and vite (esbuild) need.
+onlyBuiltDependencies:
+  - esbuild
+  - workerd

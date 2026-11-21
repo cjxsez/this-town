@@ -19,8 +19,9 @@ wss://<domain>/ws/kiosk/<car>?key=<KIOSK_KEY>&role=pi
 | type | payload | when |
 |---|---|---|
 | `kiosk.hello` | `car: CarId`, `role: "pi"`, `hw?: { leds: boolean, nfc: "dynamic" \| "static" \| "none" }` | first message after every connect. The agent always sends `hw`. |
-| `nfc.written` | `url: string` (URL) | after the tag was rewritten for an `nfc.write`. Echoes the URL written. |
-| `ping` | none | every `agent.ping_interval_s` (default 20 s) |
+| `nfc.written` | `writeId: string`, `url: string` | after the tag was rewritten for an `nfc.write` (same `writeId`). |
+| `nfc.failed` | `writeId: string`, `reason: string` | the write failed after retries. |
+| `ping` | none | every `agent.ping_interval_s` (default 20 s). Must be exactly `{"type":"ping"}`: the server's auto-response replies `{"type":"pong"}`, which the agent ignores. |
 
 ## Server -> Pi
 
@@ -28,10 +29,11 @@ The Pi receives every `ServerToKiosk` event (the screen gets the same stream). W
 
 | type | payload | Pi action |
 |---|---|---|
-| `kiosk.idle` | `ridersInCar: int`, `ridersOnTrain: int`, `nextStop: string \| null`, `nextStopEtaSec: int \| null` | dim idle animation, only if no pair is active (stats are for the screen) |
-| `pair.incoming` | `matchId`, `color: PairColor`, `firstNames: [string, string]` | solid pair color |
-| `mission.show` | `matchId`, `color: PairColor`, `mission: Mission` | slow pulse in the pair color |
-| `nfc.write` | `url: string` (URL) | Pi only. Write one NDEF URI record with `url` to the tag, then send `nfc.written {url}`. Ignored when `hw.nfc` is not `dynamic`. |
+| `kiosk.idle` | `ridersInCar: int`, `ridersOnTrain: int`, `nextStop: string \| null`, `nextStopEtaSec: int \| null`, `serverNow: int` | periodic stats push, not a "go idle" command. Dim idle animation only if no pair is active. |
+| `pair.incoming` | `matchId`, `color: PairColor`, `firstNames: [string, string]`, `arrived: 0-2` | solid pair color |
+| `mission.show` | `matchId`, `color: PairColor`, `mission: Mission`, `serverNow: int` | slow pulse in the pair color |
+| `stamp.progress` | `matchId`, `tapped: 1 \| 2` | optional flash when the first rider taps |
+| `nfc.write` | `writeId: string`, `url: string` | Pi only. Write one NDEF URI record with `url` to the tag, then send `nfc.written` or `nfc.failed` with the same `writeId`. Ignored when `hw.nfc` is not `dynamic`. |
 | `celebrate` | `matchId`, `color: PairColor`, `rare: boolean` | burst; if `rare`, burst then rainbow. Then hold the pair color. |
 | `pair.cleared` | `matchId` | back to idle, if `matchId` is the pair being shown |
 
@@ -55,13 +57,8 @@ From `PAIR_COLOR_HEX` in `models.ts`:
 - Check-in: `https://<domain>/k/<car>?n=<nonce>` (dynamic tag) or `https://<domain>/k/<car>` (static sticker fallback).
 - Encoded as a single NDEF URI record (TNF well-known, type `U`, prefix code `0x04` for `https://`) inside an NDEF TLV. See `questline_kiosk/nfc_tag.py`.
 
-## Open questions (not in the contract yet)
+## Contract notes
 
-These are assumptions the agent makes today. If the contract changes, change it in `packages/protocol` first.
-
-1. **No error reply for `nfc.write`.** If the write fails, the Pi has no way to say so; the server has to time out waiting for `nfc.written`.
-2. **No correlation on `nfc.write`.** It carries only `url`, so `nfc.written` echoes the URL to match them up. A `sessionId` or `matchId` would be cleaner.
-3. **State after reconnect.** The agent assumes the server resends the current kiosk state (`kiosk.idle` or `pair.incoming`/`mission.show`, plus the current tag URL via `nfc.write`) after `kiosk.hello`. Not written down anywhere yet.
-4. **`kiosk.idle` during a pair.** Unclear whether `kiosk.idle` is only sent when nothing is happening or also as periodic stats. The Pi ignores it while a pair is active and waits for `pair.cleared`.
-5. **One pair per kiosk.** Two pairs meeting at the same kiosk would fight over the LEDs. The Pi shows the latest one.
-6. **No pong.** `ping` has no server reply in the contract.
+- **Reconnect replay.** After `kiosk.hello` the server sends `kiosk.idle`, then `pair.incoming` / `mission.show` for an active pair, and (role=pi) `nfc.write` with the current tag URL.
+- **One pair per kiosk.** A kiosk hosts at most one pair at a time; the matcher treats a busy kiosk as unavailable. If two ever arrive, show the latest.
+- **Missing `hw`** in `kiosk.hello` defaults to `{ leds: false, nfc: "static" }` on the server. The agent always sends it.

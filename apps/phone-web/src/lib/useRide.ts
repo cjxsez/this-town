@@ -67,6 +67,19 @@ function setSnapshot(next: RideSnapshot) {
 
 function reduce(s: RideSnapshot, e: ServerToRider): RideSnapshot {
   switch (e.type) {
+    case "ride.snapshot":
+      // Sent after rider.hello: replace everything we know with the server's view.
+      // TODO: store e.snapshot.serverNow - Date.now() as a clock offset for countdowns.
+      return {
+        ...s,
+        state: e.snapshot.state,
+        stateAt: Date.now(),
+        match: e.snapshot.match,
+        mission: e.snapshot.mission,
+      };
+    case "stamp.progress":
+      // TODO: show "waiting for your partner to tap" on the Tap screen.
+      return s;
     case "ride.state": {
       const unpaired = e.state.status === "off" || e.state.status === "riding";
       return {
@@ -131,7 +144,7 @@ export function disconnectRide(): void {
 
 /** Apply a RideState that came from REST (TapRes) or an optimistic local change. */
 export function applyRideState(state: RideState): void {
-  setSnapshot(reduce(snapshot, { type: "ride.state", state }));
+  setSnapshot(reduce(snapshot, { type: "ride.state", state, serverNow: Date.now() }));
 }
 
 /** Ride ended locally (POST /api/ride/end succeeded). */

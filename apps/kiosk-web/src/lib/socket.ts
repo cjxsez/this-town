@@ -20,7 +20,7 @@ import type { KioskToServer, ServerToKiosk } from "@questline/protocol";
 import type { KioskConfig } from "./config";
 
 /** Everything the screen cares about: ServerToKiosk minus the Pi-only nfc.write. */
-export type ScreenEvent = Exclude<ServerToKiosk, { type: "nfc.write" }>;
+export type ScreenEvent = Exclude<ServerToKiosk, { type: "nfc.write" } | { type: "pong" }>;
 export type KioskSocketStatus = "connecting" | "open" | "offline";
 
 export interface KioskSocketOptions {
@@ -92,7 +92,7 @@ export function connectKioskSocket(opts: KioskSocketOptions): KioskSocket {
         console.warn("[kiosk socket] bad message", e.data);
         return;
       }
-      if (msg.type === "nfc.write") return; // Pi agent's job
+      if (msg.type === "nfc.write" || msg.type === "pong") return; // nfc.write is the Pi agent's job
       opts.onEvent(msg);
     };
 

@@ -57,6 +57,7 @@ class KioskIdleEvent(TypedDict):
     ridersOnTrain: int
     nextStop: str | None
     nextStopEtaSec: int | None
+    serverNow: int  # epoch ms
 
 
 class PairIncomingEvent(TypedDict):
@@ -64,6 +65,7 @@ class PairIncomingEvent(TypedDict):
     matchId: str
     color: PairColor
     firstNames: list[str]  # zod tuple [string, string]; first names only, screen is public
+    arrived: int  # 0-2 riders who said "I'm here"
 
 
 class MissionShowEvent(TypedDict):
@@ -71,12 +73,20 @@ class MissionShowEvent(TypedDict):
     matchId: str
     color: PairColor
     mission: Mission
+    serverNow: int  # epoch ms
+
+
+class StampProgressEvent(TypedDict):
+    type: Literal["stamp.progress"]
+    matchId: str
+    tapped: int  # 1 or 2
 
 
 class NfcWriteEvent(TypedDict):
-    """Pi only: write this URL to the NFC tag now."""
+    """Pi only: write this URL to the NFC tag now, reply nfc.written / nfc.failed with the same writeId."""
 
     type: Literal["nfc.write"]
+    writeId: str
     url: str
 
 
@@ -96,17 +106,20 @@ ServerToKiosk = Union[
     KioskIdleEvent,
     PairIncomingEvent,
     MissionShowEvent,
+    StampProgressEvent,
     NfcWriteEvent,
     CelebrateEvent,
     PairClearedEvent,
 ]
+# "pong" (auto-response to ping) is parsed as an unknown type and ignored.
 
 # Required keys per event type (besides "type"). Keep in sync with events.ts.
 SERVER_TO_KIOSK_KEYS: Final[dict[str, tuple[str, ...]]] = {
-    "kiosk.idle": ("ridersInCar", "ridersOnTrain", "nextStop", "nextStopEtaSec"),
-    "pair.incoming": ("matchId", "color", "firstNames"),
-    "mission.show": ("matchId", "color", "mission"),
-    "nfc.write": ("url",),
+    "kiosk.idle": ("ridersInCar", "ridersOnTrain", "nextStop", "nextStopEtaSec", "serverNow"),
+    "pair.incoming": ("matchId", "color", "firstNames", "arrived"),
+    "mission.show": ("matchId", "color", "mission", "serverNow"),
+    "stamp.progress": ("matchId", "tapped"),
+    "nfc.write": ("writeId", "url"),
     "celebrate": ("matchId", "color", "rare"),
     "pair.cleared": ("matchId",),
 }
@@ -130,14 +143,23 @@ class NfcWrittenMsg(TypedDict):
     """Pi confirms the tag was rewritten."""
 
     type: Literal["nfc.written"]
+    writeId: str
     url: str
+
+
+class NfcFailedMsg(TypedDict):
+    """Pi reports the tag write failed after retries."""
+
+    type: Literal["nfc.failed"]
+    writeId: str
+    reason: str
 
 
 class PingMsg(TypedDict):
     type: Literal["ping"]
 
 
-KioskToServer = Union[KioskHelloMsg, NfcWrittenMsg, PingMsg]
+KioskToServer = Union[KioskHelloMsg, NfcWrittenMsg, NfcFailedMsg, PingMsg]
 
 
 # ---------- helpers ----------
@@ -191,8 +213,12 @@ def kiosk_hello(car: str, leds: bool, nfc: NfcMode) -> KioskHelloMsg:
     return {"type": "kiosk.hello", "car": car, "role": "pi", "hw": {"leds": leds, "nfc": nfc}}
 
 
-def nfc_written(url: str) -> NfcWrittenMsg:
-    return {"type": "nfc.written", "url": url}
+def nfc_written(write_id: str, url: str) -> NfcWrittenMsg:
+    return {"type": "nfc.written", "writeId": write_id, "url": url}
+
+
+def nfc_failed(write_id: str, reason: str) -> NfcFailedMsg:
+    return {"type": "nfc.failed", "writeId": write_id, "reason": reason}
 
 
 def ping() -> PingMsg:

@@ -10,7 +10,7 @@ Per connection:
          kiosk.idle    -> idle animation, unless a pair is active
          pair.incoming -> solid pair color
          mission.show  -> slow pulse in the pair color
-         nfc.write     -> write URL to the tag, reply nfc.written {url}
+         nfc.write     -> write URL to the tag, reply nfc.written {writeId, url} or nfc.failed
          celebrate     -> burst (+ rainbow if rare), then hold the pair color
          pair.cleared  -> idle animation (only if it matches the active pair)
 On disconnect: dim amber idle, wait with jittered exponential backoff
@@ -45,6 +45,7 @@ from .protocol import (
     encode,
     hex_to_rgb,
     kiosk_hello,
+    nfc_failed,
     nfc_written,
     pair_rgb,
 )
@@ -159,6 +160,8 @@ class KioskAgent:
                 await self.on_celebrate(event)  # type: ignore[arg-type]
             case "pair.cleared":
                 await self.on_pair_cleared(event)  # type: ignore[arg-type]
+            case "stamp.progress":
+                pass  # TODO: optional LED flash when the first rider taps
 
     async def on_kiosk_idle(self, event: KioskIdleEvent) -> None:
         # kiosk.idle also carries live stats for the screen and may arrive while
@@ -194,20 +197,19 @@ class KioskAgent:
         TODO:
         - retry with a short sleep (RF arbitration) up to cfg.nfc.write_retries
         - optional: read back with tag.read_url() and compare before acking
-        - on final failure there is no error event to send (see protocol.md gaps);
-          log it and let the server time out
         """
-        url = event["url"]
+        url, write_id = event["url"], event["writeId"]
         if self.tag.mode != "dynamic":
             log.info("nfc.write ignored, tag mode is %s", self.tag.mode)
             return
         try:
             await asyncio.to_thread(self.tag.write_url, url)
-        except (NfcTagError, OSError, NotImplementedError):
+        except (NfcTagError, OSError, NotImplementedError) as e:
             log.exception("nfc write failed")
+            await self.send(nfc_failed(write_id, str(e) or type(e).__name__))
             return
         self.last_nfc_url = url
-        await self.send(nfc_written(url))
+        await self.send(nfc_written(write_id, url))
 
     # ---------- LED helpers ----------
 

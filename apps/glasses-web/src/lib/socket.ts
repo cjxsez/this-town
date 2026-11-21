@@ -21,14 +21,14 @@
  *
  * TODO:
  * - Agree close codes for bad/expired token with the worker (not in packages/protocol).
- * - GET /api/ride/state has no response schema in api.ts; assumed to return RideState.
+ * - GET /api/ride/state returns RideSnapshot (RideStateRes); emitted as a ride.snapshot event.
  *   It also carries no current match or mission, so polling mode cannot show a match card.
  * - In polling mode, send() returns false: there are no REST routes for rider.arrived /
  *   rider.notNow yet. Add them (or a REST "Not now") if WebSockets turn out to be broken.
  * - While polling, retry the WebSocket every few minutes in case it was transient.
  * - Pause/resume on document visibilitychange if the glasses browser backgrounds the page.
  */
-import type { RideState, RiderToServer, ServerToRider } from "@questline/protocol";
+import type { RideSnapshot, RiderToServer, ServerToRider } from "@questline/protocol";
 
 export type MatchFound = Extract<ServerToRider, { type: "match.found" }>;
 export type SocketStatus = "connecting" | "open" | "polling" | "offline";
@@ -152,8 +152,8 @@ export function connectRiderSocket(opts: RiderSocketOptions): RiderSocket {
           return;
         }
         if (!res.ok) return;
-        const state = (await res.json()) as RideState;
-        opts.onEvent({ type: "ride.state", state });
+        const snapshot = (await res.json()) as RideSnapshot;
+        opts.onEvent({ type: "ride.snapshot", snapshot });
       } catch {
         // network blip: try again next tick
       }

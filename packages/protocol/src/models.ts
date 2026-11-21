@@ -1,6 +1,7 @@
 // Core domain models shared by the worker and every client.
 // Keep this file free of runtime deps besides zod.
 import { z } from "zod";
+import { PAIR_COLORS } from "./colors";
 
 export const InterestTag = z.enum([
   "music", "food", "coffee", "sports", "running", "climbing", "hiking",
@@ -29,17 +30,9 @@ export const Profile = z.object({
 export type Profile = z.infer<typeof Profile>;
 
 /** Pair colors. The kiosk LEDs, kiosk screen and glasses all use the same names. */
-export const PairColor = z.enum(["orange", "green", "blue", "pink", "yellow", "purple"]);
+export const PairColor = z.enum(PAIR_COLORS);
 export type PairColor = z.infer<typeof PairColor>;
-
-export const PAIR_COLOR_HEX: Record<PairColor, string> = {
-  orange: "#ff8a00",
-  green: "#22c55e",
-  blue: "#3b82f6",
-  pink: "#ec4899",
-  yellow: "#facc15",
-  purple: "#a855f7",
-};
+export { PAIR_COLOR_HEX, RARE_ACCENT_HEX } from "./colors";
 
 export const MissionCategory = z.enum(["create", "show-me", "spot", "quick-game", "late-bonus"]);
 export type MissionCategory = z.infer<typeof MissionCategory>;
@@ -92,3 +85,27 @@ export const Stamp = z.object({
   awardedAt: z.number().int(),
 });
 export type Stamp = z.infer<typeof Stamp>;
+
+/**
+ * The rider's current match, as sent in match.found and in snapshots.
+ * carDelta: cars from the rider's current car to meetAtCar. Positive = toward the front
+ * of the train, negative = toward the back, 0 = same car.
+ */
+export const MatchInfo = z.object({
+  matchId: z.string(),
+  partner: Partner,
+  why: z.string(),             // "You both love ramen and are riding to Park St"
+  meetAtCar: CarId,            // whose kiosk to go to
+  carDelta: z.number().int(),
+  youWalk: z.boolean(),        // false = stay put, they come to you
+});
+export type MatchInfo = z.infer<typeof MatchInfo>;
+
+/** Everything a client needs to redraw after a reload or reconnect. */
+export const RideSnapshot = z.object({
+  state: RideState,
+  match: MatchInfo.nullable(),
+  mission: Mission.nullable(),
+  serverNow: z.number().int(), // epoch ms; clients use it to correct countdowns for clock skew
+});
+export type RideSnapshot = z.infer<typeof RideSnapshot>;

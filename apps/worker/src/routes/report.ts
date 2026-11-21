@@ -1,0 +1,58 @@
+/**
+ * routes/report.ts: report (and optionally block) a match partner. Always one action away
+ * (architecture.md "Safety and privacy").
+ *
+ * Route:
+ * - POST /api/report  (rider auth) body ReportReq { matchId, reason, block } -> OkRes
+ *   1. The match must include the caller (getMatchForUser), else 404.
+ *   2. insertReport; if block, insertBlock(caller -> partner). Matching treats blocks in
+ *      either direction as a hard filter from the next check-in (the room also drops the
+ *      pair now).
+ *   3. If the match is still live, tell its room (clearForReport) so the mission ends and
+ *      both sides get match.cleared.
+ *
+ * Protocol types: ReportReq.
+ *
+ * TODO:
+ * - Blocks should also apply to riders already checked in: clearForReport adds the partner
+ *   to the reporter's RoomRider.blocked and vice versa.
+ * - match.cleared has no "reported"/"blocked" reason; the room uses "partner-left" for the
+ *   reported side (see README "Protocol gaps").
+ */
+import { Hono } from "hono";
+import { ReportReq } from "@questline/protocol";
+import type { AppEnv } from "../env";
+import { requireRider } from "../auth";
+import { getMatchForUser, insertBlock, insertReport } from "../db/queries";
+import type { OkRes } from "../lib/api";
+import { readJson } from "../lib/http";
+import { newId } from "../lib/ids";
+import { roomFor } from "../rooms/stub";
+
+export const reportRoutes = new Hono<AppEnv>();
+
+reportRoutes.post("/report", requireRider, async (c) => {
+  const body = await readJson(c.req.raw, ReportReq);
+  if (!body.ok) return c.json({ error: body.error, issues: body.issues }, 400);
+  const userId = c.get("userId");
+  const { matchId, reason, block } = body.data;
+
+  const match = await getMatchForUser(c.env.DB, matchId, userId);
+  if (!match) return c.json({ error: "match not found" }, 404);
+
+  const now = Date.now();
+  await insertReport(c.env.DB, {
+    id: newId("rpt"),
+    reporterId: userId,
+    reportedUserId: match.otherUserId,
+    matchId,
+    reason,
+    blocked: block,
+    createdAt: now,
+  });
+  if (block) await insertBlock(c.env.DB, userId, match.otherUserId, now);
+  if (match.endedAt === null) await roomFor(c.env, match.tripId).clearForReport(matchId, userId);
+
+  const res: OkRes = { ok: true };
+  return c.json(res);
+});

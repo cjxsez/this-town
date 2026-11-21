@@ -112,17 +112,11 @@ This is a web app, so the tag URL just opens in the browser. There is no `apple-
 - **In-app browsers** (Instagram, etc.) also have separate storage. Same fix: open in the real browser.
 - A refresh of `/k/...` re-sends the tap (TODO: strip `?n=` after the tap).
 
-## Protocol gaps (noticed while scaffolding)
+## Protocol follow-ups
 
-Not changed here; raise in `packages/protocol` first.
+The gaps found while scaffolding are now in `packages/protocol` (REST types, `RideSnapshot` + `ride.snapshot` replay, `GET /api/ride/state`, `OkRes` / `ErrorRes`, `GET /api/matches/recent`, `Line` in `need-destination`, `stamp.progress`, `pong`). Still to do here:
+- Import the REST types from the protocol instead of deriving them in `lib/api.ts`.
+- Use `GET /api/matches/recent` so Report works after a match ends.
+- Show "waiting for your partner" on `stamp-pending` / `stamp.progress`. The tap itself is the confirmation.
+- Correct countdowns with `serverNow`.
 
-- `api.ts` exports schemas but no `z.infer` types; `lib/api.ts` derives them locally.
-- No schema for `GET /api/ride/state` (decisions.md mentions it as the glasses fallback). The phone relies on the socket sending `ride.state` on connect.
-- `RideState` has no match or mission, so after a reconnect the phone shows "matched" without a partner until the worker re-sends `match.found` / `mission.start`. Either replay them on `rider.hello` or add them to `RideState`.
-- How `/ws/rider` reaches a `TrainRoom` before the rider has checked in (no trip yet) is not specified. The phone reconnects after a `checked-in` tap.
-- No response bodies for `POST /api/ride/end`, `PUT /api/ride/ghost`, `POST /api/report`, and no shared error body shape.
-- `ReportReq` comment says `{ reportedMatchId, reason }`, schema is `{ matchId, reason, block }`.
-- No way to report someone after the match is cleared (no recent-matches route).
-- `TapRes` `need-destination.line` is `z.string()`, not `Line`; `PassportRes.byLine` keys are plain strings.
-- Architecture says riders "tap and confirm on their phones" for a stamp; the protocol has no confirm step, so the tap itself is the confirmation.
-- No `pong` in `ServerToRider` for the client `ping`.

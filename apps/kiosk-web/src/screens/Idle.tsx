@@ -16,7 +16,7 @@ import type { ServerToKiosk } from "@questline/protocol";
 import { Countdown } from "../components/Countdown";
 import { NfcHint } from "../components/NfcHint";
 
-export type IdleStats = Omit<Extract<ServerToKiosk, { type: "kiosk.idle" }>, "type">;
+export type IdleStats = Omit<Extract<ServerToKiosk, { type: "kiosk.idle" }>, "type" | "serverNow">;
 
 interface IdleProps {
   car: string;

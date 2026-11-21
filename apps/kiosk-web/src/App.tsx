@@ -76,7 +76,7 @@ function withoutPair(pairs: Record<string, PairInfo>, matchId: string): Record<s
 function onEvent(state: State, event: ScreenEvent, at: number): State {
   switch (event.type) {
     case "kiosk.idle": {
-      const { type: _type, ...stats } = event;
+      const { type: _type, serverNow: _serverNow, ...stats } = event; // TODO: clock offset from serverNow
       const nextStopAt = stats.nextStopEtaSec === null ? null : at + stats.nextStopEtaSec * 1000;
       return { ...state, stats, nextStopAt };
     }
@@ -96,6 +96,9 @@ function onEvent(state: State, event: ScreenEvent, at: number): State {
         ...state,
         screen: { name: "celebrate", matchId: event.matchId, color: event.color, rare: event.rare },
       };
+    case "stamp.progress":
+      // TODO: show "1 of 2 tapped" on the mission screen.
+      return state;
     case "pair.cleared": {
       // Let a running celebration finish (with names); celebrateDone drops the pair.
       if (state.screen.name === "celebrate" && state.screen.matchId === event.matchId) return state;

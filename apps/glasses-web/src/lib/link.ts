@@ -5,7 +5,7 @@
  *   1. POST /api/glasses/code              (no auth)  -> GlassesCodeRes { code, expiresAt }
  *   2. Show the code big on the lens. The rider types it on the phone, which calls
  *      POST /api/glasses/link (phone-web, not us).
- *   3. Poll GET /api/glasses/code/:code    (no auth)  -> GlassesCodePollRes { linked, token? }
+ *   3. Poll GET /api/glasses/code/:code?secret=<pollSecret>  (no auth)  -> GlassesCodePollRes { linked, token? }
  *      every POLL_MS until linked, then store the rider's token in localStorage.
  *   4. If the code expires (past expiresAt, or the poll 404s/410s), request a new one.
  *
@@ -60,8 +60,9 @@ export async function requestCode(signal?: AbortSignal): Promise<CodeRes> {
 }
 
 /** Returns null when the code is unknown or expired, so the caller asks for a new one. */
-export async function pollCode(code: string, signal?: AbortSignal): Promise<PollRes | null> {
-  const res = await fetch(`/api/glasses/code/${encodeURIComponent(code)}`, { signal });
+export async function pollCode(code: string, pollSecret: string, signal?: AbortSignal): Promise<PollRes | null> {
+  const url = `/api/glasses/code/${encodeURIComponent(code)}?secret=${encodeURIComponent(pollSecret)}`;
+  const res = await fetch(url, { signal });
   if (res.status === 404 || res.status === 410) return null;
   if (!res.ok) throw new Error(`GET /api/glasses/code/${code} failed: ${res.status}`);
   return (await res.json()) as PollRes;
@@ -95,12 +96,12 @@ export function startLinking(handlers: LinkingHandlers): () => void {
   (async () => {
     while (!signal.aborted) {
       try {
-        const { code, expiresAt } = await requestCode(signal);
+        const { code, pollSecret, expiresAt } = await requestCode(signal);
         handlers.onCode(code, expiresAt);
 
         while (!signal.aborted && Date.now() < expiresAt) {
           await sleep(POLL_MS, signal);
-          const poll = await pollCode(code, signal);
+          const poll = await pollCode(code, pollSecret, signal);
           if (poll === null) break; // expired or unknown: get a new code
           if (poll.linked && poll.token) {
             saveToken(poll.token);

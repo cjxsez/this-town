@@ -51,6 +51,16 @@ Each web app builds with Vite using its own `base` (`/`, `/g/`, `/kiosk/`). `scr
 - **Stamp proof:** during a mission the Pi rewrites the tag with a fresh nonce. A stamp needs both people in the pair to tap with the current nonce within the window. A photo of an old tag does nothing.
 - **Fallback:** if the dynamic tag is not working, use a static sticker (`/k/<car>`) and accept the weaker proof.
 
+## Sockets, reconnects and time
+
+- The rider socket only exists after check-in (there is no `TrainRoom` before that). Before check-in, or if the socket is refused with close code `4009`, clients poll `GET /api/ride/state`, which returns a `RideSnapshot`.
+- After `rider.hello` the room sends `ride.snapshot` (state + current match + mission), so a reloaded page redraws correctly.
+- After `kiosk.hello` the room sends `kiosk.idle`, any active `pair.incoming` / `mission.show`, and (Pi only) `nfc.write` with the current tag URL.
+- Keepalive: clients send exactly `{"type":"ping"}`; the DO auto-responds `{"type":"pong"}` without waking.
+- Countdown events carry `serverNow`; clients correct for clock skew with it.
+- Close codes live in `WS_CLOSE` in `packages/protocol/src/colors.ts`.
+- Every rider socket action also has a REST twin (`/api/ride/not-now`, `/api/ride/arrived`) for the polling fallback.
+
 ## Car to trip mapping
 
 MBTA V3 `vehicles` includes `carriages[]` (per-car `label`, order in the train) for the Orange Line and new Red Line cars. The Worker maps a car label to its current `trip_id`. For the demo, `DEMO_CAR_TRIPS` in `wrangler.toml` hardcodes the mapping and a fake trip with scripted stops.
@@ -81,7 +91,11 @@ Ride Mode on = consent. There is no accept step.
 5. **Meeting point:** the kiosk in the car of whichever rider has more time left before their stop stays put; the other walks. Same car means nobody walks.
 6. **Blurb:** Claude writes one line grounded in shared tags. Cached per pair. If the call fails or is slow (> 1.5 s), fall back to a template ("You both like ramen and books").
 
-Escape hatches: one pinch on the glasses ("Not now") drops you out for 10 minutes and rematches your partner. Ghost mode hides you entirely.
+Escape hatches: "Not now" on the glasses (back gesture, or the focused "Not now" button on the match card) drops you out for 10 minutes and rematches your partner. Select on the match card means "I'm here". Ghost mode hides you entirely. Verify on the device that the back gesture reaches the page as Escape and doesn't just close the Web App; if it closes the app, use the button only.
+
+**One pair per kiosk.** A kiosk has one tag and one screen, so it hosts at most one pair at a time. If the natural meeting kiosk is busy, use the other rider's car, or wait.
+
+**carDelta** in `match.found` counts cars from your current car to `meetAtCar`: positive is toward the front of the train, negative toward the back.
 
 ## Missions
 
@@ -98,7 +112,7 @@ Escape hatches: one pinch on the glasses ("Not now") drops you out for 10 minute
 3. `TrainRoom` matches you. Phone and glasses get `match.found`, the kiosk gets `pair.incoming`, LEDs glow the pair color.
 4. Glasses: "Maya, kiosk 1 car back, look for orange. You both love ramen."
 5. At the kiosk, when the second person arrives (or after a short delay), `mission.start`: the kiosk screen shows the prompt and countdown, the glasses show a compact version.
-6. The Pi writes a fresh nonce to the tag. Both tap and confirm on their phones. `stamp.awarded`, kiosk celebrates.
+6. The Pi writes a fresh nonce to the tag. Both tap; the tap itself is the confirmation (`stamp.progress` after the first, `stamp.awarded` after the second). Kiosk celebrates.
 7. Mission ends at the next stop minus 30 s, or on stamp. You are eligible for a new match on the next segment.
 8. At your destination stop, the room checks you out.
 

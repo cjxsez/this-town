@@ -72,6 +72,22 @@ function initState(): State {
 
 function onEvent(state: State, event: ServerToRider, at: number): State {
   switch (event.type) {
+    case "ride.snapshot": {
+      // Sent after rider.hello and returned by the polling fallback: redraw from scratch.
+      // TODO: use snapshot.serverNow - Date.now() as a clock offset for countdowns.
+      const { state: ride, match, mission } = event.snapshot;
+      const nextStopAt = ride.nextStopEtaSec === null ? null : at + ride.nextStopEtaSec * 1000;
+      let screen: Screen = IDLE;
+      if (mission) screen = { name: "mission", mission, partner: match?.partner ?? null };
+      else if (match) screen = { name: "match", match: { type: "match.found", ...match }, arrived: false };
+      if (state.screen.name === "stamp") screen = state.screen; // let the celebration finish
+      return { ...state, ride, nextStopAt, match: match ? { type: "match.found", ...match } : null, screen };
+    }
+    case "stamp.progress":
+      // TODO: show "1 of 2 tapped" on the mission screen.
+      return state;
+    case "pong":
+      return state;
     case "ride.state": {
       const ride = event.state;
       const nextStopAt = ride.nextStopEtaSec === null ? null : at + ride.nextStopEtaSec * 1000;
