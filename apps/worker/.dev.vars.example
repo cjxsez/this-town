@@ -1,0 +1,18 @@
+# Copy to .dev.vars for `wrangler dev` (gitignored). In production set each one with
+#   wrangler secret put <NAME>
+# from apps/worker/.
+
+# Claude API key for the one-line "why you two" blurb (src/llm/why.ts).
+# Leave empty to always use the template fallback.
+ANTHROPIC_API_KEY=
+
+# MBTA V3 API key (https://api-v3.mbta.com). Optional in DEMO_MODE for the demo cars.
+MBTA_API_KEY=
+
+# Shared secret for kiosk-web and the Pi agent (/ws/kiosk/:car?key=) and the /api/demo/* routes.
+KIOSK_KEY=change-me-to-a-long-random-string
+
+# Optional: override [vars] from wrangler.toml for local dev. PUBLIC_ORIGIN is the origin
+# written into NFC tag URLs (`${PUBLIC_ORIGIN}/k/<car>?n=<nonce>`), so point it at
+# something a phone on your network can open.
+# PUBLIC_ORIGIN=http://192.168.1.20:5173

@@ -1,0 +1,237 @@
+/*
+ * styles.css (kiosk-web): styles for the 7" Pi touchscreen, 800x480 landscape.
+ *
+ * - #root is exactly 800x480, nothing scrolls, no cursor, no text selection.
+ * - Big type: names and countdown must be readable from across a train car.
+ * - Dark background by default; PairIncoming fills the screen with the pair color.
+ * - Keep animations CSS-only and cheap (Pi GPU).
+ *
+ * TODO:
+ * - Bundle a bold display font locally.
+ * - Per-color text contrast on the PairIncoming fill.
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #0b0b0f;
+  --fg: #ffffff;
+  --dim: #a1a1aa;
+  --gold: #facc15;
+  --urgent: #ef4444;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden;
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#root {
+  position: relative;
+  width: 800px;
+  height: 480px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 28px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.screen-foot {
+  font-size: 18px;
+  color: var(--dim);
+}
+
+/* Idle */
+.idle {
+  align-items: center;
+}
+.idle-top {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+.idle-stat {
+  display: flex;
+  flex-direction: column;
+}
+.idle-num {
+  font-size: 72px;
+  font-weight: 800;
+  line-height: 1;
+}
+.idle-cap {
+  font-size: 22px;
+  color: var(--dim);
+}
+.idle-next {
+  align-items: flex-end;
+  text-align: right;
+}
+.idle-stop {
+  font-size: 36px;
+  font-weight: 700;
+}
+
+/* NFC hint */
+.nfc-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.nfc-label {
+  font-size: 44px;
+  font-weight: 800;
+}
+
+/* Pair incoming */
+.pair {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #000;
+}
+.pair-names {
+  font-size: 88px;
+  font-weight: 900;
+  line-height: 1;
+}
+.pair-sub {
+  font-size: 48px;
+  font-weight: 700;
+}
+.pair-color {
+  margin-top: 16px;
+  font-size: 26px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Mission */
+.mission {
+  border-left: 16px solid;
+}
+.mission-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mission-names {
+  font-size: 30px;
+  font-weight: 800;
+}
+.mission-rare {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.mission-body {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.mission-text {
+  flex: 1;
+}
+.mission-title {
+  margin: 0 0 8px;
+  font-size: 44px;
+  line-height: 1.05;
+}
+.mission-prompt {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+/* Countdown */
+.countdown {
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+.countdown-sm {
+  font-size: 32px;
+}
+.countdown-lg {
+  font-size: 120px;
+  line-height: 1;
+}
+.countdown.is-urgent {
+  color: var(--urgent);
+}
+
+/* Celebrate */
+.celebrate {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.burst {
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(circle, var(--burst) 0%, transparent 60%);
+  animation: burst 900ms ease-out forwards;
+}
+.celebrate.is-rare .burst {
+  background: radial-gradient(circle, var(--gold) 0%, var(--burst) 35%, transparent 65%);
+}
+.celebrate-title {
+  position: relative;
+  font-size: 96px;
+  font-weight: 900;
+}
+.celebrate-names {
+  position: relative;
+  font-size: 40px;
+  font-weight: 700;
+}
+@keyframes burst {
+  from {
+    transform: scale(0.1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+}
+
+/* Disconnected */
+.disconnected {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+.disc-title {
+  font-size: 56px;
+  font-weight: 800;
+}
+.disc-sub {
+  font-size: 26px;
+  color: var(--dim);
+}

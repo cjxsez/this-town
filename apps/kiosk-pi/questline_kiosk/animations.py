@@ -1,0 +1,153 @@
+"""Cancellable LED animations.
+
+Each animation is a coroutine that draws on a ``LedStrip`` until it finishes
+or is cancelled. ``AnimationPlayer`` runs exactly one at a time: ``play()``
+cancels whatever is running and starts the new one, so event handlers never
+have to care what was on before.
+
+Event -> animation (wired in agent.py):
+    kiosk.idle / pair.cleared  idle      dim slow breathing in leds.idle_color
+    pair.incoming              solid     pair color, full brightness
+    mission.show               pulse     pair color, slow pulse (~2.5 s period)
+    celebrate                  burst     white-to-pair flash running outward
+    celebrate (rare)           burst + rainbow
+    socket down                idle      dim amber (OFFLINE_RGB)
+
+All loops should run at ~FPS frames/s and ``await asyncio.sleep`` between
+frames so cancellation is immediate.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from collections.abc import Coroutine
+from typing import Any
+
+from .leds import OFF, RGB, LedStrip
+
+log = logging.getLogger(__name__)
+
+FPS = 30
+FRAME_S = 1.0 / FPS
+OFFLINE_RGB: RGB = (255, 120, 0)
+
+
+def scale(rgb: RGB, factor: float) -> RGB:
+    """Multiply a color by 0..1."""
+    f = max(0.0, min(1.0, factor))
+    return (int(rgb[0] * f), int(rgb[1] * f), int(rgb[2] * f))
+
+
+def wheel(pos: int) -> RGB:
+    """Classic 0..255 color wheel (red -> green -> blue -> red)."""
+    pos %= 256
+    if pos < 85:
+        return (255 - pos * 3, pos * 3, 0)
+    if pos < 170:
+        pos -= 85
+        return (0, 255 - pos * 3, pos * 3)
+    pos -= 170
+    return (pos * 3, 0, 255 - pos * 3)
+
+
+async def solid(strip: LedStrip, rgb: RGB) -> None:
+    """Fill the strip with one color and return."""
+    strip.fill(rgb)
+    strip.show()
+
+
+async def off(strip: LedStrip) -> None:
+    strip.fill(OFF)
+    strip.show()
+
+
+async def idle(strip: LedStrip, rgb: RGB, period_s: float = 6.0, low: float = 0.02, high: float = 0.12) -> None:
+    """Dim breathing loop, forever. Low enough that it doesn't compete with a pair color.
+
+    TODO:
+    - t = 0; loop: level = low + (high - low) * (0.5 - 0.5 * cos(2*pi*t/period_s))
+    - strip.fill(scale(rgb, level)); strip.show(); await asyncio.sleep(FRAME_S); t += FRAME_S
+    - optional: slow comet of one slightly brighter pixel to show the kiosk is alive
+    """
+    raise NotImplementedError
+
+
+async def pulse(strip: LedStrip, rgb: RGB, period_s: float = 2.5, low: float = 0.2, high: float = 1.0) -> None:
+    """Slow pulse in the pair color, forever (mission in progress).
+
+    TODO: same sine envelope as idle() with a shorter period and higher floor.
+    """
+    raise NotImplementedError
+
+
+async def burst(strip: LedStrip, rgb: RGB, duration_s: float = 2.0) -> None:
+    """Celebration: white flash from the center outward, settling into the pair color.
+
+    TODO:
+    - center = strip.count // 2; radius grows 0 -> count/2 over duration_s * 0.4
+    - pixels inside the radius: white fading to rgb over ~150 ms
+    - 2 to 3 quick full-strip flashes, then end on solid rgb
+    """
+    raise NotImplementedError
+
+
+async def rainbow(strip: LedStrip, duration_s: float | None = None, speed: int = 3) -> None:
+    """Moving rainbow. Runs forever when duration_s is None.
+
+    TODO:
+    - offset += speed each frame
+    - pixel i = wheel((i * 256 // strip.count + offset) & 255)
+    - stop after duration_s if given
+    """
+    raise NotImplementedError
+
+
+async def celebrate(strip: LedStrip, rgb: RGB, rare: bool, duration_s: float = 4.0) -> None:
+    """burst, then rainbow for the rest of duration_s if rare, then hold the pair color."""
+    burst_s = min(2.0, duration_s)
+    await burst(strip, rgb, burst_s)
+    if rare and duration_s > burst_s:
+        await rainbow(strip, duration_s - burst_s)
+    await solid(strip, rgb)
+
+
+class AnimationPlayer:
+    """Runs one animation task at a time on a strip."""
+
+    def __init__(self, strip: LedStrip) -> None:
+        self.strip = strip
+        self._task: asyncio.Task[None] | None = None
+        self.current: str | None = None
+
+    def play(self, name: str, coro: Coroutine[Any, Any, None]) -> asyncio.Task[None]:
+        """Cancel the running animation (if any) and start ``coro``."""
+        self._cancel()
+        self.current = name
+        self._task = asyncio.create_task(self._guard(name, coro), name=f"anim:{name}")
+        return self._task
+
+    async def stop(self) -> None:
+        """Cancel the running animation and wait for it to finish."""
+        task = self._task
+        self._cancel()
+        if task is not None:
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    def _cancel(self) -> None:
+        if self._task is not None and not self._task.done():
+            self._task.cancel()
+        self._task = None
+        self.current = None
+
+    async def _guard(self, name: str, coro: Coroutine[Any, Any, None]) -> None:
+        # A broken animation must never take down the socket loop.
+        try:
+            await coro
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("animation %s failed", name)

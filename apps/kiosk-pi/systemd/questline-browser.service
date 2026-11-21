@@ -1,0 +1,35 @@
+# Questline kiosk screen: Chromium in kiosk mode on https://<domain>/kiosk/<car>?key=...
+# Installed by scripts/setup.sh to /etc/systemd/system/ (paths rewritten to the repo location).
+#
+# Needs the Pi to boot to the desktop with autologin for user pi
+# (raspi-config nonint do_boot_behaviour B4), because Chromium attaches to the
+# logged-in Wayland/X session. Bookworm's labwc uses wayland-0; older wayfire
+# images use wayland-1. Check with: ls /run/user/1000/
+# Not installed on a screenless kiosk (SKIP_BROWSER=1 scripts/setup.sh).
+
+[Unit]
+Description=Questline kiosk screen (Chromium kiosk mode)
+Wants=network-online.target
+After=network-online.target graphical.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/this-town/apps/kiosk-pi
+Environment=PYTHONUNBUFFERED=1
+Environment=QUESTLINE_CONFIG=/home/pi/this-town/apps/kiosk-pi/config.toml
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=DISPLAY=:0
+# Wait for the desktop session's display socket before starting Chromium.
+# ($$ escapes systemd's own variable expansion so the shell sees $VAR.)
+ExecStartPre=/bin/sh -c 'until [ -S "$$XDG_RUNTIME_DIR/$$WAYLAND_DISPLAY" ] || [ -S /tmp/.X11-unix/X0 ]; do sleep 1; done'
+ExecStart=/home/pi/this-town/apps/kiosk-pi/.venv/bin/python -m questline_kiosk browser
+TimeoutStartSec=180
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

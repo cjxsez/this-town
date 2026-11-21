@@ -1,0 +1,20 @@
+<!doctype html>
+<!--
+  kiosk-web entry HTML.
+  Runs full screen in Chromium --kiosk on a Raspberry Pi 7" touchscreen (800x480 landscape).
+  The screen is public: first names and colors only.
+  TODO:
+  - Preload the display font locally (no network fonts on a flaky hotspot).
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=800, height=480, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="color-scheme" content="dark" />
+    <title>Questline kiosk</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

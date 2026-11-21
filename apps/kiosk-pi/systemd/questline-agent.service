@@ -1,0 +1,32 @@
+# Questline kiosk agent: LED strip, dynamic NFC tag, kiosk socket (role=pi).
+# Installed by scripts/setup.sh to /etc/systemd/system/ (paths rewritten to the repo location).
+#
+# LED note: leds.driver = "ws281x" on GPIO18 (PWM) needs root for /dev/mem.
+# Either switch to GPIO10 / SPI (driver "neopixel_spi", works as pi) or run
+# `sudo systemctl edit questline-agent` and set:
+#   [Service]
+#   User=root
+#   Group=root
+
+[Unit]
+Description=Questline kiosk agent (LEDs + NFC + kiosk socket)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+SupplementaryGroups=gpio i2c spi
+WorkingDirectory=/home/pi/this-town/apps/kiosk-pi
+Environment=PYTHONUNBUFFERED=1
+Environment=QUESTLINE_CONFIG=/home/pi/this-town/apps/kiosk-pi/config.toml
+ExecStart=/home/pi/this-town/apps/kiosk-pi/.venv/bin/python -m questline_kiosk agent
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
