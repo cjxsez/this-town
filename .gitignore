@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+apps/worker/public/
+*.log
+.DS_Store
+
+# python (kiosk-pi)
+__pycache__/
+*.pyc
+.venv/
+apps/kiosk-pi/config.toml
+
+# seed output
+scripts/.seed-tokens.json
