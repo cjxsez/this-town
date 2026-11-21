@@ -33,6 +33,15 @@ Served by the worker at `https://<domain>/g/` (Vite `base: "/g/"`).
 | socket dropped, retrying | `Offline` |
 | socket auth failure | clear token, `LinkCode` |
 
+## Guess who (the `/g/` root)
+
+`/g/` opens a five-question guessing game about the person in front of you. The ride HUD described above is at `/g/?ride`, so use that URL when linking glasses for a ride. The game makes no API or socket calls.
+
+- Two kinds of question: either/or ("Night owl" or "Day person") and a 0 to 10 scale ("How much does this person like horror movies?"). The deck is `src/game/questions.ts`.
+- 20 seconds per question. If time runs out the question is recorded as "No guess" and the next one shows.
+- The last screen lists the guesses and has a Restart button.
+- Frame only, no Neural Band: scroll the temple strip to move the choice (left or up is previous, right or down is next), tap to lock it in. The game listens for arrow keys and Enter, and also for `wheel` and `click`, in case the strip's scroll reaches the page as scroll events. Which one the glasses send has not been checked on device: open `/g/?debug=keys` and watch the console (it logs keys, wheel deltas and clicks). If scrolling moves too fast or too slow, change `WHEEL_STEP_PX` in `src/lib/input.ts`.
+
 ## Input mapping
 
 Nothing here is required. Every screen is driven by server events, tapping the meeting kiosk's tag counts as arriving, the mission auto-starts, and "Not now" is a button on the phone.
@@ -50,10 +59,11 @@ On the match card: select on "I'm here" (default focus) sends `rider.arrived`. B
 ```
 index.html              600x600 viewport, black theme
 vite.config.ts          base /g/, port 5174, proxies /api and /ws to :8787
-src/main.tsx            React entry
+src/main.tsx            React entry: Guess who at /g/, ride HUD at /g/?ride
 src/App.tsx             screen state machine driven by socket events
 src/styles.css          600x600 root, black background, big type, focus rings
-src/lib/input.ts        key -> action mapping, useInput hook
+src/lib/input.ts        key -> action mapping, useInput hook (optional wheel and click)
+src/game/questions.ts   Guess who deck, round size, seconds per question
 src/lib/link.ts         4-digit code linking, token in localStorage
 src/lib/socket.ts       /ws/rider socket, reconnect, polling fallback
 src/screens/LinkCode.tsx  big 4-digit code
@@ -62,6 +72,7 @@ src/screens/MatchCard.tsx partner name, color, why line, where to go, I'm here /
 src/screens/Mission.tsx   compact title, prompt, countdown
 src/screens/Stamp.tsx     brief celebration, auto-dismiss
 src/screens/Offline.tsx   reconnecting
+src/screens/GuessGame.tsx Guess who: start, five questions, recap and Restart
 src/components/Countdown.tsx   m:ss to an epoch ms time
 src/components/ColorSwatch.tsx pair color from PAIR_COLOR_HEX
 ```
@@ -76,7 +87,7 @@ pnpm dev:worker      # worker on :8787
 pnpm dev:glasses     # this app on :5174
 ```
 
-Open http://localhost:5174/g/. In dev the 600x600 lens area is outlined. To preview at the real size, use Chrome DevTools device toolbar with a custom 600x600 device, or a 600x600 window. Use arrow keys, Enter and Escape to simulate the touch strip. The Meta Ray-Ban Display Simulator Chrome extension also previews the 600x600 display.
+Open http://localhost:5174/g/ for Guess who, or http://localhost:5174/g/?ride for the ride HUD. In dev the 600x600 lens area is outlined. To preview at the real size, use Chrome DevTools device toolbar with a custom 600x600 device, or a 600x600 window. Use arrow keys, Enter and Escape to simulate the touch strip. The Meta Ray-Ban Display Simulator Chrome extension also previews the 600x600 display.
 
 To link in dev, run phone-web too (`pnpm dev:phone`), onboard, and enter the code from the glasses tab.
 

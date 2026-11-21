@@ -195,3 +195,54 @@ body {
   font-size: 24px;
   color: #9ca3af;
 }
+
+/* Guess who: 0 to 10 scale. Outlines, not fills (additive display). */
+.scale {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.scale-value {
+  font-size: 96px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.scale-track {
+  display: flex;
+  gap: 8px;
+}
+
+.scale-tick {
+  flex: 1;
+  height: 28px;
+  border: 3px solid #555;
+  border-radius: 8px;
+}
+
+.scale-tick.is-under {
+  border-color: var(--fg);
+}
+
+.scale-tick.is-focused {
+  border-color: var(--fg);
+  outline: 4px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.guess-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guess-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  font-size: 24px;
+}
