@@ -10,6 +10,7 @@ Per connection:
          kiosk.idle    -> idle animation, unless a pair is active
          pair.incoming -> solid pair color
          mission.show  -> slow pulse in the pair color
+         stamp.progress (tapped: 1) -> short white flash, then back to pulse
          nfc.write     -> write URL to the tag, reply nfc.written {writeId, url} or nfc.failed
          celebrate     -> burst (+ rainbow if rare), then hold the pair color
          pair.cleared  -> idle animation (only if it matches the active pair)
@@ -46,6 +47,7 @@ from .protocol import (
     PairIncomingEvent,
     ProtocolError,
     ServerToKiosk,
+    StampProgressEvent,
     encode,
     hex_to_rgb,
     kiosk_hello,
@@ -230,7 +232,7 @@ class KioskAgent:
             case "pair.cleared":
                 await self.on_pair_cleared(event)  # type: ignore[arg-type]
             case "stamp.progress":
-                pass  # TODO: optional LED flash when the first rider taps
+                await self.on_stamp_progress(event)  # type: ignore[arg-type]
 
     async def on_kiosk_idle(self, event: KioskIdleEvent) -> None:
         # kiosk.idle also carries live stats for the screen and may arrive while
@@ -245,6 +247,26 @@ class KioskAgent:
     async def on_mission_show(self, event: MissionShowEvent) -> None:
         self.active_match, self.active_color = event["matchId"], event["color"]
         self.player.play("pulse", anim.pulse(self.leds, pair_rgb(event["color"])))
+
+    async def on_stamp_progress(self, event: StampProgressEvent) -> None:
+        """First tap: short white flash, then resume the mission pulse."""
+        if self.active_match not in (None, event["matchId"]):
+            log.info(
+                "stamp.progress for %s but showing %s, ignoring",
+                event["matchId"],
+                self.active_match,
+            )
+            return
+        if event["tapped"] != 1 or self.active_color is None:
+            return
+
+        color = self.active_color
+
+        async def flash_then_pulse() -> None:
+            await anim.flash(self.leds, anim.WHITE, duration_s=0.18)
+            await anim.pulse(self.leds, pair_rgb(color))
+
+        self.player.play("flash", flash_then_pulse())
 
     async def on_celebrate(self, event: CelebrateEvent) -> None:
         self.active_match, self.active_color = event["matchId"], event["color"]
