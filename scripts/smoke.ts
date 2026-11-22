@@ -173,7 +173,7 @@ async function main() {
   // Andres walks to 1413 and taps its tag: that's arriving.
   const walk = await api<TapRes>("POST", "/api/taps", { car: "1413" }, andres.token);
   if (walk.result !== "moved-car") fail(`expected moved-car, got ${JSON.stringify(walk)}`);
-  /** Where the pair got their stamp; stays null in games-only, where nobody is stamped. */
+  /** Where the pair got their stamp (a mission, or finishing the games in games-only). */
   let stampStationId: string | null = null;
   if (GAMES_ONLY) {
     // D26: arriving starts no mission; the pair plays the games in their room instead.
@@ -188,6 +188,80 @@ async function main() {
     });
     if (view.gameId !== "tale" || view.game.phase !== "think") fail(`both ready should start Tall tale, got ${JSON.stringify(view)}`);
     ok("games only: arriving starts no mission, and the pair is playing Tall tale in their room");
+
+    // D28: play all three games to the end through both seats. Finishing the last one stamps
+    // both riders, celebrates on the kiosk and frees it, then rests them before a rematch.
+    type View = { gameId: string | null; done: boolean; game: Record<string, unknown> & { phase?: string } };
+    const seats = [room.seat, mayaGame.seat] as const;
+    const act = (seat: string, action: object) => api<View>("POST", `/api/game/rooms/${room.code}/act`, { seat, action });
+    const look = (seat: string) => api<View>("GET", `/api/game/rooms/${room.code}?seat=${seat}`);
+    const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    /** Poll both seats (as their phones would) until `pred` holds for the first seat's view. */
+    const until = async (what: string, pred: (v: View) => boolean, ms = 30_000) => {
+      const end = Date.now() + ms;
+      for (;;) {
+        const [v] = await Promise.all(seats.map(look));
+        if (pred(v!)) return v!;
+        if (Date.now() > end) fail(`games: ${what} (last view ${JSON.stringify(v)})`);
+        await pause(400);
+      }
+    };
+    const both = async (action: object) => {
+      for (const seat of seats) await act(seat, action);
+    };
+
+    // Tall tale: ready through thinking, each teller says done (after the leftover-tap guard), both call.
+    await both({ type: "ready", phase: "think" });
+    await until("tale reaches the first story", (v) => v.game.phase === "tell");
+    for (const turn of [0, 1]) {
+      await pause(3200);
+      await both({ type: "done", turn });
+    }
+    await until("tale reaches the verdict", (v) => v.game.phase === "verdict");
+    await pause(1200);
+    await both({ type: "call", call: "truth" });
+    await until("tale reveals", (v) => v.done);
+    await act(room.seat, { type: "room.next" });
+
+    // First impressions: five rounds of lock, rate, and the short wait after both rated.
+    await until("impressions starts", (v) => v.gameId === "impressions");
+    await both({ type: "ready" });
+    for (let round = 0; round < 5; round++) {
+      await until(`impressions round ${round + 1} guess`, (v) => v.game.phase === "guess" || v.done);
+      await both({ type: "lock", value: 0 });
+      await until(`impressions round ${round + 1} talk`, (v) => v.game.phase === "talk");
+      await both({ type: "rate", rating: "close" });
+      await until(`impressions round ${round + 1} ends`, (v) => v.game.phase !== "talk" || v.game.round !== round);
+    }
+    await until("impressions finishes", (v) => v.done);
+    await act(room.seat, { type: "room.next" });
+
+    // Left for you: answer three questions, step past each reveal, then skip leaving one.
+    await until("trivia starts", (v) => v.gameId === "trivia");
+    await both({ type: "ready" });
+    for (let q = 0; q < 3; q++) {
+      await until(`trivia question ${q + 1}`, (v) => v.game.phase === "question" && v.game.index === q);
+      await act(room.seat, { type: "lock", q, choice: 0 });
+      await act(mayaGame.seat, { type: "next", q });
+    }
+    await until("trivia asks to leave a question", (v) => v.game.phase === "leave");
+    await act(room.seat, { type: "skip" });
+    await until("trivia finishes", (v) => v.done);
+    ok("games only: the pair played Tall tale, First impressions and Left for you to the end");
+
+    const andresStamp = await phone.wait("stamp.awarded", 10_000);
+    await mayaSock.wait("stamp.awarded", 10_000);
+    await screen.wait("celebrate", 10_000);
+    await phone.wait("match.cleared", 10_000, (e) => e.reason === "mission-done");
+    await screen.wait("pair.cleared", 15_000);
+    stampStationId = andresStamp.stamp.stationId;
+    ok(`games only: finishing stamped both at ${andresStamp.stamp.station}, the kiosk celebrated and is free again`);
+
+    const passport = await api<{ stamps: unknown[]; peopleMet: number }>("GET", "/api/passport", undefined, andres.token);
+    if (passport.stamps.length !== 1 || passport.peopleMet !== 1) fail(`games-only passport: ${JSON.stringify(passport)}`);
+    const rested = await api<{ match: unknown }>("GET", "/api/ride/state", undefined, andres.token);
+    if (rested.match) fail("games only: the pair was re-matched during the rest after finishing");
+    ok("games only: passport has the stamp and 1 person met; no rematch during the rest");
   } else {
     const started = await glasses.wait("mission.start");
     const show = await screen.wait("mission.show");
@@ -231,7 +305,7 @@ async function main() {
   // History, profile edits, mood.
   type Recent = { matches: { matchId: string; partnerFirstName: string; color: string; stamped: boolean; stationId: string | null; blocked: boolean }[] };
   const recent = await api<Recent>("GET", "/api/matches/recent", undefined, andres.token);
-  if (recent.matches[0]?.partnerFirstName !== "Maya" || recent.matches[0]?.stamped !== !GAMES_ONLY) fail(`recent matches: ${JSON.stringify(recent)}`);
+  if (recent.matches[0]?.partnerFirstName !== "Maya" || !recent.matches[0]?.stamped) fail(`recent matches: ${JSON.stringify(recent)}`);
   if (recent.matches[0]?.stationId !== stampStationId) fail(`recent match should say where you met (${stampStationId}): ${JSON.stringify(recent.matches[0])}`);
 
   // Block Maya from People, see it on the server, then unblock (later steps pair them again).
