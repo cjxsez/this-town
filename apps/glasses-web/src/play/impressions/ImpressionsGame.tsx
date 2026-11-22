@@ -190,7 +190,7 @@ function tallyText(t: ImpressionsTally): string {
   return `${t.spot} spot on, ${t.close} close`;
 }
 
-function Done({ view, onNext, onAgain }: Props & { view: Of<"done"> }) {
+function Done({ view, onNext, onAgain, last }: Props & { view: Of<"done"> }) {
   return (
     <main className="hud guess impressions">
       <Wobble />
@@ -206,7 +206,7 @@ function Done({ view, onNext, onAgain }: Props & { view: Of<"done"> }) {
         </div>
       </div>
       <div className="guess-body impressions-verdict">{IMPRESSIONS_VERDICT_LABEL[view.verdict]}</div>
-      <EndButtons onAgain={onAgain} onNext={onNext} />
+      <EndButtons onAgain={onAgain} onNext={onNext} last={last} />
     </main>
   );
 }

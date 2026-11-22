@@ -58,6 +58,15 @@ export interface RoomView {
   /** The current module's view for this seat. Cast it to that game's view type. */
   game: unknown;
   done: boolean;
+  /** The current game is the last of the playlist: its end screen offers Finish, not Next game / Again. */
+  last: boolean;
+  /**
+   * The last game is done and the room ends by itself at this server time unless someone
+   * presses Finish first. null otherwise.
+   */
+  finishAt: number | null;
+  /** The pair played the whole playlist and pressed Finish (or it timed out): show the end screen. */
+  finished: boolean;
   /** Goes up each time a game starts (first game, "Next game", "Again"). Screens are keyed on it. */
   run: number;
   /** Server time when this view was made, to line the client clock up with deadlines. */
@@ -75,7 +84,7 @@ export interface RoomView {
 }
 
 /** Actions the room handles itself. Everything else goes to the current game. */
-export type RoomAction = { type: "room.next" } | { type: "room.again" };
+export type RoomAction = { type: "room.next" } | { type: "room.again" } | { type: "room.finish" };
 
 /** Props every game screen takes, on the glasses and on the phone. */
 export interface GameProps<V> {
@@ -84,7 +93,12 @@ export interface GameProps<V> {
   send: (action: unknown) => void;
   /** Current server time, epoch ms. Compare deadlines against this, not Date.now(). */
   serverNow: () => number;
-  /** Last screen only: move both players to the next game, or replay this one. */
+  /**
+   * Last screen only: move both players to the next game, or replay this one. On the last
+   * game of the playlist (`last`), onNext finishes the room instead and there is no Again.
+   */
   onNext: () => void;
   onAgain: () => void;
+  /** This is the last game of the playlist: the end screen shows one Finish button. */
+  last?: boolean;
 }

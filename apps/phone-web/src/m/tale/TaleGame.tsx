@@ -17,7 +17,7 @@ const CARD_TITLE: Record<TaleCard, string> = { truth: "Tell the truth", fake: "M
 const CARD_WORD: Record<TaleCard, string> = { truth: "True", fake: "Made up" };
 const SPARK_LEAD: Record<TaleCard, string> = { truth: "Think of", fake: "Try" };
 
-export function TaleGame({ view, send, serverNow, onNext, onAgain }: GameProps<TaleView>) {
+export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameProps<TaleView>) {
   const [peeked, setPeeked] = useState(false);
 
   if (view.phase === "intro") {
@@ -131,7 +131,7 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain }: GameProps<T
   }
 
   return (
-    <Screen label="M-tale-reveal" footer={<EndButtons onNext={onNext} onAgain={onAgain} />}>
+    <Screen label="M-tale-reveal" footer={<EndButtons onNext={onNext} onAgain={onAgain} last={last} />}>
       <Eyebrow>Tall tale</Eyebrow>
       <Title size="md">{view.summary}</Title>
       <Story label="Your story" result={view.yours} />

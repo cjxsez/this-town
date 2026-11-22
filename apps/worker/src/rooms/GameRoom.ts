@@ -7,16 +7,18 @@
  * - `view(seat)`: the poll. Marks the seat as present, starts the first game once both
  *   seats have shown up, runs the module's tick() so timed phases move on, and returns that
  *   seat's RoomView.
- * - `act(seat, action)`: "room.next" and "room.again" on a finished game, otherwise the
+ * - `act(seat, action)`: "room.next" / "room.again" on a finished game, "room.finish" after the last, otherwise the
  *   module's reduce().
  * - `setLens()`, `moveTo()`, `release()`: a player moving their seat from a phone onto a
  *   pair of glasses and back. The seat's own room remembers which glasses show it (`lens`);
  *   the room those glasses opened for themselves points at the seat (`moved`), and the
  *   glasses follow it. The game state never moves, so nothing can go out of step.
  * - Hooks (games/hooks.ts): prepare before a game starts, effect after each change.
- * - A room TrainRoom opened for a matched pair remembers that pair (`pair`). The first time
- *   the last game of the playlist finishes there, it tells the TrainRoom (`gamesDone`), which
- *   stamps both riders and celebrates on the kiosk (decisions D28).
+ * - The end: when the last game of the playlist is done, the room finishes on "room.finish"
+ *   (the Finish button) or by itself FINISH_AFTER_MS later, and stays finished: no Next game
+ *   or Again after that, both screens show the end. A room TrainRoom opened for a matched
+ *   pair remembers that pair (`pair`) and tells the TrainRoom when it finishes (`gamesDone`),
+ *   which stamps both riders and celebrates on the kiosk (decisions D28).
  * - `sharedGet` / `sharedPut`: the instance named SHARED_ROOM keeps values that outlive a
  *   room, such as the trivia questions pairs leave for the next pair.
  * - Idle alarm: after ROOM_STORAGE_TTL_MS with no open/view/act (or lens moves), `alarm`
@@ -46,6 +48,8 @@ const PRESENT_MS = 5000;
 export const ROOM_IDLE_MS = 2 * 60 * 60 * 1000;
 
 const ROOM_KEY = "room";
+/** After the last game is done, the room finishes by itself this long later (nobody has to press Finish). */
+export const FINISH_AFTER_MS = 20_000;
 
 /** The matched pair a room was opened for, so the TrainRoom hears when they finish. */
 export interface PairRef {
@@ -79,8 +83,10 @@ interface Room {
   moved?: SeatRef | null;
   /** Set when TrainRoom opened this room for a matched pair. */
   pair?: PairRef;
-  /** The pair finished the last game once; TrainRoom has been told. */
+  /** The playlist is over (Finish, or FINISH_AFTER_MS after the last game); TrainRoom has been told. */
   finished?: boolean;
+  /** Server time the room finishes by itself, once the last game is done. */
+  finishAt?: number | null;
 }
 
 export class GameRoom extends DurableObject<Env> {
@@ -208,6 +214,7 @@ export class GameRoom extends DurableObject<Env> {
     }
     room.index = index % GAMES.length;
     room.run += 1;
+    room.finishAt = null;
     room.game = mod.init(this.gameCtx(), seed);
     await this.save();
   }
@@ -226,10 +233,9 @@ export class GameRoom extends DurableObject<Env> {
     if (!room || next === prev) return;
     room.game = next;
     const mod = GAMES[room.index]!;
-    const finishedNow = Boolean(room.pair) && !room.finished && room.index === GAMES.length - 1 && mod.isDone(next);
-    if (finishedNow) room.finished = true;
+    // The last game just ended: start the clock on the room finishing by itself.
+    if (!room.finished && room.finishAt == null && this.isLast() && mod.isDone(next)) room.finishAt = Date.now() + FINISH_AFTER_MS;
     await this.save();
-    if (finishedNow) this.ctx.waitUntil(this.tellPairDone(room.pair!));
     const job = HOOKS[mod.id]?.effect?.(this.env, this.shared(), prev, next, { names: room.names ?? null });
     if (!job) return;
     const run = room.run;
@@ -242,6 +248,20 @@ export class GameRoom extends DurableObject<Env> {
         })
         .catch((err) => console.error("game effect failed", mod.id, err)),
     );
+  }
+
+  private isLast(): boolean {
+    return this.room !== null && this.room.index === GAMES.length - 1;
+  }
+
+  /** End the room for good. A matched pair's TrainRoom then stamps them. */
+  private async finish(): Promise<void> {
+    const room = this.room;
+    if (!room || room.finished) return;
+    room.finished = true;
+    room.finishAt = null;
+    await this.save();
+    if (room.pair) this.ctx.waitUntil(this.tellPairDone(room.pair));
   }
 
   /** The pair played the whole playlist: their TrainRoom stamps them and lights the kiosk. */
@@ -265,6 +285,9 @@ export class GameRoom extends DurableObject<Env> {
       gameId: room.game === null ? null : mod.id,
       game: room.game === null ? null : mod.view(room.game, seat),
       done: room.game !== null && mod.isDone(room.game),
+      last: this.isLast(),
+      finishAt: room.finishAt ?? null,
+      finished: room.finished === true,
       run: room.run,
       now,
       lens: room.lens?.[seat] ?? null,
@@ -281,6 +304,7 @@ export class GameRoom extends DurableObject<Env> {
     } else {
       const mod = GAMES[this.room.index]!;
       await this.commit(this.room.game, mod.tick(this.room.game, this.gameCtx()));
+      if (!this.room.finished && this.room.finishAt != null && Date.now() >= this.room.finishAt) await this.finish();
     }
     // Polls count as activity even when the game state did not change (commit may no-op).
     await this.save();
@@ -294,7 +318,11 @@ export class GameRoom extends DurableObject<Env> {
     if (room.game !== null) {
       const mod = GAMES[room.index]!;
       const type = (action as { type?: unknown } | null)?.type;
-      if (type === "room.next" || type === "room.again") {
+      if (room.finished) {
+        // The playlist is over: nothing restarts it.
+      } else if (type === "room.finish" || (type === "room.next" && this.isLast())) {
+        if (this.isLast() && mod.isDone(room.game)) await this.finish();
+      } else if (type === "room.next" || type === "room.again") {
         if (mod.isDone(room.game)) await this.startOnce(type === "room.next" ? room.index + 1 : room.index);
       } else {
         const ticked = mod.tick(room.game, this.gameCtx());

@@ -25,6 +25,7 @@ import { ROOM_CODE, roomApi, type Seat, type SeatRef } from "@questline/protocol
 import { SCREENS } from "./play";
 import { useRoom } from "./lib/room";
 import { Pair } from "./screens/Pair";
+import { GamesOver } from "./screens/GamesOver";
 import "./guess.css";
 
 const STORE_KEY = "questline.game.code";
@@ -134,6 +135,7 @@ export function Games({ follow, waiting }: { follow?: SeatRef; waiting?: ReactNo
   const { room, send, serverNow } = following ? away : home;
   if (!room) return null;
   if (!room.gameId || (moved && !following)) return waiting ?? <Pair code={room.code} state="waiting" />;
+  if (room.finished) return <GamesOver />;
   if (!room.partnerHere) return waiting ?? <Pair code={room.code} state="away" />;
 
   const Screen = SCREENS[room.gameId];
@@ -144,7 +146,8 @@ export function Games({ follow, waiting }: { follow?: SeatRef; waiting?: ReactNo
       seat={room.seat}
       send={send}
       serverNow={serverNow}
-      onNext={() => send({ type: "room.next" })}
+      last={room.last}
+      onNext={() => send({ type: room.last ? "room.finish" : "room.next" })}
       onAgain={() => send({ type: "room.again" })}
     />
   );

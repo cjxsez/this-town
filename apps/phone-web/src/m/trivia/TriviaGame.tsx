@@ -20,7 +20,7 @@ const LETTERS = ["A", "B", "C", "D"];
  * pair. Then this screen has the form for the question the pair leaves behind (the glasses
  * cannot type).
  */
-export function TriviaGame({ view, send, serverNow, onNext, onAgain }: GameProps<TriviaView>) {
+export function TriviaGame({ view, send, serverNow, onNext, onAgain, last }: GameProps<TriviaView>) {
   // The form lives up here so the text is still there if the question has to be rewritten.
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
@@ -181,7 +181,7 @@ export function TriviaGame({ view, send, serverNow, onNext, onAgain }: GameProps
           ? "Couldn't save it this time"
           : "Nothing left this time";
   return (
-    <Screen label="M-trivia-result" footer={<EndButtons onNext={onNext} onAgain={onAgain} />}>
+    <Screen label="M-trivia-result" footer={<EndButtons onNext={onNext} onAgain={onAgain} last={last} />}>
       <Eyebrow>
         You two got {view.score} of {view.total}
       </Eyebrow>

@@ -24,8 +24,10 @@ import "./m.css";
  * phone then waits, takes over again for anything that needs typing, and can bring the
  * game back. The game itself stays in the room on the worker, so nothing is lost or reset.
  *
- * A matched pair that finishes the last game gets a stamp from the worker (D28). When it
- * lands while this page is open, the phone goes to /ride, which shows the stamp.
+ * After the last game the only button is Finish (the room also finishes by itself 20 s after
+ * the last game ends). A finished room shows the end screen and never restarts. A matched
+ * pair then gets a stamp from the worker (D28); when it lands while this page is open, the
+ * phone goes to /ride, which shows the stamp.
  *
  * The seat is kept in sessionStorage so a reload stays in the game. It talks to the worker
  * directly (roomApi), not through the app's api layer, so it also works in simulator mode
@@ -94,7 +96,8 @@ export default function MRoute() {
   const [lensCode, setLensCode] = useState("");
   const { room, gone, send, lens, serverNow } = useRoom(joined?.code ?? null, joined?.seat ?? "b");
   const navigate = useNavigate();
-  const phase = useApp().state.ride.phase;
+  const app = useApp().state;
+  const phase = app.ride.phase;
   const lastPhase = useRef(phase);
   useEffect(() => {
     const before = lastPhase.current;
@@ -276,6 +279,26 @@ export default function MRoute() {
     );
   }
 
+  // All three games played (Finish, or the room timed out after the last one): the end.
+  // A matched pair's stamp then takes the phone to /ride (see the effect above).
+  if (room?.finished) {
+    return (
+      <Screen
+        label="M-over"
+        blobs="b"
+        footer={
+          <>
+            <Button onClick={() => (leave(), navigate(app.profile ? "/ride" : "/"))}>Done</Button>
+          </>
+        }
+      >
+        <Eyebrow>That's all three</Eyebrow>
+        <Title size="md">Thanks for playing</Title>
+        <Body>Tall tale, First impressions and Left for you. Your question is waiting for the next pair.</Body>
+      </Screen>
+    );
+  }
+
   if (!room || !room.gameId || !room.partnerHere) {
     const hosting = joined.seat === "a";
     return (
@@ -328,7 +351,8 @@ export default function MRoute() {
         seat={room.seat}
         send={send}
         serverNow={serverNow}
-        onNext={() => send({ type: "room.next" })}
+        last={room.last}
+        onNext={() => send({ type: room.last ? "room.finish" : "room.next" })}
         onAgain={() => send({ type: "room.again" })}
       />
     </Stage>

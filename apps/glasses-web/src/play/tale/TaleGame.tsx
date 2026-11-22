@@ -23,7 +23,7 @@ const CARD_WORD: Record<TaleCard, string> = { truth: "True", fake: "Made up" };
 const SPARK_LEAD: Record<TaleCard, string> = { truth: "Think of", fake: "Try" };
 const CALLS: TaleCard[] = ["truth", "fake"];
 
-export function TaleGame({ view, send, serverNow, onNext, onAgain }: GameProps<TaleView>) {
+export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameProps<TaleView>) {
   /** Focused verdict button: 0 "True", 1 "Made up". */
   const [focus, setFocus] = useState(0);
 
@@ -168,7 +168,7 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain }: GameProps<T
           Partner <b>{view.theyPoints}</b>
         </span>
       </div>
-      <EndButtons onAgain={onAgain} onNext={onNext} />
+      <EndButtons onAgain={onAgain} onNext={onNext} last={last} />
     </main>
   );
 }
