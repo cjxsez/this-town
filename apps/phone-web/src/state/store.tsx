@@ -109,9 +109,21 @@ function reducer(s: AppState, a: Action): AppState {
     case "serverStamps":
       return { ...s, stamps: a.stamps };
     case "serverPeople": {
-      // Keep local fields (blocked, where you met) for people the server also knows.
+      // The server knows names, colors, blocks and the stamp's station. Keep what only this
+      // device knows (where you met without a stamp, stamp counts from the simulator).
       const local = new Map(s.people.map((p) => [p.id, p]));
-      return { ...s, people: a.people.map((p) => ({ ...p, ...local.get(p.id), firstName: p.firstName, color: p.color })) };
+      return {
+        ...s,
+        people: a.people.map((p) => {
+          const mine = local.get(p.id);
+          return {
+            ...mine,
+            ...p,
+            metAtStationId: p.metAtStationId || mine?.metAtStationId || "",
+            quests: Math.max(p.quests, mine?.quests ?? 0),
+          };
+        }),
+      };
     }
     case "devRide": {
       const next = { ...s, ride: a.ride };

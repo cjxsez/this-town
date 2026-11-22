@@ -56,8 +56,9 @@ export function createBackendApi(): Omit<QuestlineApi, "ride"> & { ride: Backend
     block: async (personId) => {
       if (getToken()) await rest.report({ matchId: personId, reason: "Blocked from People", block: true });
     },
-    // No unblock route yet: it only changes this device.
-    unblock: async () => {},
+    unblock: async (personId) => {
+      if (getToken()) await rest.unblock(personId);
+    },
   };
 }
 

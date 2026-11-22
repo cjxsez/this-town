@@ -150,9 +150,10 @@ export function toPerson(m: RecentMatchesRes["matches"][number]): Person {
     id: m.matchId,
     firstName: m.partnerFirstName,
     color: m.color,
-    metAtStationId: "",
+    metAtStationId: m.stationId ?? "",
     metAt: new Date(m.at).toISOString(),
     quests: m.stamped ? 1 : 0,
+    blocked: m.blocked,
   };
 }
 

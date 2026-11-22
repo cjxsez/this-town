@@ -23,6 +23,7 @@
  * - POST /api/ride/arrived   REST twin of rider.arrived
  * - GET  /api/passport       -> PassportRes
  * - POST /api/report         ReportReq -> (no body defined in protocol)
+ * - POST /api/unblock        UnblockReq -> OkRes
  *
  * - On a 401 to a request that carried a token, auth.tokenRejected() so the app resets.
  */
@@ -212,4 +213,6 @@ export const api = {
   getPassport: () => request("GET", "/api/passport", { schema: PassportRes }),
 
   report: (body: ReportBody) => request("POST", "/api/report", { body }),
+
+  unblock: (matchId: string) => request("POST", "/api/unblock", { body: { matchId } }),
 };
