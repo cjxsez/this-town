@@ -70,3 +70,22 @@ So riders are told Ride Mode will turn off at their stop, but the room keeps the
 3. **Soft kiosk release while the pair keeps playing.** After both have arrived (or after N minutes), send `pair.cleared` to the kiosk only and clear `meetAtCar` occupancy so the screen/LEDs return to idle and another pair can use that car, while the two riders keep their game room on phone/glasses. Addresses "kiosk busy for the rest of the trip" without forcing Ride Mode off at the stop. Still need a decision on stop check-out / copy (combine with 1 or 2).
 
 No code changes from this note — pick a direction and we can implement in a follow-up.
+
+## Copy seen in a three-screen run (phone, /g/?ride, kiosk), games-only
+
+Added after an end-to-end run against a local games-only worker. Same decision as above;
+nothing changed.
+
+- Kiosk, pair screen: "One more tap on the tag starts your mission" at 1 of 2 and still at
+  2 of 2 here, but no mission starts; the pair plays on their phones or glasses.
+- Glasses match card: pressing "I'm here" gives no visible change (the kiosk does go to
+  "1 of 2 here").
+- Phone destination step and Ride Mode rules still mention missions and Ride Mode turning
+  off at your stop (see the table above).
+- In demo mode, 90 s after finishing, the same two riders are matched again if nobody else
+  shares their interests (demo mode ignores "met recently"). Fine for a demo, worth knowing
+  when filming.
+
+What worked end to end: demo rider, glasses link, kiosk check-in, the match on all three
+screens, the game moving onto the lens, all three games, and the finish (stamp on the
+phone, "Stamped!" on the kiosk, kiosk freed).
