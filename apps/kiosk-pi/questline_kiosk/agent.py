@@ -43,6 +43,7 @@ from .protocol import (
     PairClearedEvent,
     PairColor,
     PairIncomingEvent,
+    ProtocolError,
     ServerToKiosk,
     encode,
     hex_to_rgb,
@@ -50,6 +51,7 @@ from .protocol import (
     nfc_failed,
     nfc_written,
     pair_rgb,
+    parse_server_event,
     ping,
 )
 
@@ -104,22 +106,35 @@ class KioskAgent:
         """
         raise NotImplementedError
 
-    async def _session(self, ws: object) -> None:
+    async def _session(self, ws: ClientConnection) -> None:
         """One connected session: hello, ping loop, read loop.
 
-        TODO:
-        - self._ws = ws
-        - await self.send(kiosk_hello(cfg.car, leds=cfg.leds.enabled, nfc=self.tag.mode))
-        - ping_task = asyncio.create_task(self._ping_loop())
-        - async for raw in ws:
-              try: event = parse_server_event(raw)
-              except ProtocolError: log.warning and continue
-              if event is not None: await self.dispatch(event)
-        - finally: ping_task.cancel(); self._ws = None
-        - LEDs keep their current state on reconnect; the server is expected to
-          resend the current kiosk state after kiosk.hello (see protocol.md gaps)
+        LEDs keep their current state on reconnect; the server resends kiosk
+        state after the next kiosk.hello (see protocol.md).
         """
-        raise NotImplementedError
+        self._ws = ws
+        ping_task = asyncio.create_task(self._ping_loop(), name="kiosk-ping")
+        try:
+            await self.send(
+                kiosk_hello(self.cfg.car, leds=self.cfg.leds.enabled, nfc=self.tag.mode)
+            )
+            log.info("sent kiosk.hello car=%s nfc=%s", self.cfg.car, self.tag.mode)
+            async for raw in ws:
+                try:
+                    event = parse_server_event(raw)
+                except ProtocolError as e:
+                    log.warning("dropping bad server event: %s", e)
+                    continue
+                if event is None:
+                    continue  # unknown type (e.g. pong) — ignore
+                await self.dispatch(event)
+        finally:
+            ping_task.cancel()
+            try:
+                await ping_task
+            except asyncio.CancelledError:
+                pass
+            self._ws = None
 
     async def _ping_loop(self) -> None:
         """Send {"type": "ping"} every agent.ping_interval_s.
