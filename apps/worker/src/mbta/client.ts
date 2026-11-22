@@ -10,10 +10,8 @@
  *
  * Protocol types: none.
  *
- * TODO:
- * - Short edge caching for /vehicles (many rooms ask for the same route every 20 s):
- *   use caches.default keyed by URL with a ~10 s TTL.
- * - Respect 429 Retry-After.
+ * Caching: vehicles.ts keeps a 10 s in-memory label map so rooms share one poll.
+ * Optional later: caches.default for cross-isolate reuse, and honor 429 Retry-After.
  */
 import type { Env } from "../env";
 

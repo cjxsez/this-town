@@ -28,9 +28,10 @@ The happy path works on the demo trip and is covered by `pnpm smoke` (see "Run l
 - "Not now" (socket or `POST /api/ride/not-now`), report, check-out at the destination stop
 - demo controls: `POST /api/demo/delay | advance | reset` (header `x-kiosk-key`)
 
+Live MBTA (when `DEMO_MODE=false`): `resolveLiveCarTrip` polls Orange/Red `/vehicles` (10 s cache, `carriages` labels → trip) and `fetchTripTimeline` builds stops/ETAs from predictions + schedule; empty polls end the trip (`WS_CLOSE.tripChanged` for kiosks). Demo cars in `DEMO_CAR_TRIPS` still win when `DEMO_MODE=true`.
+
 Not done yet:
 
-- **Live MBTA.** `resolveLiveCarTrip` and live predictions are still stubs, so only cars in `DEMO_CAR_TRIPS` work. Fine for the demo.
 - Block/unblock without a report.
 
 ## File map
@@ -70,8 +71,9 @@ src/missions/deck.ts          the curated mission deck
 src/missions/select.ts        fit-before-next-stop, late bonus, anti-repeat, rarity
 src/missions/fill.ts          {slot} filling and Mission construction
 src/mbta/client.ts            MBTA V3 fetch wrapper (x-api-key)
-src/mbta/predictions.ts       trip -> stops, next stop, ETA, delay
-src/mbta/vehicles.ts          car label -> current trip (carriages), demo override
+src/mbta/predictions.ts       parseTimeline / fetchTripTimeline (predictions + schedule)
+src/mbta/vehicles.ts          parseVehicles / resolveLiveCarTrip (carriages), demo override
+src/mbta/__fixtures__/        recorded MBTA JSON:API docs for vitest
 src/mbta/demo.ts              scripted demo trip (Orange, cars 1413/1412), triggerable delay
 src/llm/why.ts                Claude "why you two" line, 1.5 s timeout, template fallback
 src/db/queries.ts             typed D1 helpers (all SQL lives here)
