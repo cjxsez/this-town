@@ -46,4 +46,11 @@ Other things a tag tap can show: "You're in car N now" (moved cars), "You made i
 
 ## After
 
-Passport (`/passport`, with an overview of the whole T map and one swipeable rail of tickets per stretch of line), the T map (`/passport/map`, H7: every station named, stamped ones in yellow, drag, pinch and tap a station), People (`/people`, with report and block), Me (`/me`), Glasses (`/me/glasses`). "Delete my data" on Me turns Ride Mode off and removes the rider on the worker.
+Passport (`/passport`, with an overview of the whole T map and one swipeable rail of tickets per stretch of line), the T map (`/passport/map`, H7: every station named, stamped ones in yellow, drag, pinch and tap a station), People (`/people`, with report, block and unblock; each person shows their rider in their pair color, and the list is the same on any phone), Me (`/me`), Glasses (`/me/glasses`).
+
+On Me:
+- **Keep your stamps** (guests only): add an email with the same 6-digit code as sign-in, so the guest can sign back in on any phone with everything kept.
+- **Sign out**: turns Ride Mode off and forgets the rider on this phone. An email account signs back in with a code; a guest is warned first that there is no way back in.
+- **Delete my data**: turns Ride Mode off and removes the rider on the worker.
+
+If the worker stops accepting the phone's token (a database reset, or data deleted on another phone), the app drops back to the landing page by itself.
