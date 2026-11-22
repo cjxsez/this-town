@@ -24,8 +24,7 @@
  * - GET  /api/passport       -> PassportRes
  * - POST /api/report         ReportReq -> (no body defined in protocol)
  *
- * TODO:
- * - Handle 401 globally: clear token and route to onboarding.
+ * - On a 401 to a request that carried a token, auth.tokenRejected() so the app resets.
  */
 import {
   AuthVerifyRes,
@@ -42,7 +41,7 @@ import {
   type UpdateProfileReq,
 } from "@questline/protocol";
 import type { GhostReq, GlassesLinkReq, ReportReq, TapReq } from "@questline/protocol";
-import { getToken } from "./auth";
+import { getToken, tokenRejected } from "./auth";
 
 /** Anything with a zod-style parse(). Lets us infer types without importing zod here. */
 type Schema<T> = { parse: (data: unknown) => T };
@@ -139,6 +138,9 @@ async function requestOnce<T>(method: Method, path: string, { body, schema, auth
       json = text;
     }
   }
+
+  // A token the worker no longer knows (database reset, data deleted elsewhere): start over.
+  if (res.status === 401 && auth && getToken()) tokenRejected();
 
   if (!res.ok) {
     // Every worker error is an ErrorRes; anything else (a proxy's HTML page) gets a generic line.

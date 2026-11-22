@@ -11,9 +11,8 @@
  * Uses: no API routes directly. api.ts reads the token for `Authorization: Bearer`,
  * socket.ts reads it for /ws/rider?token=.
  *
- * TODO:
- * - Clear the token on a 401 from GET /api/me (stale token after a DB reset).
- * - "Sign out" / "delete my profile" entry point (needs a worker route, see README gaps).
+ * - Telling the app when the worker no longer accepts the token (any 401: a database reset,
+ *   "Delete my data" on another device), so it can drop this device back to the start.
  */
 
 const TOKEN_KEY = "questline.token";
@@ -81,4 +80,21 @@ export function onboardingPath(returnTo: string): string {
 export function readReturnPath(next: string | null): string | null {
   if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
   return next;
+}
+
+// ---- the worker rejected the token ----
+
+const signedOutListeners = new Set<() => void>();
+
+/** Called when the worker answers 401 to a request that carried our token. Returns an unsubscribe. */
+export function onSignedOut(listener: () => void): () => void {
+  signedOutListeners.add(listener);
+  return () => signedOutListeners.delete(listener);
+}
+
+/** The token is dead: forget it and let the app reset to the landing page. */
+export function tokenRejected(): void {
+  if (!getToken()) return; // already handled (several requests can fail at once)
+  clearToken();
+  for (const fn of signedOutListeners) fn();
 }

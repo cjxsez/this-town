@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type
 import type { Person, Profile, QuestRecap, ReportReason, SocialBattery, Stamp, TimeOfDay } from "../../shared/types";
 import { api, sim } from "../api";
 import type { TapBody, TapResult } from "../lib/api";
+import { onSignedOut } from "../lib/auth";
 import { initialRide, rideReducer, type RideAction, type RideState } from "./ride";
 import { DEMO_PROFILE, SEED_PEOPLE, SEED_STAMPS } from "./seed";
 
@@ -264,6 +265,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const actions = useActions(state, dispatch);
 
   useEffect(() => api.ride.subscribe((e) => dispatch({ type: "ride", action: e })), []);
+  // The worker stopped accepting our token: forget the ride and the profile, back to the landing page.
+  useEffect(
+    () =>
+      onSignedOut(() => {
+        void api.signOut();
+        dispatch({ type: "reset" });
+      }),
+    [],
+  );
   useEffect(() => save(state), [state]);
   // Server collections on load, and again after each stamp.
   useEffect(() => {
