@@ -4,7 +4,7 @@ The touchscreen UI in each train car's kiosk (decision D7). Runs in Chromium kio
 
 It wears the phone app's look: sea background, paper cards with ink outlines, Bungee block letters, Gaegu handwriting, the IN THIS TOWN letter tiles. Tokens in `src/styles/tokens.css` are copied from `apps/phone-web/src/styles/tokens.css`; keep them in step. Screens are laid out on an 800x480 stage that scales to fit the window, so the same build works on the Pi and full screen on a laptop or TV.
 
-Served by the worker at `https://<domain>/kiosk/:car` (Vite `base: "/kiosk/"`). The car comes from the path, the kiosk key from `?key=` (saved to `localStorage`, used as a fallback when the query is missing).
+Served by the worker at `https://<domain>/kiosk/:car` (Vite `base: "/kiosk/"`). The car comes from the path, the kiosk key from `?key=` (saved to `localStorage`, then stripped from the URL with `history.replaceState`).
 
 ## Privacy rule
 
@@ -17,14 +17,18 @@ Socket: `/ws/kiosk/:car?key=&role=screen`. On open it sends `kiosk.hello { car, 
 | Event | Screen |
 |---|---|
 | bad URL (no car or key) | `Disconnected` (setup error) |
-| socket dropped, retrying | `Disconnected` (reconnecting) |
-| `kiosk.idle` | updates riders in car / on train / next stop; `Idle` when no pair is active |
-| `pair.incoming` | `PairIncoming`: color fill, both initials, "Maya & Andres", how many are here |
+| socket dropped, retrying | `Disconnected` (reconnecting); page reloads after 5 min offline |
+| `WS_CLOSE.badAuth` / `forbidden` | `Disconnected` (bad key / unknown car), no retry |
+| `WS_CLOSE.tripChanged` | reconnect immediately |
+| `kiosk.idle` | stats push only: updates riders in car / on train / next stop (does not reset a pair) |
+| `pair.incoming` | `PairIncoming`: color fill, both initials, "Maya & Andres", how many are here. A new matchId replaces the previous pair (worker: one pair per kiosk, no split screen) |
 | `mission.show` | `Mission`: title, prompt, countdown with a draining bar, "Both tap the tag" |
 | `stamp.progress` | fills the two tap dots on `Mission` |
 | `celebrate` | `Celebrate`: color burst (gold for `rare`), back to `Idle` after 6 s |
-| `pair.cleared` | `Idle` |
+| `pair.cleared` | `Idle` only when it matches the pair on screen |
 | `nfc.write` | ignored (for the Pi agent) |
+
+On `Idle`, tap anywhere for a 10 s "How it works" overlay (three steps, no names or interests).
 
 ## File map
 
@@ -32,14 +36,16 @@ Socket: `/ws/kiosk/:car?key=&role=screen`. On open it sends `kiosk.hello { car, 
 index.html                  800x480 viewport
 vite.config.ts              base /kiosk/, port 5175, proxies /api and /ws to :8787
 public/art/                 sprites copied from phone-web/public/art (town strip on Idle)
-src/main.tsx                React entry, blocks context menu / zoom
+src/main.tsx                React entry, ErrorBoundary, blocks context menu / zoom
+src/ErrorBoundary.tsx       night-sea crash card; reloads after 5 s
 src/App.tsx                 state machine on ServerToKiosk events, ?preview= screens
 src/styles.css              the phone look on the kiosk: cards, pills, tiles, motion
 src/styles/tokens.css       colors and fonts, copied from phone-web
-src/lib/config.ts           car from /kiosk/:car, key from ?key= or localStorage
+src/lib/config.ts           car from /kiosk/:car, key from ?key= or localStorage (key stripped from URL)
+src/lib/clock.ts            serverNow offset for countdowns
 src/lib/preview.ts          sample data for ?preview=
 src/lib/socket.ts           /ws/kiosk/:car socket, kiosk.hello, reconnect, drops nfc.write
-src/screens/Idle.tsx        Tap to play, riders in car / on train, next stop, town strip
+src/screens/Idle.tsx        Tap to play, riders / next stop, How it works overlay, town strip
 src/screens/PairIncoming.tsx color fill, initials, first names
 src/screens/Mission.tsx     title, prompt, countdown + drain bar, tap dots
 src/screens/Celebrate.tsx   stamp ticket, rays, confetti, rare variant

@@ -102,10 +102,19 @@ export function Idle({ car, stats, nextStopAt }: IdleProps) {
 }
 
 function Stat({ n, label }: { n: number | undefined; label: string }) {
+  const value = n ?? "–";
   return (
-    <div className="k-card" style={{ flex: 1, gap: 2, justifyContent: "center", padding: "10px 16px", borderRadius: "var(--r4)" }}>
-      <span className="k-num" style={{ font: "400 46px/1 var(--font-display)" }}>{n ?? "–"}</span>
-      <span className="k-hint" style={{ color: "var(--ink)", fontWeight: 700, lineHeight: 1.05 }}>{label}</span>
+    <div
+      className="k-card"
+      style={{ flex: 1, gap: 2, justifyContent: "center", padding: "10px 16px", borderRadius: "var(--r4)" }}
+      aria-label={n === undefined ? `${label}: waiting` : `${n} ${label}`}
+    >
+      <span className="k-num" style={{ font: "400 46px/1 var(--font-display)" }} aria-hidden>
+        {value}
+      </span>
+      <span className="k-hint" style={{ color: "var(--ink)", fontWeight: 700, lineHeight: 1.05 }} aria-hidden>
+        {label}
+      </span>
     </div>
   );
 }
