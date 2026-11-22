@@ -52,6 +52,7 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 | `/k/:car?n=<nonce>` | Kiosk tag landing: pick your stop, confirm Ride Mode, or a car move / stamp tap |
 | `/ride` | Ride Mode. One URL; the screen follows the ride phase |
 | `/passport`, `/passport/:id`, `/people`, `/people/:id`, `/people/:id/report`, `/me`, `/me/glasses` | Collection and settings |
+| `/m`, `/m?code=1234`, `/m?host` | The phone seat of the two-player games: type the 4-digit code from the glasses (or prefilled), or host a game from this phone. No profile needed. Screens are in `src/m/`, one folder per game; rules are in `packages/protocol/src/games/` and the worker's `GameRoom` runs them |
 | `/print/tag/:car` | Printable "Tap here" sign for a kiosk, with a QR fallback to `/k/:car` |
 | `/screens`, `/lens` | Dev: every screen with fixture data, every glasses card |
 

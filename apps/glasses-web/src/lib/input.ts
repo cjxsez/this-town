@@ -31,17 +31,12 @@
  *   Mission    (nothing yet, see TODO)
  *   Stamp      select/back: dismiss early (auto-dismisses anyway)
  *   Offline    select: retry now
- *   GuessGame  left/up: previous option or -1, right/down: next option or +1
- *              select: lock in the answer (also Start and Restart)
- *              Also takes wheel and click (pointer mode below), so it works from the frame
- *              whether the strip's scroll arrives as arrow keys or as scroll events.
- *   HikeGame   left/up: previous of the four options, right/down: next (reading order,
- *              stops at the ends). select: lock in, skip the reveal, Start and Restart.
- *              Wheel and click too, as GuessGame.
- *              With the split prop (Split clue) a describe screen comes before each
- *              question: select moves on to the guess, arrows do nothing.
+ *   Games      (src/play/*) left/up: previous choice or slider step down, right/down:
+ *              next or step up, select: choose, lock in, ready, done.
+ *              They also take wheel and click (pointer mode below), so they work from the
+ *              frame whether the strip's scroll arrives as arrow keys or as scroll events.
  *   EndButtons (last screen of each game) left/up: "Next game", right/down: "Again",
- *              select: activate. On its own a game shows one Restart button instead.
+ *              select: activate.
  *
  * "Not now" is always one action away (architecture: safety and privacy): either the back
  * gesture, or focus the "Not now" button and pinch select.

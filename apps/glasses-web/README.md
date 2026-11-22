@@ -35,44 +35,22 @@ Served by the worker at `https://<domain>/g/` (Vite `base: "/g/"`).
 
 ## Games (the `/g/` root)
 
-`/g/` plays three games one after another: Guess who, Trail trivia, then Split clue. Each game's last screen has two buttons, "Next game" (focused) and "Again"; after Split clue, "Next game" goes back to Guess who. The playlist is `src/Games.tsx` and the buttons are `src/components/EndButtons.tsx`. `/g/?guess`, `/g/?hike` and `/g/?split` open one game on its own, where the last screen has a single Restart button. The ride HUD described above is at `/g/?ride`, so use that URL when linking glasses for a ride. The games make no API or socket calls.
+`/g/` plays three games between the glasses and a phone, for two people sitting together. The lens shows a 4-digit code; the other player opens `/m` on a phone and types it. From then on both devices show the same game, each from its own seat, and the worker keeps them in step (`GameRoom`, see the worker README). The ride HUD described above is at `/g/?ride`, so use that URL when linking glasses for a ride.
 
-## Guess who (`/g/?guess`)
+| Game | What happens |
+|---|---|
+| Tall tale | Each player is secretly dealt "Tell the truth" or "Make it up", tells their worst T story in turn, then both call the other's story True or Made up. A point for a right call, a point for fooling your partner |
+| First impressions | Five slider questions about your partner, some about Boston and the T. Both guess at the same time (12 s), then both guesses show and the pair talks (20 s) and rates each guess Spot on / Close / Way off |
+| Left for you | Three trivia questions left by earlier pairs, answered as a team with one shared highlight. Then the pair leaves a question about the T or Boston (typed on the phone); the model writes the three wrong answers and the next pair gets it |
 
-A five-question guessing game about the person in front of you.
-
-- Two kinds of question: either/or ("Night owl" or "Day person") and a 0 to 10 scale ("How much does this person like horror movies?"). The deck is `src/game/questions.ts`.
-- 20 seconds per question. If time runs out the question is recorded as "No guess" and the next one shows.
-- The last screen lists the guesses.
-- It wears the phone app's look (Gaegu and Bungee, wobbly outlines, yellow primary button), redrawn for the lens: black background, outlines in place of paper cards, and only the focused choice filled. Those styles are in `src/guess.css`, scoped under `.guess`, so the ride HUD keeps `src/styles.css` as is. Trail trivia uses them too. The two fonts are bundled from `@fontsource`, no CDN.
-- Frame only, no Neural Band: scroll the temple strip to move the choice (left or up is previous, right or down is next), tap to lock it in. The game listens for arrow keys and Enter, and also for `wheel` and `click`, in case the strip's scroll reaches the page as scroll events. Which one the glasses send has not been checked on device: open `/g/?debug=keys` and watch the console (it logs keys, wheel deltas and clicks). If scrolling moves too fast or too slow, change `WHEEL_STEP_PX` in `src/lib/input.ts`.
-
-## Trail trivia (`/g/?hike`)
-
-`/g/?hike` opens a second game: five photos of famous hiking places around the world (Himalayas, Patagonia, the Andes, Norway, East Africa), each with a short question and four answers. Like Guess who it makes no API or socket calls. Each rider plays on their own glasses, and the questions come in the same order for everyone, so two riders can compare as they go.
-
-- 20 seconds per question. If time runs out it counts as no answer.
-- After an answer or a timeout the same screen shows the result for 2 seconds (or until a tap): the right option gets a green outline and a tick, a wrong pick an orange dashed outline and a cross, and the place is named. The clock is stopped while this shows.
-- The last screen has the score out of 5 and what each photo was.
-- Same input as Guess who. The four options are in a 2x2 grid and previous/next walks them in reading order (top left, top right, bottom left, bottom right), stopping at both ends, so one scroll axis reaches all four.
-- Same look as Guess who: it uses `src/guess.css`, plus `src/hike.css` for the photo, the option grid and the reveal marks. The photo is the only bright area, 320x200 beside the clock.
-- The deck is `src/game/hike/questions.ts` and the photos sit next to it. They come from Wikimedia Commons under CC BY and CC BY-SA licences: `src/game/hike/CREDITS.md` lists the source page, author and licence of each.
-
-To add a question:
-
-1. Find a photo on Wikimedia Commons (or a US federal source) that is public domain, CC0, CC BY or CC BY-SA. Check the licence and author on the file page, do not guess.
-2. Scale and crop it to 640x400 JPEG, under 100 KB, and save it in `src/game/hike/`. On macOS: `sips -s format jpeg -s formatOptions 62 --resampleWidth 640 in.jpg --out name.jpg`, then `sips --cropToHeightWidth 400 640 name.jpg`.
-3. Add a row to `src/game/hike/CREDITS.md`.
-4. Import the photo in `src/game/hike/questions.ts` and add an entry to `QUESTIONS`: `prompt`, four short `options` (two or three words), the `answer` index, `place` (under about 30 characters), and three one-word `avoid` entries for Split clue. Every fact must be true, and the wrong options must not be in the photo or be another name for the place. A round is the first `ROUND_SIZE` entries.
-5. Open `/g/?hike` and check that nothing wraps badly or runs off the 600x600 lens, on the question and on the reveal.
-
-## Split clue (`/g/?split`)
-
-Trail trivia for two people who see different things: one sees the photo and describes it, the other sees only the four answers and picks. For now both halves run on one lens, one after the other, so the wearer describes and then hands the choice over (or reads the options out). The plan is to put the photo on one rider's glasses and the answers on the other's.
-
-- Describe screen: the photo, "Describe it. Don't say:" and three banned words. Tap when the other person is ready to guess, or it moves on after 20 seconds.
-- Guess screen: the photo is replaced by "Photo hidden", with the question and four answers, 20 seconds. Then the usual reveal, with the photo back.
-- It is `HikeGame` with the `split` prop, on the same deck. The banned words are the `avoid` field of each question in `src/game/hike/questions.ts`: three words that would give the answer away.
+- The game rules live in `packages/protocol/src/games/` as pure modules. The screens here only draw the view for their seat and send actions. Anything a player must not see (the other card, an unlocked guess) is not in their view at all.
+- Clients poll `GET /api/game/rooms/:code` every 700 ms. Timers are deadlines in server time, so both clocks agree.
+- Every game's last screen has "Next game" (focused) and "Again". Either player can press; both move.
+- `/g/?room=1234` fixes the code (handy for a demo: the phone link is then `/m?code=1234`). `/g/?join=1234` joins someone else's room as the second seat, for testing without a phone.
+- The room code is kept in `sessionStorage`, so a reload rejoins the same game. If the other device stops polling for about 5 s, a "partner away" screen shows until it is back.
+- The look is the phone app's (Gaegu and Bungee, wobbly outlines, yellow primary button) redrawn for the lens: black background, outlines in place of paper cards, only the focused choice filled. Shared styles are in `src/guess.css`, scoped under `.guess`; each game adds its own CSS next to its screen. Fonts are bundled from `@fontsource`.
+- Input: scroll the temple strip to move, tap to choose. The games listen for arrow keys and Enter, and also for `wheel` and `click`. Which one the glasses send has not been checked on device: open `/g/?debug=keys` and watch the console. If scrolling moves too fast or too slow, change `WHEEL_STEP_PX` in `src/lib/input.ts`.
+- The glasses cannot type, so in Left for you the phone player writes the question while the lens shows the prompt.
 
 ## Input mapping
 
@@ -91,17 +69,15 @@ On the match card: select on "I'm here" (default focus) sends `rider.arrived`. B
 ```
 index.html              600x600 viewport, black theme
 vite.config.ts          base /g/, port 5174, proxies /api and /ws to :8787
-src/main.tsx            React entry: games at /g/, one game at /g/?guess, ?hike or ?split, ride HUD at /g/?ride
-src/Games.tsx           the three games in order, one after another
+src/main.tsx            React entry: games at /g/, ride HUD at /g/?ride
+src/Games.tsx           game shell: opens a room, shows the code, then the current game
+src/play/               one folder per game (tale, impressions, trivia): the lens screen and its CSS
+src/lib/room.ts         useRoom (poll the room, send actions), useSecondsLeft
+src/screens/Pair.tsx    the 4-digit code for the phone
 src/App.tsx             screen state machine driven by socket events
 src/styles.css          600x600 root, black background, big type, focus rings
-src/guess.css           both games: phone fonts and colors as outlines on black
-src/hike.css            Trail trivia only: photo frame, 2x2 options, reveal marks
+src/guess.css           all games: phone fonts and colors as outlines on black
 src/lib/input.ts        key -> action mapping, useInput hook (optional wheel and click)
-src/game/questions.ts   Guess who deck, round size, seconds per question
-src/game/hike/questions.ts  Trail trivia deck, round size, seconds per question, reveal time
-src/game/hike/*.jpg         Trail trivia photos, 640x400
-src/game/hike/CREDITS.md    source, author and licence of each photo
 src/lib/link.ts         4-digit code linking, token in localStorage
 src/lib/socket.ts       /ws/rider socket, reconnect, polling fallback
 src/screens/LinkCode.tsx  big 4-digit code
@@ -110,9 +86,8 @@ src/screens/MatchCard.tsx partner name, color, why line, where to go, I'm here /
 src/screens/Mission.tsx   compact title, prompt, countdown
 src/screens/Stamp.tsx     brief celebration, auto-dismiss
 src/screens/Offline.tsx   reconnecting
-src/screens/GuessGame.tsx Guess who: start, five questions, recap
-src/screens/HikeGame.tsx  Trail trivia and Split clue: start, five photo questions with a reveal, score
-src/components/EndButtons.tsx  end of a game: Next game and Again, or Restart on its own
+src/components/EndButtons.tsx  end of a game: Next game and Again
+src/components/Clock.tsx       m:ss pill for a game deadline in server time
 src/components/Countdown.tsx   m:ss to an epoch ms time
 src/components/ColorSwatch.tsx pair color from PAIR_COLOR_HEX
 ```
@@ -127,7 +102,7 @@ pnpm dev:worker      # worker on :8787
 pnpm dev:glasses     # this app on :5174
 ```
 
-Open http://localhost:5174/g/ for the games, or http://localhost:5174/g/?ride for the ride HUD. In dev the 600x600 lens area is outlined. To preview at the real size, use Chrome DevTools device toolbar with a custom 600x600 device, or a 600x600 window. Use arrow keys, Enter and Escape to simulate the touch strip. The Meta Ray-Ban Display Simulator Chrome extension also previews the 600x600 display.
+Open http://localhost:5174/g/ for the games (and http://localhost:5173/m in a second window for the phone seat; needs `pnpm dev:phone`), or http://localhost:5174/g/?ride for the ride HUD. In dev the 600x600 lens area is outlined. To preview at the real size, use Chrome DevTools device toolbar with a custom 600x600 device, or a 600x600 window. Use arrow keys, Enter and Escape to simulate the touch strip. The Meta Ray-Ban Display Simulator Chrome extension also previews the 600x600 display.
 
 To link in dev, run phone-web too (`pnpm dev:phone`), onboard, and enter the code from the glasses tab.
 

@@ -37,7 +37,7 @@ pnpm dev
 ```
 
 - Phone: http://localhost:5173
-- Glasses: http://localhost:5174/g/?ride for the ride HUD, http://localhost:5174/g/ for the games (resize the window to 600x600)
+- Glasses: http://localhost:5174/g/?ride for the ride HUD, http://localhost:5174/g/ for the games (resize the window to 600x600; the second player joins at http://localhost:5173/m)
 - Kiosk: http://localhost:5175/kiosk/1412
 - Worker: http://localhost:8787
 

@@ -6,8 +6,9 @@ The Cloudflare Worker behind Questline. One deploy, one HTTPS origin:
 - **Static hosting** for phone-web (`/`), glasses-web (`/g/`) and kiosk-web (`/kiosk/`) from `public/` via the `ASSETS` binding.
 - **D1** (`DB`) for durable records: users, sessions, glasses codes, check-ins, matches, mission sessions, stamps, met pairs, blocks, reports.
 - **`TrainRoom` Durable Objects** (`TRAIN_ROOM`), one per MBTA trip: live rider state, every phone/glasses/kiosk WebSocket on that train (Hibernation API), an alarm loop that polls MBTA, matching, missions and stamps.
+- **`GameRoom` Durable Objects** (`GAME_ROOM`), one per 4-digit game code: the two-player games between a pair of glasses (`/g/`) and a phone (`/m`). It runs the pure game modules from `packages/protocol/src/games`, clients poll it (no sockets, no alarms), and timers are server-time deadlines. No login: the code is the only key. One extra instance holds values shared between rooms (the trivia questions pairs leave for each other).
 - **MBTA V3** polling (car label to trip via `carriages`, predictions for next stop and delay), with a scripted demo trip when `DEMO_MODE=true`.
-- **Claude** for the one-line "why you two" (1.5 s timeout, template fallback). Missions never come from the LLM.
+- **Claude** for the one-line "why you two" (1.5 s timeout, template fallback) and for the three wrong answers to a trivia question a pair leaves in "Left for you" (6 s timeout; without a key or on a bad reply the question is not saved). Missions never come from the LLM.
 
 Contract: `packages/protocol`. Architecture: `docs/architecture.md`.
 
@@ -47,6 +48,11 @@ src/routes/taps.ts            POST /api/taps: check-in, move car, stamp confirm,
 src/routes/ride.ts            POST /api/ride/end, PUT /api/ride/ghost, GET /api/ride/state (glasses polling)
 src/routes/passport.ts        GET /api/passport
 src/routes/report.ts          POST /api/report (+ block)
+src/routes/game.ts            POST /api/game/rooms, POST /api/game/rooms/:code/join, GET /api/game/rooms/:code?seat=, POST /api/game/rooms/:code/act
+src/rooms/GameRoom.ts         the game room Durable Object: seats, presence, playlist, runs the game modules
+src/games/hooks.ts            async work a game needs (LLM, shared store), fed back as "server" actions
+src/games/trivia.ts           Left for you: picks the questions for a room, saves the one a pair leaves
+src/llm/decoys.ts             wrong answers for a left question, and whether it can be kept
 src/routes/demo.ts            POST /api/demo/delay|advance|reset (DEMO_MODE + kiosk key only)
 src/rooms/TrainRoom.ts        the Durable Object: sockets, alarm loop, check-in/out, matching, missions, stamps
 src/rooms/state.ts            RoomState and related types, socket attachments/tags
