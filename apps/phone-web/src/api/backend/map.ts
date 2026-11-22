@@ -131,7 +131,7 @@ export function toMission(w: WireMission, now: number): Mission {
   };
 }
 
-export function toStamp(w: WireStamp, ctx: { missionId?: string; matchId?: string }): Stamp {
+export function toStamp(w: WireStamp, ctx: { missionId?: string; matchId?: string } = {}): Stamp {
   return {
     id: w.id,
     stationId: w.stationId || stationIdFor(w.station),
@@ -139,8 +139,9 @@ export function toStamp(w: WireStamp, ctx: { missionId?: string; matchId?: strin
     ...fromLine(w.line),
     earnedAt: new Date(w.awardedAt).toISOString(),
     rare: w.rare,
-    missionId: ctx.missionId ?? "",
-    withPersonId: ctx.matchId ?? "",
+    // Prefer wire fields (passport / stamp.awarded); fall back to live-ride context.
+    missionId: w.templateId ?? ctx.missionId ?? "",
+    withPersonId: w.matchId ?? ctx.matchId ?? "",
     withFirstName: w.partnerFirstName,
   };
 }

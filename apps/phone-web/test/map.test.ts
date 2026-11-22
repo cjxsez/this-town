@@ -102,6 +102,31 @@ test("a stamp keeps the worker's station id and the person it was earned with", 
   assert.deepEqual([s.stationId, s.line, s.branch, s.withFirstName, s.withPersonId], ["hynes", "green", "D", "Maya", "mat_1"]);
 });
 
+test("toStamp prefers wire matchId and templateId so passport links the person", () => {
+  const s = toStamp({
+    id: "stp",
+    stationId: "hynes",
+    station: "Hynes",
+    line: "Green-D",
+    partnerFirstName: "Maya",
+    rare: false,
+    awardedAt: 0,
+    matchId: "mat_wire",
+    templateId: "games-playlist",
+  });
+  assert.equal(s.withPersonId, "mat_wire");
+  assert.equal(s.missionId, "games-playlist");
+});
+
+test("toStamp falls back to live-ride context when the wire omits links", () => {
+  const s = toStamp(
+    { id: "stp", stationId: "hynes", station: "Hynes", line: "Green-D", partnerFirstName: "Maya", rare: false, awardedAt: 0 },
+    { matchId: "mat_ctx", missionId: "excuse" },
+  );
+  assert.equal(s.withPersonId, "mat_ctx");
+  assert.equal(s.missionId, "excuse");
+});
+
 test("a person from recent matches carries where you met and whether you blocked them", () => {
   const p = toPerson({ matchId: "mat_1", partnerFirstName: "Maya", color: "orange", line: "Green-D", at: 0, stamped: true, stationId: "hynes", blocked: true });
   assert.deepEqual([p.id, p.metAtStationId, p.quests, p.blocked], ["mat_1", "hynes", 1, true]);

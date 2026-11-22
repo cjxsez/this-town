@@ -4,6 +4,7 @@ import { useApp } from "../../state/store";
 import { shortDate } from "../../state/format";
 import { LINES, missionById, missionText, stationById } from "../../../shared/catalog";
 import type { Stamp, Station } from "../../../shared/types";
+import { stampActivityLabel } from "../../lib/stampCopy";
 import { PaperBack } from "./parts";
 
 const lineLabel = (s: Stamp) => `${LINES[s.line].label}${s.branch ? ` ${s.branch}` : ""}`;
@@ -29,6 +30,7 @@ export default function StampDetail() {
 
   const person = state.people.find((p) => p.id === stamp.withPersonId);
   const mission = missionById(stamp.missionId);
+  const gamesActivity = stampActivityLabel(stamp.missionId);
   const meta = [lineLabel(stamp), shortDate(stamp.earnedAt), stamp.delayNote].filter(Boolean).join(" · ");
 
   return (
@@ -43,7 +45,13 @@ export default function StampDetail() {
       </div>
 
       <Card style={{ gap: 6 }}>
-        {mission && (
+        {gamesActivity && (
+          <>
+            <div className="q-eyebrow">{gamesActivity.eyebrow}</div>
+            <div style={{ font: "700 26px/1.08 var(--font-hand)" }}>{gamesActivity.title}</div>
+          </>
+        )}
+        {mission && !gamesActivity && (
           <>
             <div className="q-eyebrow">MISSION</div>
             <div style={{ font: "700 26px/1.08 var(--font-hand)" }}>
