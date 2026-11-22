@@ -149,27 +149,47 @@ class Ws281xStrip(LedStrip):
 class NeopixelSpiStrip(LedStrip):
     """WS2812 over SPI0 MOSI (GPIO10) via adafruit-circuitpython-neopixel-spi.
 
-    TODO:
-    - import board, neopixel_spi
-    - self._px = neopixel_spi.NeoPixel_SPI(board.SPI(), count, pixel_order=neopixel_spi.GRB,
-          brightness=brightness, auto_write=False)
-    - needs dtparam=spi=on and the user in the ``spi`` group
-    - on Pi 4 the SPI clock follows core_freq: set core_freq=500 and core_freq_min=500
-      in config.txt or colors glitch
+    Needs ``dtparam=spi=on`` and the user in the ``spi`` group. On Pi 4 set
+    ``core_freq=500`` and ``core_freq_min=500`` in config.txt or colors glitch.
     """
 
     def __init__(self, count: int, brightness: float, order: str = "GRB") -> None:
+        # Lazy import so laptops without the Adafruit libs still import this module.
+        import board  # type: ignore[import-untyped]
+        import neopixel_spi  # type: ignore[import-untyped]
+
+        order_key = order.upper()
+        pixel_order = getattr(neopixel_spi, order_key, None)
+        if pixel_order is None:
+            raise ValueError(f"unsupported leds.order for neopixel_spi: {order!r}")
+
         self.count = count
-        raise NotImplementedError("NeopixelSpiStrip: see TODO in docstring")
+        # brightness is a current cap (same as Ws281xStrip).
+        self._px = neopixel_spi.NeoPixel_SPI(
+            board.SPI(),
+            count,
+            brightness=max(0.0, min(1.0, brightness)),
+            auto_write=False,
+            pixel_order=pixel_order,
+        )
 
     def set_pixel(self, index: int, rgb: RGB) -> None:
-        raise NotImplementedError  # TODO: self._px[index] = rgb
+        self._px[index] = rgb
 
     def show(self) -> None:
-        raise NotImplementedError  # TODO: self._px.show()
+        self._px.show()
 
     def set_brightness(self, brightness: float) -> None:
-        raise NotImplementedError  # TODO: self._px.brightness = brightness
+        self._px.brightness = max(0.0, min(1.0, brightness))
+
+    def close(self) -> None:
+        try:
+            self.clear()
+        finally:
+            try:
+                self._px.deinit()
+            except Exception:
+                pass
 
 
 class FakeLeds(LedStrip):
