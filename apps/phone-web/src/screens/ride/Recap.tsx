@@ -5,6 +5,8 @@ import { useApp } from "../../state/store";
 import { capitalize, shortDate, timeOfDay } from "../../state/format";
 import { missionText, stationById } from "../../../shared/catalog";
 import type { Mission } from "../../../shared/types";
+import { recapEyebrow, recapNoStamp, recapStillRiding } from "../../lib/rideModeCopy";
+import { useGamesOnly } from "../../lib/useWorkerMode";
 import { StampTicketSmall } from "./parts/StampTicket";
 import { friendColor } from "./parts/Celebrate";
 
@@ -22,6 +24,7 @@ function recapMissionLabel(m: Mission, station: string, name: string) {
 export default function Recap() {
   const { state, actions } = useApp();
   const navigate = useNavigate();
+  const gamesOnly = useGamesOnly();
   const { ride } = state;
   const recap = state.lastRecap;
   const person = recap?.person ?? ride.match;
@@ -50,7 +53,7 @@ export default function Recap() {
   return (
     <Screen label="H1" blobs="a" tabs>
       <div {...enter(0, "q-eyebrow", { color: "inherit" })}>
-        {stamped ? "Quest complete" : "Time's up"}
+        {recapEyebrow(stamped, gamesOnly)}
         {station && ` · ${station}`} · {timeOfDay(at)}
       </div>
 
@@ -104,13 +107,11 @@ export default function Recap() {
         </div>
       ) : (
         <Card {...enter(560)}>
-          <span style={{ font: "700 22px/1.1 var(--font-hand)" }}>No stamp this time: the tag needs both of you to tap it before the stop.</span>
+          <span style={{ font: "700 22px/1.1 var(--font-hand)" }}>{recapNoStamp(gamesOnly)}</span>
         </Card>
       )}
 
-      <p {...enter(640, "q-hint")}>
-        Ride Mode is still on{dest ? ` until ${dest}` : ""}. You can be matched again after the next stop.
-      </p>
+      <p {...enter(640, "q-hint")}>{recapStillRiding(dest, gamesOnly)}</p>
 
       <div {...enter(720, "", { display: "flex", flexDirection: "column", alignItems: "stretch", gap: 4 })}>
         <Button onClick={finish}>Back to riding</Button>
