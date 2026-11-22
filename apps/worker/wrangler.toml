@@ -40,6 +40,12 @@ database_name = "questline"
 database_id = "3be2dcde-a7b7-4b07-a249-19bf928170aa"
 migrations_dir = "migrations"
 
+# Media kept out of the public repo (the waiting song), served by src/routes/media.ts when a
+# build has no copy of the file. Upload with `wrangler r2 object put` (see that file).
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "questline-media"
+
 [[durable_objects.bindings]]
 name = "TRAIN_ROOM"
 class_name = "TrainRoom"

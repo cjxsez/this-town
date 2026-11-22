@@ -51,10 +51,12 @@ Landing (B1) has two ways in: **Sign in with email** (a one-time code; the code 
 
 From Ride Mode on until the pair's first game starts, a song loops: on Riding (C2) while waiting for a match, on the match screen (Meet) while you find each other, and on `/m` until the game begins. It stops when the first game starts, at the end of the ride, or offline, and pauses while the page is hidden. "♪ Music on/off" on Riding mutes it (kept in settings). Each screen calls `useWaitingMusic` (`src/lib/useWaitingMusic.ts`), so moving between them doesn't restart the song. Browsers only play sound after a tap, so "Turn on Ride Mode" and "Got it" on the kiosk-tap screen unlock it; otherwise it starts on the rider's next touch. Code: `src/lib/music.ts`.
 
-The file is `public/sounds/waiting.m4a` and is **not in git** (a commercial track, and this repo is public): it ships with whatever build you deploy from a machine that has it. Without it the screen is just quiet. To make it from an MP3:
+The file is **not in git** (a commercial track, and this repo is public). In production it lives in the R2 bucket `questline-media`, and the worker serves `/sounds/waiting.m4a` from there whenever the build has no copy, so GitHub auto-deploys keep the song (`apps/worker/src/routes/media.ts`). For local dev, put a copy at `public/sounds/waiting.m4a` (gitignored). To make it from an MP3, and to replace the one in R2:
 
 ```
 ffmpeg -i song.mp3 -vn -map_metadata -1 -c:a aac -b:a 112k apps/phone-web/public/sounds/waiting.m4a
+cd apps/worker && wrangler r2 object put questline-media/sounds/waiting.m4a \
+  --file ../phone-web/public/sounds/waiting.m4a --content-type audio/mp4 --remote
 ```
 
 ## Look

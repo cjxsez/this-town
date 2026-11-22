@@ -25,6 +25,8 @@ export interface Env {
   GAME_ROOM: DurableObjectNamespace<GameRoom>;
   /** Cloudflare Email Sending (`[[send_email]]`). Simulated under `wrangler dev`. */
   EMAIL?: SendEmail;
+  /** R2 bucket `questline-media`: media kept out of git, such as the waiting song (routes/media.ts). */
+  MEDIA?: R2Bucket;
 
   // ---- [vars] (always strings) ----
   PUBLIC_ORIGIN: string;

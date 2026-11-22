@@ -14,7 +14,9 @@
  *                       /kiosk/*  -> /kiosk/  (kiosk-web)
  *                       else      -> /        (phone-web, incl. the NFC landing /k/:car
  *                                              and the phone side of the games at /m)
- *                     Requests that look like files (have an extension) keep their 404.
+ *                     Requests that look like files (have an extension) keep their 404,
+ *                     except media kept out of git (/sounds/waiting.m4a), which comes from
+ *                     the R2 bucket MEDIA when the build has no copy (routes/media.ts).
  *                     Shells are fetched as "/g/" not "/g/index.html" because the assets
  *                     layer's html_handling redirects index.html to the directory URL.
  *
@@ -43,6 +45,7 @@ import { reportRoutes } from "./routes/report";
 import { rideRoutes } from "./routes/ride";
 import { tapsRoutes } from "./routes/taps";
 import { usersRoutes } from "./routes/users";
+import { mediaRoutes } from "./routes/media";
 
 export { TrainRoom } from "./rooms/TrainRoom";
 export { GameRoom } from "./rooms/GameRoom";
@@ -117,6 +120,9 @@ async function serveSpa(env: Env, req: Request): Promise<Response> {
   if (/\.[a-z0-9]+$/i.test(url.pathname)) return res; // missing file, not a client route
   return env.ASSETS.fetch(new Request(new URL(spaShellFor(url.pathname), url), { headers: req.headers }));
 }
+
+// Media kept out of git (routes/media.ts). Only reached when the build has no such asset.
+app.route("/", mediaRoutes);
 
 app.get("*", (c) => serveSpa(c.env, c.req.raw));
 

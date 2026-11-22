@@ -149,7 +149,8 @@ In `src/index.ts`:
 
 1. `/api/*` goes to the Hono routes. Unknown API paths return JSON 404.
 2. `/ws/rider` and `/ws/kiosk/:car` are authenticated in the Worker, then forwarded to the right `TrainRoom` stub with internal headers (`x-questline-*`, always stripped from the client request first).
-3. Everything else: try `env.ASSETS.fetch(request)`. On 404, if the path has no file extension, serve the SPA shell for its prefix: `/g/` for `/g/*`, `/kiosk/` for `/kiosk/*`, `/` for everything else (including `/k/:car`, the phone-web NFC landing route).
+3. `/sounds/waiting.m4a` (the waiting song, not in git) comes from the R2 bucket `questline-media` (binding `MEDIA`, `src/routes/media.ts`) when the build has no copy, with range requests for iOS. Replace it with `wrangler r2 object put questline-media/sounds/waiting.m4a --file <file> --content-type audio/mp4 --remote`.
+4. Everything else: try `env.ASSETS.fetch(request)`. On 404, if the path has no file extension, serve the SPA shell for its prefix: `/g/` for `/g/*`, `/kiosk/` for `/kiosk/*`, `/` for everything else (including `/k/:car`, the phone-web NFC landing route).
 
 ## Which TrainRoom?
 
