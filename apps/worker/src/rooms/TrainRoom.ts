@@ -36,7 +36,7 @@
  *
  * RPC methods (called by routes through rooms/stub.ts roomFor()):
  *   checkIn, moveCar, checkOut, notNow, stampTap, setGhost, snapshot, upcomingStops,
- *   clearForReport, demoTriggerDelay, demoAdvance, demoReset
+ *   applyReport, demoTriggerDelay, demoAdvance, demoReset
  *
  * D1 writes from here: checkins (insert / car / close), matches (insert / end),
  * mission_sessions (insert / end), met_pairs (on mission start), stamps (on award).
@@ -477,10 +477,29 @@ export class TrainRoom extends DurableObject<Env> {
   }
 
   /** POST /api/report while the match is live: end it now. */
-  async clearForReport(matchId: string, reporterId: string): Promise<void> {
+  /**
+   * A report from `reporterId` about `otherId`, met in `matchId`. Ends the pair if it is still
+   * live and never pairs the two again on this trip. With `block`, both riders' in-room block
+   * lists get the other right away (D1 only feeds them at check-in). The reported rider is
+   * told only that their partner left, never that they were reported.
+   */
+  async applyReport(matchId: string, reporterId: string, otherId: string, block: boolean): Promise<void> {
+    const s = this.state;
+    const reporter = s.riders[reporterId];
+    const other = s.riders[otherId];
+    // Neither rider is on this train any more and the pair is gone: nothing to keep apart here.
+    if (!s.pairs[matchId] && !reporter && !other) return;
+
     const now = Date.now();
-    if (!this.state.pairs[matchId]) return;
-    await this.clearPair(matchId, "reported", now, { [reporterId]: "reported" }, "reported");
+    const key = pairKey(reporterId, otherId);
+    if (!s.declinedPairs.includes(key)) s.declinedPairs.push(key);
+    if (block) {
+      if (reporter && !reporter.blocked.includes(otherId)) reporter.blocked.push(otherId);
+      if (other && !other.blocked.includes(reporterId)) other.blocked.push(reporterId);
+    }
+    if (s.pairs[matchId]) {
+      await this.clearPair(matchId, "partner-left", now, { [reporterId]: "reported" }, "reported");
+    }
     await this.persist();
     await this.runMatching(now);
     this.broadcastRideStates();

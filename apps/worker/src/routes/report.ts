@@ -7,18 +7,12 @@
  * - POST /api/unblock (rider auth) body UnblockReq { matchId } -> OkRes
  *   1. The match must include the caller (getMatchForUser), else 404.
  *   2. insertReport; if block, insertBlock(caller -> partner). Matching treats blocks in
- *      either direction as a hard filter from the next check-in (the room also drops the
- *      pair now).
- *   3. If the match is still live, tell its room (clearForReport) so the mission ends and
- *      both sides get match.cleared.
+ *      either direction as a hard filter; rooms load them at check-in.
+ *   3. Tell the trip's room (applyReport): it ends a live pair, never re-pairs the two on
+ *      this trip, and applies a block to riders already on board. The reported rider only
+ *      hears that their partner left.
  *
- * Protocol types: ReportReq.
- *
- * TODO:
- * - Blocks should also apply to riders already checked in: clearForReport adds the partner
- *   to the reporter's RoomRider.blocked and vice versa.
- * - match.cleared has no "reported"/"blocked" reason; the room uses "partner-left" for the
- *   reported side (see README "Protocol gaps").
+ * Protocol types: ReportReq, UnblockReq.
  */
 import { Hono } from "hono";
 import { ReportReq, UnblockReq } from "@questline/protocol";
@@ -52,7 +46,8 @@ reportRoutes.post("/report", requireRider, async (c) => {
     createdAt: now,
   });
   if (block) await insertBlock(c.env.DB, userId, match.otherUserId, now);
-  if (match.endedAt === null) await roomFor(c.env, match.tripId).clearForReport(matchId, userId);
+  // Even an ended match's room may still hold both riders (same train, next segment).
+  await roomFor(c.env, match.tripId).applyReport(matchId, userId, match.otherUserId, block);
 
   const res: OkRes = { ok: true };
   return c.json(res);
