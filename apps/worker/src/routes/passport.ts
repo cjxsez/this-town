@@ -14,7 +14,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
-import { passportFor } from "../db/queries";
+import { passportFor, recentMatches } from "../db/queries";
 import type { PassportResT } from "../lib/api";
 
 export const passportRoutes = new Hono<AppEnv>();
@@ -22,4 +22,8 @@ export const passportRoutes = new Hono<AppEnv>();
 passportRoutes.get("/passport", requireRider, async (c) => {
   const res: PassportResT = await passportFor(c.env.DB, c.get("userId"));
   return c.json(res);
+});
+
+passportRoutes.get("/matches/recent", requireRider, async (c) => {
+  return c.json({ matches: await recentMatches(c.env.DB, c.get("userId")) });
 });

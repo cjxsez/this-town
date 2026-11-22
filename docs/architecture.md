@@ -82,7 +82,7 @@ D1 holds durable records (users, check-in history, matches, stamps, met pairs). 
 
 ## Matching
 
-Ride Mode on = consent. There is no accept step.
+Ride Mode on = consent. There is no accept step. The consent is explicit: onboarding has a rules step (18+ and "Ride Mode on means I can be matched"), and every ride's first tap ends on a "Turn on Ride Mode?" screen that says what it means (D15).
 
 1. **Pool:** riders checked in to this trip, not ghost, not in a `notNow` cooldown, not already paired, whose remaining journeys overlap by at least one more stop.
 2. **Interest gate:** shared interest tags >= 1 (tunable `MIN_SHARED_TAGS`), not met in the last 7 days, not blocked either way.
@@ -108,7 +108,7 @@ Ride Mode on = consent. There is no accept step.
 ## Flow (happy path)
 
 1. One-time: onboarding on `phone-web`, link glasses with the 4-digit code.
-2. Board, tap the car's kiosk tag, pick destination. You are checked in, Ride Mode is on.
+2. Board, tap the car's kiosk tag, pick destination, then confirm "Turn on Ride Mode" on the phone. Only that confirm sends `rideMode: true` in `POST /api/kiosk/tap`; without it the worker answers `need-destination` and nothing is turned on (D15). You are checked in, Ride Mode is on.
 3. `TrainRoom` matches you. Phone and glasses get `match.found`, the kiosk gets `pair.incoming`, LEDs glow the pair color.
 4. Glasses: "Maya, kiosk 1 car back, look for orange. You both love ramen."
 5. At the kiosk, when the second person arrives (or after a short delay), `mission.start`: the kiosk screen shows the prompt and countdown, the glasses show a compact version.

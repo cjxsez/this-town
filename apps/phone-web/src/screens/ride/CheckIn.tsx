@@ -1,176 +1,75 @@
-import { useState, type CSSProperties } from "react";
-import { DIRECTIONS, LINES } from "../../../shared/catalog";
-import type { CheckIn as CheckInData, Direction, GreenBranch, LineColor } from "../../../shared/types";
-import { useApp, useRide } from "../../state/store";
-import { Card, Eyebrow, Screen, Segmented, Title } from "../../ui";
-import { PlatformBlobs, PlatformQuestsToggle, stationFor } from "./parts/PlatformKit";
-import { PlatformKenmoreMap } from "./parts/PlatformKenmoreMap";
-import { PlatformStationSheet } from "./parts/PlatformStationSheet";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { DEMO_TRIP } from "../../../shared/catalog";
+import { sim } from "../../api";
+import { useRide } from "../../state/store";
+import { Body, Button, Card, Eyebrow, Hint, Screen, Title } from "../../ui";
+import { PlatformBlobs, PlatformQuestsToggle } from "./parts/PlatformKit";
 
-const pickLine = (lines: LineColor[], want?: LineColor) => (want && lines.includes(want) ? want : lines[0]);
-const pickBranch = (branches: GreenBranch[] | undefined, want?: GreenBranch) =>
-  branches?.length ? (want && branches.includes(want) ? want : branches[0]) : undefined;
-const pickDirection = (line: LineColor, want?: Direction["id"]) =>
-  DIRECTIONS[line].some((d) => d.id === want) ? want! : DIRECTIONS[line][0].id;
+/** A car to "tap" when there's no real tag to hand: mock mode, or VITE_DEMO_CAR in http mode. */
+const DEMO_CAR: string | undefined = sim ? DEMO_TRIP.cars[1] : import.meta.env.VITE_DEMO_CAR;
 
-/** C1: Ride Mode off. Pick station, line and direction, then flip quests on. */
+/**
+ * C1: Ride Mode off. The only way to turn it on is tapping the kiosk tag in your train car,
+ * so this screen just says how. The switch explains rather than toggles.
+ */
 export default function CheckIn() {
-  const { ride, act, profile } = useRide();
-  const { state, actions } = useApp();
-  const prev = ride.checkIn;
-
-  const [stationId, setStationId] = useState(prev?.stationId ?? profile.homeStation);
-  const station = stationFor(stationId);
-  const [line, setLine] = useState<LineColor>(pickLine(station.lines, prev?.line));
-  const [branch, setBranch] = useState<GreenBranch | undefined>(pickBranch(station.branches, prev?.branch));
-  const [direction, setDirection] = useState<Direction["id"]>(pickDirection(line, prev?.direction));
-  const [via, setVia] = useState<CheckInData["via"]>(prev?.via ?? "list");
-  const [picking, setPicking] = useState(false);
-
-  const branches = line === "green" ? station.branches : undefined;
-
-  const chooseStation = (id: string) => {
-    const s = stationFor(id);
-    const l = pickLine(s.lines, line);
-    setStationId(s.id);
-    setLine(l);
-    setBranch(pickBranch(l === "green" ? s.branches : undefined, branch));
-    setDirection(pickDirection(l, direction));
-    setVia("list");
-    setPicking(false);
-  };
-
-  const chooseLine = (l: LineColor) => {
-    setLine(l);
-    setBranch(pickBranch(l === "green" ? station.branches : undefined, branch));
-    setDirection(pickDirection(l, direction));
-  };
-
-  const goOn = () => {
-    act.checkIn({ stationId: station.id, line, branch: line === "green" ? branch : undefined, direction, via });
-    // Ghost is "for this ride"; a new check-in is a new ride.
-    if (state.settings.ghost) actions.setSettings({ ghost: false });
-  };
-
-  const multiLine = station.lines.length > 1;
+  const { ride } = useRide();
+  const navigate = useNavigate();
+  const [explain, setExplain] = useState(false);
 
   return (
     <Screen label="C1" tabs blobs={false}>
       <PlatformBlobs blobs={[[120, 110, 330, 200], [-80, 60, 240, 130]]} />
-      <Title style={{ fontSize: 34 }}>Where are you riding?</Title>
+      <Title style={{ fontSize: 34 }}>Tap the kiosk in your car.</Title>
+      <Body>Every train car has a Questline kiosk. Hold your phone to the tag on it to turn on Ride Mode.</Body>
 
-      <Card style={{ gap: 8 }}>
-        <Eyebrow>Station</Eyebrow>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ font: "400 24px/1.02 var(--font-display)", minWidth: 0, textTransform: "uppercase" }}>{station.name}</div>
-          <button
-            type="button"
-            onClick={() => setPicking(true)}
-            aria-haspopup="dialog"
-            aria-label={`Change station${via === "beacon" ? ", found via station beacon" : ""}`}
-            className="q-pill"
-            style={{ background: "var(--sky)", borderRadius: "var(--r3)", minHeight: 44, cursor: "pointer", flex: "0 1 auto", whiteSpace: "normal", textAlign: "center", lineHeight: 1.2, padding: "4px 10px" }}
-          >
-            {via === "beacon" ? "VIA BEACON · CHANGE" : "CHANGE"}
-          </button>
-        </div>
-
-        {station.id === "kenmore" && (
-          <div style={{ padding: "4px 0" }}>
-            <PlatformKenmoreMap branch={line === "green" ? branch : undefined} name={station.name} />
-          </div>
-        )}
-
-        <Eyebrow>Line</Eyebrow>
-        {multiLine && (
-          <Segmented
-            label="Line"
-            value={line}
-            onChange={chooseLine}
-            options={station.lines.map((l) => ({
-              value: l,
-              label: (
-                <>
-                  <span aria-hidden style={dot(LINES[l].hex)} />
-                  {LINES[l].label}
-                </>
-              ),
-            }))}
-          />
-        )}
-        {branches && branch ? (
-          <Segmented
-            label="Green Line branch"
-            value={branch}
-            onChange={setBranch}
-            options={branches.map((b) => ({ value: b, label: b === branch && !multiLine ? `Green ${b}` : b }))}
-          />
-        ) : (
-          !multiLine && (
-            <Segmented
-              label="Line"
-              value={line}
-              onChange={chooseLine}
-              options={[{ value: line, label: LINES[line].label }]}
-            />
-          )
-        )}
-
-        <Eyebrow>Direction</Eyebrow>
-        <div role="radiogroup" aria-label="Direction" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {DIRECTIONS[line].map((d, i) => {
-            const on = d.id === direction;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => setDirection(d.id)}
-                style={{
-                  minHeight: 46,
-                  padding: "6px 12px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  border: "var(--ol) solid var(--ink)",
-                  borderRadius: i % 2 ? "var(--r2)" : "var(--r1)",
-                  background: on ? "var(--sky)" : "var(--paper-hi)",
-                  font: "700 20px/1.1 var(--font-hand)",
-                  textAlign: "left",
-                }}
-              >
-                <span
-                  aria-hidden
-                  style={{
-                    flex: "none",
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    border: "var(--ol) solid var(--ink)",
-                    background: on ? "var(--ink)" : "var(--paper-hi)",
-                  }}
-                />
-                <span>
-                  {d.label} · {d.towards}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      <Card style={{ gap: 10 }}>
+        <Eyebrow>How Ride Mode works</Eyebrow>
+        <Step n={1}>Tap the tag and pick your stop.</Step>
+        <Step n={2}>Turn on Ride Mode. That's your yes to being matched on this train.</Step>
+        <Step n={3}>We match you with the closest rider who shares your interests. Your glasses and the kiosk show who and where.</Step>
+        <Step n={4}>Meet at the kiosk, play a quick mission, both tap the tag for a stamp.</Step>
+        <Hint>Ride Mode turns off at your stop. "Not now" and ghost mode are always one tap away.</Hint>
       </Card>
 
-      <PlatformQuestsToggle on={false} onToggle={goOn} label="Quests" />
+      <PlatformQuestsToggle on={false} onToggle={() => setExplain(true)} label="Ride Mode" />
+      {explain && (
+        <Card style={{ background: "var(--sky)" }}>
+          <Body>Ride Mode turns on from the kiosk tag, so we know which car you're in. Find the "Tap here" sign on the kiosk.</Body>
+        </Card>
+      )}
 
-      {picking && <PlatformStationSheet current={station.id} onPick={chooseStation} onClose={() => setPicking(false)} />}
+      {DEMO_CAR && (
+        <Button variant="secondary" onClick={() => navigate(`/k/${DEMO_CAR}`)}>
+          Demo: tap the car {DEMO_CAR} kiosk
+        </Button>
+      )}
+      {ride.checkIn && <Hint>Last ride: car {ride.checkIn.car} to {ride.checkIn.destinationName}.</Hint>}
     </Screen>
   );
 }
 
-const dot = (bg: string): CSSProperties => ({
-  width: 10,
-  height: 10,
-  borderRadius: "50%",
-  background: bg,
-  border: "1.5px solid var(--ink)",
-});
+function Step({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+      <span
+        aria-hidden
+        style={{
+          flex: "none",
+          width: 26,
+          height: 26,
+          borderRadius: "50%",
+          display: "grid",
+          placeItems: "center",
+          background: "var(--ink)",
+          color: "var(--paper)",
+          font: "400 14px var(--font-display)",
+        }}
+      >
+        {n}
+      </span>
+      <Body style={{ margin: 0 }}>{children}</Body>
+    </div>
+  );
+}

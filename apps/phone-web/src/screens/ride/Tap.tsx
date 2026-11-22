@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { Navigate, useParams, useSearchParams } from "react-router";
-import { backend } from "../../api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
+import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
 import { errorMessage, type TapResult } from "../../lib/api";
 import { useApp } from "../../state/store";
-import { Body, Button, Card, Eyebrow, Hint, Screen, Title } from "../../ui";
+import { Body, Button, Card, Eyebrow, Hint, Screen, TextLink, Title } from "../../ui";
 
 const PENDING_KEY = "questline.pendingTap";
 
@@ -21,45 +21,65 @@ export function takePendingTap(): string | null {
 // One request per tag read: the nonce is single-use, and StrictMode runs effects twice in dev.
 const inFlight = new Map<string, Promise<TapResult>>();
 
+type Stop = { id: string; name: string };
 type View =
   | { step: "working" }
-  | { step: "destination"; stops: { id: string; name: string }[] }
-  | { step: "error"; message: string }
-  | { step: "done" };
+  | { step: "destination"; stops: Stop[]; picked: string | null }
+  | { step: "confirm"; stops: Stop[]; dest: Stop }
+  | { step: "on"; car: string; dest: string; next: string | null }
+  | { step: "moved"; car: string; meeting: boolean }
+  | { step: "already"; car: string }
+  | { step: "stampPending" }
+  | { step: "stamped"; station: string; partner: string }
+  | { step: "error"; message: string };
 
 /**
- * /k/:car?n=<nonce>: where the kiosk's NFC tag sends the phone. The worker decides what the
- * tap means (check in, move car, or stamp), so this screen only asks for a destination when
- * the worker wants one and then hands over to /ride.
+ * /k/:car?n=<nonce>: where the kiosk's NFC tag sends the phone. The server decides what the
+ * tap means. On the first tap of a ride that is: pick your stop, then confirm Ride Mode.
+ * Confirming is the consent to be matched on this train, so it's its own screen that says
+ * exactly what it means, and only "Turn on Ride Mode" sends rideMode: true.
  */
 export default function Tap() {
   const { car = "" } = useParams();
   const [query] = useSearchParams();
   const nonce = query.get("n") ?? undefined;
+  const navigate = useNavigate();
   const { state, actions } = useApp();
   const profile = state.profile;
   const [view, setView] = useState<View>({ step: "working" });
+  const partner = useRef(state.ride.match?.firstName);
+  partner.current = state.ride.match?.firstName ?? partner.current;
 
   const send = useCallback(
-    (destinationStop?: string) => {
-      if (!backend || !profile) return;
+    (destinationStop?: string, rideMode?: true) => {
+      if (!profile) return;
       setView({ step: "working" });
-      const key = `${car}|${nonce ?? ""}|${destinationStop ?? ""}`;
+      const key = `${car}|${nonce ?? ""}|${destinationStop ?? ""}|${rideMode ? 1 : 0}`;
       let req = inFlight.get(key);
       if (!req) {
-        req = backend.ride.tap({ car, nonce, destinationStop }, profile).finally(() => inFlight.delete(key));
+        req = actions.ride.tapKiosk({ car, nonce, destinationStop, rideMode }).finally(() => inFlight.delete(key));
         inFlight.set(key, req);
       }
       req.then(
         (res) => {
-          if (res.result === "need-destination") return setView({ step: "destination", stops: res.stops });
-          if (res.result === "error") return setView({ step: "error", message: res.message });
-          if (res.result === "stamp-pending") {
-            // Our half of the stamp is in: show the "waiting on them" side of the bump screen.
-            actions.ride.missionDone();
-            actions.ride.bump();
+          switch (res.result) {
+            case "need-destination":
+              return setView({ step: "destination", stops: res.stops, picked: res.suggestedStop });
+            case "checked-in":
+              return setView(
+                rideMode
+                  ? { step: "on", car: res.state.car ?? car, dest: res.state.destinationStop ?? "", next: res.state.nextStop }
+                  : { step: "already", car: res.state.car ?? car },
+              );
+            case "moved-car":
+              return setView({ step: "moved", car: res.state.car ?? car, meeting: res.state.status === "matched" || res.state.status === "in-mission" });
+            case "stamp-pending":
+              return setView({ step: "stampPending" });
+            case "stamp-awarded":
+              return setView({ step: "stamped", station: res.stamp.station, partner: res.stamp.partnerFirstName });
+            case "error":
+              return setView({ step: "error", message: res.message });
           }
-          setView({ step: "done" });
         },
         (e) => setView({ step: "error", message: errorMessage(e) }),
       );
@@ -77,25 +97,54 @@ export default function Tap() {
     }
     return <Navigate to="/" replace />;
   }
-  // The simulator has no kiosks.
-  if (!backend || view.step === "done") return <Navigate to="/ride" replace />;
+
+  const toRide = () => navigate("/ride", { replace: true });
+  const color = state.ride.match ? PAIR_COLOR_HEX[state.ride.match.color] : undefined;
+
+  const footer =
+    view.step === "destination" ? (
+      <Button
+        disabled={!view.picked}
+        onClick={() => {
+          const dest = view.stops.find((s) => s.id === view.picked);
+          if (dest) setView({ step: "confirm", stops: view.stops, dest });
+        }}
+      >
+        Next
+      </Button>
+    ) : view.step === "confirm" ? (
+      <>
+        <Button huge onClick={() => send(view.dest.id, true)}>
+          Turn on Ride Mode
+        </Button>
+        <TextLink to="/ride">Not today</TextLink>
+      </>
+    ) : undefined;
 
   return (
-    <Screen label="Kiosk tap" blobs="b">
+    <Screen label="Kiosk tap" blobs="b" footer={footer}>
       <Eyebrow>Car {car}</Eyebrow>
+
       {view.step === "working" && (
         <div role="status">
           <Title style={{ fontSize: 44 }}>One sec…</Title>
         </div>
       )}
+
       {view.step === "destination" && (
         <>
           <Title style={{ fontSize: 40 }}>Where are you getting off?</Title>
-          <Hint>Quests stop before your stop, so you never miss it.</Hint>
+          <Hint>Ride Mode turns off at your stop, and missions always end before a stop, so you never miss it.</Hint>
           <Card>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div role="radiogroup" aria-label="Your stop" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {view.stops.map((stop) => (
-                <Button key={stop.id} variant="secondary" onClick={() => send(stop.id)}>
+                <Button
+                  key={stop.id}
+                  variant={view.picked === stop.id ? "leaf" : "secondary"}
+                  role="radio"
+                  aria-checked={view.picked === stop.id}
+                  onClick={() => setView({ ...view, picked: stop.id })}
+                >
                   {stop.name}
                 </Button>
               ))}
@@ -103,14 +152,108 @@ export default function Tap() {
           </Card>
         </>
       )}
+
+      {view.step === "confirm" && (
+        <>
+          <Title style={{ fontSize: 40 }}>Turn on Ride Mode?</Title>
+          <Body>
+            Car {car}, riding to <strong>{view.dest.name}</strong>.
+          </Body>
+          <Card style={{ gap: 10 }}>
+            <Eyebrow>While Ride Mode is on</Eyebrow>
+            <Rule>We'll match you with the closest rider on this train who shares your interests. There's no accept step: turning this on is your yes.</Rule>
+            <Rule>Your glasses and the kiosk show who and where. Your match sees your first name and your pair color. The kiosk screen only shows first names.</Rule>
+            <Rule>You meet at a kiosk, play a short mission, and both tap the tag for a stamp. Missions end before your stop.</Rule>
+            <Rule>Not into it? Tap "Not now" any time, or turn on ghost mode. You can report or block anyone you're matched with.</Rule>
+            <Rule>Ride Mode turns off by itself at {view.dest.name}.</Rule>
+          </Card>
+          {state.settings.ghost && <Hint>Ghost mode is on, so nobody will be matched with you until you turn it off.</Hint>}
+          <TextLink onClick={() => setView({ step: "destination", stops: view.stops, picked: view.dest.id })}>Change my stop</TextLink>
+        </>
+      )}
+
+      {view.step === "on" && (
+        <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Title style={{ fontSize: 44 }}>Ride Mode is on.</Title>
+          <Card style={{ gap: 6, background: "var(--leaf)" }}>
+            <Body style={{ margin: 0 }}>
+              Car <strong>{view.car}</strong>, riding to <strong>{view.dest}</strong>.
+            </Body>
+            {view.next && <Hint>Next stop: {view.next}.</Hint>}
+          </Card>
+          <Body>
+            {profile.glassesLinked
+              ? "Put your phone away. Your glasses will show your match and where to go."
+              : "Keep this page handy. It'll show your match and where to go."}
+          </Body>
+          <Button huge onClick={toRide}>
+            Got it
+          </Button>
+        </div>
+      )}
+
+      {view.step === "moved" && (
+        <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Title style={{ fontSize: 40 }}>{view.meeting ? "You made it." : `You're in car ${view.car} now.`}</Title>
+          <Body>{view.meeting ? "This is your meeting kiosk. The mission starts on its screen in a moment." : "Ride Mode moved with you. Matching uses this car now."}</Body>
+          <Button huge onClick={toRide}>
+            OK
+          </Button>
+        </div>
+      )}
+
+      {view.step === "already" && (
+        <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Title style={{ fontSize: 40 }}>Ride Mode is already on.</Title>
+          <Body>You're checked in to car {view.car}. If you're meeting someone here, the mission starts on the kiosk.</Body>
+          <Button huge onClick={toRide}>
+            OK
+          </Button>
+        </div>
+      )}
+
+      {view.step === "stampPending" && (
+        <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Title style={{ fontSize: 44 }}>1 of 2 tapped.</Title>
+          <Body>Your half is in. Waiting for {partner.current ?? "your match"} to tap the tag.</Body>
+          <div aria-hidden style={{ height: 14, borderRadius: 7, border: "var(--ol) solid var(--ink)", overflow: "hidden" }}>
+            <div style={{ width: "50%", height: "100%", background: color ?? "var(--leaf)" }} />
+          </div>
+          <Button huge onClick={toRide}>
+            OK
+          </Button>
+        </div>
+      )}
+
+      {view.step === "stamped" && (
+        <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Title style={{ fontSize: 44 }}>Stamped!</Title>
+          <Body>
+            {view.station} stamp with {view.partner}. It's in your passport.
+          </Body>
+          <Button huge onClick={toRide}>
+            See it
+          </Button>
+        </div>
+      )}
+
       {view.step === "error" && (
         <div role="alert" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Title style={{ fontSize: 44 }}>That tap didn't take.</Title>
           <Body>{view.message}</Body>
           <Hint>Tap the tag again to get a fresh one.</Hint>
-          <Button to="/ride">Back to Ride Mode</Button>
+          <Button onClick={toRide}>Back to Ride Mode</Button>
         </div>
       )}
     </Screen>
+  );
+}
+
+function Rule({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+      <span aria-hidden style={{ flex: "none", width: 10, height: 10, marginTop: 8, borderRadius: "50%", background: "var(--ink)" }} />
+      <Body style={{ margin: 0 }}>{children}</Body>
+    </div>
   );
 }

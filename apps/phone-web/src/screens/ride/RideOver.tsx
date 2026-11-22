@@ -1,5 +1,6 @@
 import { LINES, LINE_STATION_COUNT, stationById } from "../../../shared/catalog";
 import type { CheckIn, GreenBranch, Stamp } from "../../../shared/types";
+import { useNavigate } from "react-router";
 import { useApp, useRide } from "../../state/store";
 import { Body, Button, LinePill, Screen, Title, TrainPill } from "../../ui";
 import { lineName, stationFor } from "./parts/PlatformKit";
@@ -23,21 +24,30 @@ function lineProgress(stamps: Stamp[], c: CheckIn) {
   return { got: ids.size, total };
 }
 
-/** C4: the train came and nobody was a match. Never reads as rejection. */
-export default function NoMatch() {
+/**
+ * C4: Ride Mode is off. Confirms it, says why (your stop, you turned it off, end of the
+ * line) and what you got out of the ride.
+ */
+export default function RideOver() {
   const { ride, act } = useRide();
-  const { state, actions } = useApp();
+  const { state } = useApp();
+  const navigate = useNavigate();
   const c = ride.checkIn;
-  const station = stationFor(c?.stationId);
+  const station = stationFor(c?.destinationId);
   const lineHex = LINES[c?.line ?? "green"].hex;
-  const hasHere = state.stamps.some((s) => s.stationId === station.id);
   const progress = c ? lineProgress(state.stamps, c) : undefined;
-  const [shortA, shortB] = station.short.includes("-") ? [station.short.split("-")[0] + "-", station.short.split("-").slice(1).join("-")] : [station.short, ""];
-
-  const turnOff = () => {
-    act.checkOut();
-    if (state.settings.ghost) actions.setSettings({ ghost: false });
-  };
+  const why =
+    ride.rideOverReason === "you"
+      ? "You turned it off. Nobody can be matched with you until you tap a kiosk again."
+      : ride.rideOverReason === "tripEnded"
+        ? "This train reached the end of the line."
+        : `You're at ${c?.destinationName ?? station.name}.`;
+  const got =
+    ride.stampsThisRide > 0
+      ? `${ride.stampsThisRide} stamp${ride.stampsThisRide === 1 ? "" : "s"} and ${ride.peopleThisRide} new ${ride.peopleThisRide === 1 ? "person" : "people"} this ride.`
+      : ride.peopleThisRide > 0
+        ? `You met ${ride.peopleThisRide} ${ride.peopleThisRide === 1 ? "person" : "people"} this ride.`
+        : "No quest this ride. That's most rides.";
 
   return (
     <Screen
@@ -46,11 +56,18 @@ export default function NoMatch() {
       blobs={false}
       footer={
         <>
-          <Button variant="secondary" tilt={0.6} onClick={turnOff}>
-            Turn quests off
+          <Button tilt={-0.7} onClick={act.closeRideOver}>
+            Done
           </Button>
-          <Button tilt={-0.7} onClick={act.keepOnNextStation}>
-            Keep on for the next station
+          <Button
+            variant="secondary"
+            tilt={0.6}
+            onClick={() => {
+              act.closeRideOver();
+              navigate("/passport");
+            }}
+          >
+            See passport
           </Button>
         </>
       }
@@ -60,10 +77,9 @@ export default function NoMatch() {
 
       <div className="q-topbar">
         {c ? <LinePill line={c.line}>{lineName(c).toUpperCase()}</LinePill> : <span />}
-        <TrainPill>ARRIVING</TrainPill>
+        <TrainPill>RIDE MODE OFF</TrainPill>
       </div>
 
-      {/* the train pulls in and out, without you on a quest */}
       <div
         aria-hidden
         style={{ flex: "1 0 auto", minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))", background: "var(--ink)", overflow: "hidden" }}
@@ -87,39 +103,15 @@ export default function NoMatch() {
         </div>
       </div>
 
-      <Title style={{ fontSize: 40 }}>No quest this time</Title>
-      <Body style={{ fontSize: 21 }}>Nobody heading your way was a match. That's most rides.</Body>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <div
-          aria-hidden
-          style={{
-            flex: "none",
-            width: 52,
-            height: 74,
-            border: hasHere ? "var(--ol) solid var(--ink)" : "2px dashed var(--stone-dk)",
-            background: hasHere ? "var(--ticket)" : undefined,
-            borderRadius: 4,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-            font: "400 10px/1.15 var(--font-display)",
-            color: hasHere ? "var(--ink)" : "var(--ink-soft)",
-          }}
-        >
-          {shortA}
-          {shortB && <br />}
-          {shortB}
-        </div>
-        <div>
-          <div style={{ font: "700 23px/1.08 var(--font-hand)" }}>{hasHere ? 1 : 0} of 1 stamps</div>
-          {c && progress && (
-            <Body>
-              {lineName(c)} {progress.got} / {progress.total}
-            </Body>
-          )}
-        </div>
+      <div role="status" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <Title style={{ fontSize: 40 }}>Ride Mode is off.</Title>
+        <Body style={{ fontSize: 21 }}>{why}</Body>
+        <Body style={{ fontSize: 21 }}>{got}</Body>
+        {c && progress && (
+          <Body>
+            {lineName(c)} stamps: {progress.got} / {progress.total}
+          </Body>
+        )}
       </div>
     </Screen>
   );

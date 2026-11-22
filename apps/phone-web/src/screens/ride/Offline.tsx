@@ -42,7 +42,7 @@ export default function Offline() {
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Title style={{ fontSize: 42 }}>Reconnecting…</Title>
         <Body style={{ fontSize: 21 }}>
-          You're still checked in. Offers that arrive while you're offline are dropped, not queued, so you never get a stale one.
+          Ride Mode is still on. When the signal comes back you'll see any match that came in.
         </Body>
         <Body style={{ fontSize: 18 }}>Countdown is estimated until we're back.</Body>
       </div>

@@ -1,16 +1,6 @@
 // Static catalog. The matcher compares ids, so chip labels must match these
 // exactly; that is why onboarding has no free-text interest field.
-import type {
-  Badge,
-  BadgeAnimal,
-  BadgeColor,
-  Direction,
-  GreenBranch,
-  LineColor,
-  MeetSpot,
-  Mission,
-  Station,
-} from "./types";
+import type { GreenBranch, LineColor, Mission, Station } from "./types";
 
 export const LINES: Record<LineColor, { label: string; hex: string; dark: string }> = {
   green: { label: "Green", hex: "#3F8F5A", dark: "#2E6E46" },
@@ -18,31 +8,6 @@ export const LINES: Record<LineColor, { label: string; hex: string; dark: string
   orange: { label: "Orange", hex: "#E8893A", dark: "#C4472A" },
   blue: { label: "Blue", hex: "#3B74C4", dark: "#26343B" },
 };
-
-// ---- badges: 6 colours x 8 animals = 48 printed badges ----
-
-export const BADGE_COLORS: Record<BadgeColor, string> = {
-  red: "#D9453B",
-  yellow: "#F2C84B",
-  orange: "#F0923B",
-  blue: "#6BBDE6",
-  teal: "#17736F",
-  purple: "#8A5A8C",
-};
-const COLOR_ORDER: BadgeColor[] = ["red", "yellow", "orange", "blue", "teal", "purple"];
-const ANIMAL_ORDER: BadgeAnimal[] = ["cat", "bear", "frog", "owl", "rabbit", "fox", "duck", "deer"];
-
-/**
- * Colour and animal are computed from the printed number, so the badge is the
- * only thing that has to be stored. Multiplying by 5 (coprime to 48) scatters
- * neighbouring numbers so a stack of badges doesn't come out all one colour.
- */
-export function badgeFor(number: number): Badge {
-  const n = (((number * 5) % 48) + 48) % 48;
-  return { number, color: COLOR_ORDER[Math.floor(n / 8) % 6], animal: ANIMAL_ORDER[n % 8] };
-}
-
-export const badgeName = (b: Badge) => `${b.color} ${b.animal}`;
 
 // ---- stations (the 14 in the demo catalog, plus passport placeholders) ----
 
@@ -56,6 +21,7 @@ export const STATIONS: Station[] = [
   { id: "hynes", name: "Hynes", short: "HYN-ES", lines: ["green"], branches: ["B", "C", "D"] },
   { id: "copley", name: "Copley", short: "COP-LEY", lines: ["green"], branches: ["B", "C", "D", "E"] },
   { id: "arlington", name: "Arlington", short: "ARL.", lines: ["green"], branches: ["B", "C", "D", "E"] },
+  { id: "boylston", name: "Boylston", short: "BOYL-STON", lines: ["green"], branches: ["B", "C", "D", "E"] },
   { id: "park-st", name: "Park St", short: "PARK ST", lines: ["green", "red"], branches: ["B", "C", "D", "E"] },
   { id: "gov-ctr", name: "Government Ctr", short: "GOV CTR", lines: ["green", "blue"], branches: ["B", "C", "D", "E"] },
   { id: "downtown-crossing", name: "Downtown Crossing", short: "DTX", lines: ["red", "orange"] },
@@ -69,7 +35,7 @@ export const stationById = (id: string) => STATIONS.find((s) => s.id === id);
 export const PASSPORT_LAYOUT: Record<LineColor, { group: string; stationIds: string[]; more: boolean }[]> = {
   green: [
     { group: "B BRANCH", stationIds: ["kenmore", "bu-east", "bu-central", "amory", "babcock"], more: true },
-    { group: "TRUNK", stationIds: ["park-st", "arlington", "copley", "hynes"], more: true },
+    { group: "TRUNK", stationIds: ["hynes", "copley", "arlington", "boylston", "park-st", "gov-ctr"], more: true },
   ],
   red: [{ group: "TRUNK", stationIds: ["park-st", "downtown-crossing", "harvard"], more: true }],
   orange: [{ group: "TRUNK", stationIds: ["downtown-crossing"], more: true }],
@@ -77,26 +43,6 @@ export const PASSPORT_LAYOUT: Record<LineColor, { group: string; stationIds: str
 };
 
 export const LINE_STATION_COUNT: Record<LineColor, number> = { green: 66, red: 22, orange: 20, blue: 12 };
-
-/** Locals say "outbound", visitors read the destination sign, so both are shown. */
-export const DIRECTIONS: Record<LineColor, Direction[]> = {
-  green: [
-    { id: "westbound", label: "Westbound", towards: "to Boston College" },
-    { id: "eastbound", label: "Eastbound", towards: "to Gov't Ctr" },
-  ],
-  red: [
-    { id: "northbound", label: "Northbound", towards: "to Alewife" },
-    { id: "southbound", label: "Southbound", towards: "to Ashmont / Braintree" },
-  ],
-  orange: [
-    { id: "northbound", label: "Northbound", towards: "to Oak Grove" },
-    { id: "southbound", label: "Southbound", towards: "to Forest Hills" },
-  ],
-  blue: [
-    { id: "outbound", label: "Outbound", towards: "to Wonderland" },
-    { id: "inbound", label: "Inbound", towards: "to Bowdoin" },
-  ],
-};
 
 export const GREEN_BRANCHES: GreenBranch[] = ["B", "C", "D", "E"];
 
@@ -157,47 +103,6 @@ export const INTERESTS: Interest[] = [
 
 export const interestById = (id: string) => INTERESTS.find((i) => i.id === id);
 
-// ---- favourite spots, per station (B4 shows the poster's station) ----
-
-export const SPOTS: Record<string, { id: string; label: string }[]> = {
-  kenmore: [
-    { id: "fenway-park", label: "Fenway Park" },
-    { id: "pavement", label: "Pavement Coffee" },
-    { id: "the-fens", label: "the Fens" },
-    { id: "trident", label: "Trident Books" },
-    { id: "citgo", label: "Citgo sign" },
-    { id: "lansdowne", label: "Lansdowne St" },
-  ],
-  "park-st": [
-    { id: "common", label: "Boston Common" },
-    { id: "frog-pond", label: "Frog Pond" },
-    { id: "state-house", label: "State House" },
-    { id: "brattle", label: "Brattle Book Shop" },
-    { id: "public-garden", label: "Public Garden" },
-    { id: "chinatown", label: "Chinatown gate" },
-  ],
-  copley: [
-    { id: "bpl", label: "Boston Public Library" },
-    { id: "trinity", label: "Trinity Church" },
-    { id: "newbury", label: "Newbury St" },
-    { id: "finish-line", label: "the Marathon finish" },
-    { id: "pru", label: "the Pru" },
-    { id: "tatte", label: "Tatte" },
-  ],
-};
-
-export const spotsFor = (stationId: string) => SPOTS[stationId] ?? SPOTS.kenmore;
-
-// ---- meeting spots: things already on the platform, never hardware ----
-
-export const MEET_SPOTS: Record<string, MeetSpot[]> = {
-  kenmore: [
-    { id: "system-map", name: "The system map", detail: "near the stairs" },
-    { id: "third-bench", name: "The third bench", detail: "westbound side" },
-    { id: "comm-ave-stairs", name: "The stairs to Comm Ave", detail: "bottom step" },
-  ],
-};
-
 // ---- missions: 5 groups, 20 total ----
 
 const M = (m: Mission) => m;
@@ -218,10 +123,10 @@ export const MISSIONS: Mission[] = [
   M({ id: "first-week", group: "showMe", rarity: "common", title: "One thing every first-week visitor gets wrong.", body: "Each of you, one tip.", seconds: 90 }),
   M({ id: "best-bite", group: "showMe", rarity: "common", title: "Best bite within one stop of here.", body: "Agree on a winner.", seconds: 90 }),
   M({ id: "hidden-gem", group: "showMe", rarity: "common", title: "A free thing in Boston nobody does.", body: "Trade one each.", seconds: 90 }),
-  M({ id: "three-teal", group: "spot", rarity: "common", title: "Find 3 things on this platform that are teal.", body: "Point, don't walk off.", seconds: 90 }),
-  M({ id: "oldest-thing", group: "spot", rarity: "common", title: "Spot the oldest thing on this platform.", body: "Make your case.", seconds: 90 }),
-  M({ id: "count-signs", group: "spot", rarity: "common", title: "Count the station-name signs you can see.", body: "Closest guess first, then count.", seconds: 60 }),
-  M({ id: "best-ad", group: "spot", rarity: "common", title: "Pick the best ad on this platform.", body: "Then the worst.", seconds: 60 }),
+  M({ id: "three-teal", group: "spot", rarity: "common", title: "Find 3 things in this car that are {color}.", body: "Point, don't walk off.", seconds: 90 }),
+  M({ id: "oldest-thing", group: "spot", rarity: "common", title: "Spot the oldest thing in this car.", body: "Make your case.", seconds: 90 }),
+  M({ id: "count-signs", group: "spot", rarity: "common", title: "Count the ads in this car.", body: "Closest guess first, then count.", seconds: 60 }),
+  M({ id: "best-ad", group: "spot", rarity: "common", title: "Pick the best ad in this car.", body: "Then the worst.", seconds: 60 }),
   M({ id: "rps", group: "quickGame", rarity: "common", title: "Rock-paper-scissors, best of 3.", body: "Loser names the next stop.", seconds: 60, nodFriendly: true }),
   M({ id: "thumb-war", group: "quickGame", rarity: "common", title: "Would you rather: T or bike?", body: "One sentence each.", seconds: 45, nodFriendly: true }),
   M({ id: "two-truths", group: "quickGame", rarity: "common", title: "Two truths, one lie. Boston edition.", body: "Guess theirs.", seconds: 90, nodFriendly: true }),
@@ -234,6 +139,25 @@ export const MISSIONS: Mission[] = [
 
 export const missionById = (id: string) => MISSIONS.find((m) => m.id === id);
 
-/** Fill {station} / {name} placeholders in a mission title. */
-export const missionText = (s: string, vars: { station?: string; name?: string }) =>
-  s.replace("{station}", vars.station ?? "this station").replace("{name}", vars.name ?? "them");
+/** Fill {station} / {name} / {color} placeholders in a mission title. */
+export const missionText = (s: string, vars: { station?: string; name?: string; color?: string }) =>
+  s
+    .replace("{station}", vars.station ?? "the next stop")
+    .replace("{name}", vars.name ?? "them")
+    .replace("{color}", vars.color ?? "orange");
+
+/** The demo trip (apps/worker/src/mbta/demo.ts): Green Line D inbound, cars 1413 (front) and 1412. */
+export const DEMO_TRIP = {
+  line: "green" as LineColor,
+  branch: "D" as GreenBranch,
+  cars: ["1413", "1412"],
+  stops: [
+    { id: "kenmore", name: "Kenmore" },
+    { id: "hynes", name: "Hynes" },
+    { id: "copley", name: "Copley" },
+    { id: "arlington", name: "Arlington" },
+    { id: "boylston", name: "Boylston" },
+    { id: "park-st", name: "Park St" },
+    { id: "gov-ctr", name: "Government Ctr" },
+  ],
+};

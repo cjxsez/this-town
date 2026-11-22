@@ -3,9 +3,8 @@ import { ArtSlot, Button, ButtonRow, Screen, TextLink } from "../../ui";
 import { useApp } from "../../state/store";
 
 /**
- * B1 Landing from QR. Rendered at "/" and at "/:stationId" (the poster's
- * deep link; App has already put the station into draft.homeStation).
- * Every sign-in goes to B2; a badge already in hand goes to B7.
+ * B1 Landing. Rendered at "/", and where a kiosk tag tap lands a rider with no profile
+ * (the tap is replayed after onboarding). Every sign-in goes to B2.
  */
 export default function Landing() {
   const navigate = useNavigate();
@@ -41,7 +40,6 @@ export default function Landing() {
               Just play today (first name only)
             </Button>
           </ButtonRow>
-          <TextLink to="/join/badge">Already have a badge? Scan it</TextLink>
         </>
       }
     >
@@ -76,7 +74,7 @@ export default function Landing() {
       </div>
       <h1 style={{ font: "400 46px/1 var(--font-shade)", textAlign: "center" }}>QUESTLINE</h1>
       <p style={{ fontSize: 21, lineHeight: 1.2, textWrap: "pretty", textAlign: "center" }}>
-        Short games with one other rider while you wait. Spoken, face to face, done before the train.
+        Tap the kiosk in your train car and meet one other rider who likes what you like. A short game, face to face, done before your stop.
       </p>
     </Screen>
   );

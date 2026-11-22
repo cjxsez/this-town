@@ -31,7 +31,7 @@ export default function Interests() {
       blobs="c"
       footer={
         <ButtonRow>
-          <Button tilt={0.5} disabled={picked.length < MIN} onClick={() => navigate("/join/spots")}>
+          <Button tilt={0.5} disabled={picked.length < MIN} onClick={() => navigate("/join/about")}>
             Next · {picked.length} picked
           </Button>
         </ButtonRow>

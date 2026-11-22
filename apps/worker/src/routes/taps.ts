@@ -38,7 +38,7 @@ export const tapsRoutes = new Hono<AppEnv>();
 tapsRoutes.post("/taps", requireRider, async (c) => {
   const body = await readJson(c.req.raw, TapReq);
   if (!body.ok) return c.json({ error: body.error, issues: body.issues }, 400);
-  const { car, nonce, destinationStop } = body.data;
+  const { car, nonce, destinationStop, rideMode } = body.data;
   const userId = c.get("userId");
 
   const trip = await resolveCarTrip(c.env, car);
@@ -60,11 +60,20 @@ tapsRoutes.post("/taps", requireRider, async (c) => {
 
   if (active) await roomFor(c.env, active.tripId).checkOut(userId, "moved-trip");
 
+  // Ride Mode on is the consent to be matched, so the phone must have asked: destination
+  // and rideMode: true both come from the confirmation screen, never from a bare tag tap.
   const stops = await room.upcomingStops(trip);
-  const dest = destinationStop ?? (await lastDestination(c.env.DB, userId, trip.line));
-  if (!dest || !stops.some((s) => s.id === dest)) {
-    const res: TapResT = { result: "need-destination", line: trip.line, stops };
+  if (!destinationStop || !rideMode || !stops.some((s) => s.id === destinationStop)) {
+    const last = await lastDestination(c.env.DB, userId, trip.line);
+    const res: TapResT = {
+      result: "need-destination",
+      line: trip.line,
+      car,
+      stops,
+      suggestedStop: last && stops.some((s) => s.id === last) ? last : null,
+    };
     return c.json(res);
   }
+  const dest = destinationStop;
   return c.json(await room.checkIn({ userId, car, destinationStop: dest, trip }));
 });
