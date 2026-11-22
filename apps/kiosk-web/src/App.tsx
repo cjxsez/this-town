@@ -15,137 +15,26 @@
  *   stamp.progress                  -> fills the "both tap the tag" dots on Mission
  *   nfc.write                       -> ignored (Pi only, dropped in lib/socket.ts)
  *
- * Every screen sits on an 800x480 Stage scaled to the window (components/Stage.tsx).
- * ?preview=<screen>|all shows sample screens with no socket (lib/preview.ts).
+ * Pure reducer: src/state.ts. Clock offset via setServerNow before dispatch.
  *
- * Privacy: this screen is public. Only first names and colors ever reach state here;
- * ServerToKiosk does not carry interests or the why line, keep it that way.
- *
- * One pair per kiosk: the worker matcher only assigns one pair to a busy kiosk, so there
- * is no split screen. A second pair.incoming for a different matchId simply replaces the
- * first; pair.cleared for an old matchId must not blank the new one.
- *
- * kiosk.idle is a periodic stats push (protocol.md), not a reset-to-idle command — we only
- * update riders/ETA counts and never change the active pair screen from it.
+ * Privacy: this screen is public. Only first names and colors ever reach state here.
  */
 import { useEffect, useReducer, useState, type ReactNode } from "react";
-import { PAIR_COLOR_HEX, RARE_ACCENT_HEX, type Mission as MissionModel, type PairColor } from "@questline/protocol";
+import { PAIR_COLOR_HEX, RARE_ACCENT_HEX } from "@questline/protocol";
 import { Stage } from "./components/Stage";
 import { HandDrawnFilters } from "./components/Ui";
 import { setServerNow } from "./lib/clock";
 import { parseCar, readConfig, type ConfigResult } from "./lib/config";
 import { PREVIEW_SCREENS, readPreview, SAMPLE, type PreviewMode, type PreviewScreen } from "./lib/preview";
-import { connectKioskSocket, type KioskSocketStatus, type ScreenEvent } from "./lib/socket";
+import { connectKioskSocket } from "./lib/socket";
 import { Celebrate } from "./screens/Celebrate";
 import { Disconnected } from "./screens/Disconnected";
-import { Idle, type IdleStats } from "./screens/Idle";
+import { Idle } from "./screens/Idle";
 import { Mission } from "./screens/Mission";
 import { PairIncoming } from "./screens/PairIncoming";
+import { initialKioskState, reduceKiosk } from "./state";
 
 const CELEBRATE_MS = 6000;
-
-interface PairInfo {
-  color: PairColor;
-  firstNames: [string, string];
-  arrived: number;
-}
-
-type Screen =
-  | { name: "idle" }
-  | { name: "pair"; matchId: string }
-  | { name: "mission"; matchId: string; color: PairColor; mission: MissionModel; startedAt: number; tapped: number }
-  | { name: "celebrate"; matchId: string; color: PairColor; rare: boolean };
-
-interface State {
-  status: KioskSocketStatus;
-  screen: Screen;
-  stats: IdleStats | null;
-  nextStopAt: number | null;
-  /** Pairs seen via pair.incoming, by matchId, so later events can show first names. */
-  pairs: Record<string, PairInfo>;
-}
-
-type Action =
-  | { type: "status"; status: KioskSocketStatus }
-  | { type: "event"; event: ScreenEvent; at: number }
-  | { type: "celebrateDone"; matchId: string };
-
-const IDLE: Screen = { name: "idle" };
-
-const initialState: State = { status: "connecting", screen: IDLE, stats: null, nextStopAt: null, pairs: {} };
-
-function activeMatchId(screen: Screen): string | null {
-  return screen.name === "idle" ? null : screen.matchId;
-}
-
-function withoutPair(pairs: Record<string, PairInfo>, matchId: string): Record<string, PairInfo> {
-  const next = { ...pairs };
-  delete next[matchId];
-  return next;
-}
-
-function onEvent(state: State, event: ScreenEvent, at: number): State {
-  switch (event.type) {
-    case "kiosk.idle": {
-      // Stats push only — do not reset an active pair screen.
-      setServerNow(event.serverNow, at);
-      const { type: _type, serverNow: _serverNow, ...stats } = event;
-      const nextStopAt = stats.nextStopEtaSec === null ? null : at + stats.nextStopEtaSec * 1000;
-      return { ...state, stats, nextStopAt };
-    }
-    case "pair.incoming":
-      // Newest pair wins the screen (worker allows one pair per kiosk; no split view).
-      return {
-        ...state,
-        pairs: { ...state.pairs, [event.matchId]: { color: event.color, firstNames: event.firstNames, arrived: event.arrived } },
-        screen: { name: "pair", matchId: event.matchId },
-      };
-    case "mission.show": {
-      setServerNow(event.serverNow, at);
-      // A repeat mission.show (e.g. after a reconnect) keeps the bar's start and the taps.
-      const same = state.screen.name === "mission" && state.screen.mission.sessionId === event.mission.sessionId ? state.screen : null;
-      return {
-        ...state,
-        screen: {
-          name: "mission",
-          matchId: event.matchId,
-          color: event.color,
-          mission: event.mission,
-          startedAt: same?.startedAt ?? at,
-          tapped: same?.tapped ?? 0,
-        },
-      };
-    }
-    case "celebrate":
-      return {
-        ...state,
-        screen: { name: "celebrate", matchId: event.matchId, color: event.color, rare: event.rare },
-      };
-    case "stamp.progress":
-      if (state.screen.name !== "mission" || state.screen.matchId !== event.matchId) return state;
-      return { ...state, screen: { ...state.screen, tapped: event.tapped } };
-    case "pair.cleared": {
-      // Let a running celebration finish (with names); celebrateDone drops the pair.
-      // Stale clears for an old matchId must not blank a newer pair on screen.
-      if (state.screen.name === "celebrate" && state.screen.matchId === event.matchId) return state;
-      const pairs = withoutPair(state.pairs, event.matchId);
-      const screen = activeMatchId(state.screen) === event.matchId ? IDLE : state.screen;
-      return { ...state, pairs, screen };
-    }
-  }
-}
-
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case "status":
-      return { ...state, status: action.status };
-    case "event":
-      return onEvent(state, action.event, action.at);
-    case "celebrateDone":
-      if (state.screen.name !== "celebrate" || state.screen.matchId !== action.matchId) return state;
-      return { ...state, screen: IDLE, pairs: withoutPair(state.pairs, action.matchId) };
-  }
-}
 
 export function App() {
   const [preview] = useState<PreviewMode | null>(() => readPreview());
@@ -168,12 +57,16 @@ function Shell({ bg, children }: { bg: string; children: ReactNode }) {
 }
 
 function KioskScreen({ car, kioskKey }: { car: string; kioskKey: string }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reduceKiosk, initialKioskState);
 
   useEffect(() => {
     const socket = connectKioskSocket({
       config: { car, key: kioskKey },
-      onEvent: (event) => dispatch({ type: "event", event, at: Date.now() }),
+      onEvent: (event) => {
+        const at = Date.now();
+        if ("serverNow" in event && typeof event.serverNow === "number") setServerNow(event.serverNow, at);
+        dispatch({ type: "event", event, at });
+      },
       onStatus: (status) => dispatch({ type: "status", status }),
     });
     return () => socket.close();
