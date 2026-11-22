@@ -2,13 +2,11 @@
  * Countdown.tsx (kiosk-web): m:ss countdown to an absolute epoch-ms time.
  *
  * Used by Mission (Mission.endsAt from mission.show) and Idle (next stop, converted from
- * kiosk.idle nextStopEtaSec at receipt time). No API or socket use.
- *
- * TODO:
- * - Clock skew: Mission.endsAt is server epoch ms; the Pi clock should be NTP-synced,
- *   but correct with a server time offset once the protocol carries one.
+ * kiosk.idle nextStopEtaSec at receipt time). Uses lib/clock.ts so endsAt stays aligned
+ * with the worker.
  */
 import { useEffect, useState, type CSSProperties } from "react";
+import { serverNowMs } from "../lib/clock";
 
 export function formatRemaining(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
@@ -19,9 +17,9 @@ export function formatRemaining(ms: number): string {
 
 /** Milliseconds left until endsAt, ticking 4x a second. */
 export function useRemaining(endsAt: number): number {
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => serverNowMs());
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 250);
+    const id = window.setInterval(() => setNow(serverNowMs()), 250);
     return () => window.clearInterval(id);
   }, []);
   return endsAt - now;
