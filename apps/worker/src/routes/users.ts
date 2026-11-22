@@ -15,15 +15,18 @@
  *
  * Protocol types: CreateUserReq, CreateUserRes, MeRes, UpdateProfileReq, Profile.
  *
- * TODO:
- * - Let a guest attach an email later (verify a code while signed in).
+ * - POST /api/me/email (rider auth) body AttachEmailReq { email, code } -> MeRes
+ *   A guest adds an email (code from POST /api/auth/email/start) and keeps everything.
+ *   400 "wrong-code" | "expired" | "too-many-attempts", 409 "email-taken" | "has-email".
  */
 import { Hono } from "hono";
-import { CreateUserReq, Profile, UpdateProfileReq } from "@questline/protocol";
+import { AttachEmailReq, CreateUserReq, Profile, UpdateProfileReq } from "@questline/protocol";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
 import {
   activeCheckin,
+  attachEmail,
+  checkLoginCode,
   createSession,
   createUser,
   getUser,
@@ -72,6 +75,35 @@ usersRoutes.get("/me", requireRider, async (c) => {
     glassesLinked: await hasGlassesSession(c.env.DB, userId),
     email: await getUserEmail(c.env.DB, userId),
   };
+  return c.json(res);
+});
+
+usersRoutes.post("/me/email", requireRider, limitByIp("authVerifyIp"), async (c) => {
+  const body = await readJson(c.req.raw, AttachEmailReq);
+  if (!body.ok) return c.json({ error: body.error, issues: body.issues }, 400);
+  const userId = c.get("userId");
+  const { email, code } = body.data;
+  const now = Date.now();
+
+  const check = await checkLoginCode(c.env.DB, email, code, now);
+  if (check !== "ok") {
+    const message = {
+      "wrong-code": "That code isn't right. Check the email and try again.",
+      expired: "That code has expired. Send a new one.",
+      "too-many-attempts": "Too many wrong tries. Send a new code.",
+    }[check];
+    return c.json({ error: message, code: check }, 400);
+  }
+
+  const attached = await attachEmail(c.env.DB, userId, email);
+  if (attached === "taken") {
+    return c.json({ error: "That email already has an account. Sign out and sign in with it instead.", code: "email-taken" }, 409);
+  }
+  if (attached === "has-email") return c.json({ error: "You already have an email on this account.", code: "has-email" }, 409);
+
+  const user = await getUser(c.env.DB, userId);
+  if (!user) return c.json({ error: "not found" }, 404);
+  const res: MeResT = { userId, profile: user.profile, glassesLinked: await hasGlassesSession(c.env.DB, userId), email };
   return c.json(res);
 });
 
