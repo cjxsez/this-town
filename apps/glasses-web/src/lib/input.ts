@@ -67,7 +67,8 @@ const KEY_TO_ACTION: Record<string, InputAction> = {
   Escape: "back",
 };
 
-const DEBUG_KEYS = new URLSearchParams(location.search).get("debug") === "keys";
+const DEBUG_KEYS =
+  typeof location !== "undefined" && new URLSearchParams(location.search).get("debug") === "keys";
 
 export function keyToAction(key: string): InputAction | null {
   return KEY_TO_ACTION[key] ?? null;
