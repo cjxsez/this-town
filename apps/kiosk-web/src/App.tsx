@@ -6,6 +6,7 @@
  *
  *   bad URL (no car or key)         -> Disconnected (config error)
  *   socket "offline"                -> Disconnected (reconnecting), over any screen
+ *   socket "rejected" (badAuth/forbidden) -> Disconnected (bad key / unknown car), no retry
  *   kiosk.idle                      -> updates stats; Idle if no pair is active here
  *   pair.incoming                   -> PairIncoming (remember names + color by matchId)
  *   mission.show                    -> Mission (names from the stored pair)
@@ -187,6 +188,13 @@ function KioskScreen({ car, kioskKey }: { car: string; kioskKey: string }) {
     return () => window.clearTimeout(id);
   }, [screen]);
 
+  if (state.status === "rejected") {
+    return (
+      <Shell bg={NIGHT}>
+        <Disconnected car={car} error="Bad kiosk key or unknown car. Fix the URL and reload." />
+      </Shell>
+    );
+  }
   if (state.status === "offline") return <Shell bg={NIGHT}><Disconnected car={car} /></Shell>;
 
   const idle = <Shell bg={SEA}><Idle car={car} stats={state.stats} nextStopAt={state.nextStopAt} /></Shell>;
