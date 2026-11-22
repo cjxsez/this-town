@@ -4,6 +4,7 @@
  *
  * Route:
  * - POST /api/report  (rider auth) body ReportReq { matchId, reason, block } -> OkRes
+ * - POST /api/unblock (rider auth) body UnblockReq { matchId } -> OkRes
  *   1. The match must include the caller (getMatchForUser), else 404.
  *   2. insertReport; if block, insertBlock(caller -> partner). Matching treats blocks in
  *      either direction as a hard filter from the next check-in (the room also drops the
@@ -20,10 +21,10 @@
  *   reported side (see README "Protocol gaps").
  */
 import { Hono } from "hono";
-import { ReportReq } from "@questline/protocol";
+import { ReportReq, UnblockReq } from "@questline/protocol";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
-import { getMatchForUser, insertBlock, insertReport } from "../db/queries";
+import { deleteBlock, getMatchForUser, insertBlock, insertReport } from "../db/queries";
 import type { OkRes } from "../lib/api";
 import { readJson } from "../lib/http";
 import { newId } from "../lib/ids";
@@ -53,6 +54,22 @@ reportRoutes.post("/report", requireRider, async (c) => {
   if (block) await insertBlock(c.env.DB, userId, match.otherUserId, now);
   if (match.endedAt === null) await roomFor(c.env, match.tripId).clearForReport(matchId, userId);
 
+  const res: OkRes = { ok: true };
+  return c.json(res);
+});
+
+/**
+ * POST /api/unblock (rider auth) body UnblockReq { matchId } -> OkRes. Lifts the caller's own
+ * block on that match's partner. A block the partner placed on the caller stays: matching
+ * still keeps them apart. Takes effect for rooms at the next check-in.
+ */
+reportRoutes.post("/unblock", requireRider, async (c) => {
+  const body = await readJson(c.req.raw, UnblockReq);
+  if (!body.ok) return c.json({ error: body.error, issues: body.issues }, 400);
+  const userId = c.get("userId");
+  const match = await getMatchForUser(c.env.DB, body.data.matchId, userId);
+  if (!match) return c.json({ error: "match not found" }, 404);
+  await deleteBlock(c.env.DB, userId, match.otherUserId);
   const res: OkRes = { ok: true };
   return c.json(res);
 });
