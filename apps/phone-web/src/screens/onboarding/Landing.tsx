@@ -25,8 +25,9 @@ export default function Landing() {
 
   const signIn = (method: "email" | "guest") => navigate(method === "email" ? "/signin" : "/join/name");
 
-  const skipSetup = () => {
-    actions.useDemoProfile();
+  const skipSetup = async () => {
+    // Wait for the worker to create the rider, so the first kiosk tap already has a token.
+    await actions.useDemoProfile();
     navigate("/ride");
   };
 

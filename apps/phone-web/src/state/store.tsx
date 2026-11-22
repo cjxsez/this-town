@@ -221,9 +221,19 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
         dispatch({ type: "createProfile", profile, seed: false });
         dispatch({ type: "ride", action: { type: "local/mood", mood: profile.battery } });
       },
-      /** "Just play today" with everything pre-filled, for demos. */
+      /**
+       * "demo: skip setup": a pre-filled rider, for demos. Against the worker it is created
+       * there like any guest (so taps, linking and matching work); the simulator also gets
+       * sample stamps, people and linked glasses, which a real account wouldn't have.
+       */
       useDemoProfile: () => {
-        dispatch({ type: "createProfile", profile: { ...DEMO_PROFILE, createdAt: new Date().toISOString() }, seed: true });
+        const profile: Profile = {
+          ...DEMO_PROFILE,
+          createdAt: new Date().toISOString(),
+          glassesLinked: sim ? DEMO_PROFILE.glassesLinked : false,
+        };
+        dispatch({ type: "createProfile", profile, seed: !!sim });
+        return api.saveProfile(profile);
       },
       updateProfile: (patch: Partial<Profile>) => {
         dispatch({ type: "updateProfile", patch });
