@@ -32,6 +32,8 @@ from . import animations as anim
 from .config import Config
 from .leds import LedStrip, make_strip
 from .nfc_tag import NfcTag, NfcTagError, make_tag
+from websockets.asyncio.client import ClientConnection
+
 from .protocol import (
     CelebrateEvent,
     KioskIdleEvent,
@@ -48,6 +50,7 @@ from .protocol import (
     nfc_failed,
     nfc_written,
     pair_rgb,
+    ping,
 )
 
 log = logging.getLogger(__name__)
@@ -78,8 +81,7 @@ class KioskAgent:
         self.active_color: PairColor | None = None
         self.last_nfc_url: str | None = None
         self._stopping = asyncio.Event()
-        # TODO: type as websockets.asyncio.client.ClientConnection once wired
-        self._ws: object | None = None
+        self._ws: ClientConnection | None = None
 
     # ---------- connection ----------
 
@@ -124,17 +126,18 @@ class KioskAgent:
 
         App-level ping on top of the websocket library's protocol pings, so the
         TrainRoom sees the Pi as alive even with the DO hibernating.
-
-        TODO: while True: await asyncio.sleep(interval); await self.send(ping())
         """
-        raise NotImplementedError
+        interval = self.cfg.agent.ping_interval_s
+        while True:
+            await asyncio.sleep(interval)
+            await self.send(ping())
 
     async def send(self, msg: KioskToServer) -> None:
         """Send one message if connected; drop it (with a log) if not."""
         if self._ws is None:
             log.debug("not connected, dropping %s", msg["type"])
             return
-        await self._ws.send(encode(msg))  # type: ignore[attr-defined]
+        await self._ws.send(encode(msg))
 
     async def stop(self) -> None:
         """Stop reconnecting, close the socket, turn LEDs off."""
