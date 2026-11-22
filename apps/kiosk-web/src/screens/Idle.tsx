@@ -7,13 +7,15 @@
  * strip at the bottom so the screen never looks frozen.
  *
  * Touch/click anywhere shows a 10 s "How it works" overlay (three steps, no names or
- * interests). Tap again closes it early.
+ * interests; step 3 follows GET /api/health gamesOnly via lib/pairCopy.ts). Tap again
+ * closes it early.
  *
  * Public screen: counts only, no names here.
  */
 import { useEffect, useState } from "react";
 import type { ServerToKiosk } from "@questline/protocol";
 import { Countdown } from "../components/Countdown";
+import { howItWorksSteps } from "../lib/pairCopy";
 import { NfcMark, Screen, Wordmark, art } from "../components/Ui";
 
 export type IdleStats = Omit<Extract<ServerToKiosk, { type: "kiosk.idle" }>, "type" | "serverNow">;
@@ -23,18 +25,15 @@ interface IdleProps {
   stats: IdleStats | null;
   /** Epoch ms of the next stop, computed when kiosk.idle arrived. */
   nextStopAt: number | null;
+  /** From GET /api/health; false keeps mission-mode How it works steps. */
+  gamesOnly?: boolean;
 }
 
 const HOW_IT_WORKS_MS = 10_000;
 
-const STEPS = [
-  "Tap the kiosk tag with your phone when you board.",
-  "Get matched with a rider who shares your interests.",
-  "Meet at the kiosk, do the mission, both tap for a stamp.",
-] as const;
-
-export function Idle({ car, stats, nextStopAt }: IdleProps) {
+export function Idle({ car, stats, nextStopAt, gamesOnly = false }: IdleProps) {
   const [howTo, setHowTo] = useState(false);
+  const steps = howItWorksSteps(gamesOnly);
 
   useEffect(() => {
     if (!howTo) return;
@@ -86,7 +85,7 @@ export function Idle({ car, stats, nextStopAt }: IdleProps) {
           <div className="k-howto__card">
             <div className="k-eyebrow" style={{ color: "var(--ink)" }}>How it works</div>
             <ol className="k-howto__steps">
-              {STEPS.map((step, i) => (
+              {steps.map((step, i) => (
                 <li key={step}>
                   <span className="k-howto__num">{i + 1}</span>
                   <span>{step}</span>

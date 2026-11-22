@@ -100,7 +100,7 @@ function KioskScreen({ car, kioskKey }: { car: string; kioskKey: string }) {
   }
   if (state.status === "offline") return <Shell bg={NIGHT}><Disconnected car={car} /></Shell>;
 
-  const idle = <Shell bg={SEA}><Idle car={car} stats={state.stats} nextStopAt={state.nextStopAt} /></Shell>;
+  const idle = <Shell bg={SEA}><Idle car={car} stats={state.stats} nextStopAt={state.nextStopAt} gamesOnly={gamesOnly} /></Shell>;
   switch (screen.name) {
     case "idle":
       return idle;
