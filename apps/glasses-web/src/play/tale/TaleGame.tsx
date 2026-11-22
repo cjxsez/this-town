@@ -24,7 +24,7 @@ const CARD_WORD: Record<TaleCard, string> = { truth: "True", fake: "Made up" };
 const SPARK_LEAD: Record<TaleCard, string> = { truth: "Think of", fake: "Try" };
 const CALLS: TaleCard[] = ["truth", "fake"];
 
-export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameProps<TaleView>) {
+export function TaleGame({ view, send, serverNow, onNext, onAgain, last, votes }: GameProps<TaleView>) {
   /** Focused verdict button: 0 "True", 1 "Made up". */
   const [focus, setFocus] = useState(0);
   // Done and the calls only count after the leftover-tap guard; until then they look held.
@@ -180,7 +180,7 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameP
           Partner <b>{view.theyPoints}</b>
         </span>
       </div>
-      <EndButtons onAgain={onAgain} onNext={onNext} last={last} />
+      <EndButtons onAgain={onAgain} onNext={onNext} last={last} votes={votes} />
     </main>
   );
 }

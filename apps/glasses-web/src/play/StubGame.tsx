@@ -4,7 +4,7 @@ import { EndButtons } from "../components/EndButtons";
 import { Wobble } from "../components/Wobble";
 import { useInput } from "../lib/input";
 
-export function StubGame({ title, view, send, onNext, onAgain, last }: GameProps<StubView> & { title: string }) {
+export function StubGame({ title, view, send, onNext, onAgain, last, votes }: GameProps<StubView> & { title: string }) {
   useInput(
     (action) => {
       if (view.phase === "intro" && action === "select") send({ type: "ready" });
@@ -18,7 +18,7 @@ export function StubGame({ title, view, send, onNext, onAgain, last }: GameProps
         <Wobble />
         <div className="guess-title guess-title-sm">{title}</div>
         <div className="guess-hint">Not built yet</div>
-        <EndButtons onAgain={onAgain} onNext={onNext} last={last} />
+        <EndButtons onAgain={onAgain} onNext={onNext} last={last} votes={votes} />
       </main>
     );
   }

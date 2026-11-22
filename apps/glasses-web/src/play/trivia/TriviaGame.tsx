@@ -38,7 +38,7 @@ function Choices({ choices, focus, right, wrong, small }: { choices: string[]; f
 
 const sizeOf = (q: string) => (q.length > 90 ? "is-long" : q.length > 55 ? "is-mid" : "");
 
-export function TriviaGame({ view, send, serverNow, onNext, onAgain, last }: GameProps<TriviaView>) {
+export function TriviaGame({ view, send, serverNow, onNext, onAgain, last, votes }: GameProps<TriviaView>) {
   /** Skip on the leave screen was pressed once and waits for a second press. */
   const [sure, setSure] = useState(0);
 
@@ -183,7 +183,7 @@ export function TriviaGame({ view, send, serverNow, onNext, onAgain, last }: Gam
       <div className="guess-hint">
         You two got {view.score} of {view.total}
       </div>
-      <EndButtons onAgain={onAgain} onNext={onNext} last={last} />
+      <EndButtons onAgain={onAgain} onNext={onNext} last={last} votes={votes} />
     </main>
   );
 }

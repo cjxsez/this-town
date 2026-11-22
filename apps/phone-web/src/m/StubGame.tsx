@@ -3,10 +3,10 @@ import { Button, Hint, Screen, Title } from "../ui";
 import { EndButtons } from "./EndButtons";
 
 /** The screen for a placeholder game (protocol games/stub.ts). */
-export function StubGame({ title, view, send, onNext, onAgain, last }: GameProps<StubView> & { title: string }) {
+export function StubGame({ title, view, send, onNext, onAgain, last, votes }: GameProps<StubView> & { title: string }) {
   if (view.phase === "done") {
     return (
-      <Screen footer={<EndButtons onNext={onNext} onAgain={onAgain} last={last} />}>
+      <Screen footer={<EndButtons onNext={onNext} onAgain={onAgain} last={last} votes={votes} />}>
         <Title size="md">{title}</Title>
         <Hint>Not built yet</Hint>
       </Screen>

@@ -7,7 +7,9 @@
  * - `view(seat)`: the poll. Marks the seat as present, starts the first game once both
  *   seats have shown up, runs the module's tick() so timed phases move on, and returns that
  *   seat's RoomView.
- * - `act(seat, action)`: "room.next" / "room.again" on a finished game, "room.finish" after the last, otherwise the
+ * - `act(seat, action)`: on a game's last screen "room.next" / "room.again" (and "room.finish"
+ *   after the last game) are votes: the room moves only once both seats picked the same
+ *   (`votes`), so one player can't push the other on. Anything else goes to the
  *   module's reduce().
  * - `setLens()`, `moveTo()`, `release()`: a player moving their seat from a phone onto a
  *   pair of glasses and back. The seat's own room remembers which glasses show it (`lens`);
@@ -34,7 +36,7 @@
  * only key. Fine for a demo between two people at a table, not for anything private.
  */
 import { DurableObject } from "cloudflare:workers";
-import { GAMES, type GameCtx, type RoomView, type Seat, type SeatRef } from "@questline/protocol/games";
+import { GAMES, type EndChoice, type GameCtx, type RoomView, type Seat, type SeatRef } from "@questline/protocol/games";
 import type { Env } from "../env";
 import { HOOKS, type SharedStore } from "../games/hooks";
 import { ROOM_STORAGE_TTL_MS, roomStorageExpired } from "./gameRoomExpiry";
@@ -85,6 +87,8 @@ interface Room {
   pair?: PairRef;
   /** The playlist is over (Finish, or FINISH_AFTER_MS after the last game); TrainRoom has been told. */
   finished?: boolean;
+  /** Each seat's pick on the current game's last screen. Cleared whenever a game starts. */
+  votes?: Partial<Record<Seat, EndChoice>>;
   /** Server time the room finishes by itself, once the last game is done. */
   finishAt?: number | null;
 }
@@ -215,6 +219,7 @@ export class GameRoom extends DurableObject<Env> {
     room.index = index % GAMES.length;
     room.run += 1;
     room.finishAt = null;
+    room.votes = {};
     room.game = mod.init(this.gameCtx(), seed);
     await this.save();
   }
@@ -264,6 +269,24 @@ export class GameRoom extends DurableObject<Env> {
     if (room.pair) this.ctx.waitUntil(this.tellPairDone(room.pair));
   }
 
+  /**
+   * A pick on the last screen of a game. The room moves once both seats picked the same
+   * thing; until then the pick just shows on both screens. After the last game the only
+   * choice is finish (a "next" there counts as finish), and the room also finishes by itself
+   * at finishAt.
+   */
+  private async vote(seat: Seat, type: "room.next" | "room.again" | "room.finish"): Promise<void> {
+    const room = this.room!;
+    const last = this.isLast();
+    if (!last && type === "room.finish") return;
+    const choice: EndChoice = last ? "finish" : type === "room.again" ? "again" : "next";
+    room.votes = { ...room.votes, [seat]: choice };
+    const other: Seat = seat === "a" ? "b" : "a";
+    if (room.votes[other] !== choice) return;
+    if (choice === "finish") await this.finish();
+    else await this.startOnce(choice === "next" ? room.index + 1 : room.index);
+  }
+
   /** The pair played the whole playlist: their TrainRoom stamps them and lights the kiosk. */
   private async tellPairDone(pair: PairRef): Promise<void> {
     try {
@@ -288,6 +311,7 @@ export class GameRoom extends DurableObject<Env> {
       last: this.isLast(),
       finishAt: room.finishAt ?? null,
       finished: room.finished === true,
+      votes: { you: room.votes?.[seat] ?? null, partner: room.votes?.[other] ?? null },
       run: room.run,
       now,
       lens: room.lens?.[seat] ?? null,
@@ -320,10 +344,8 @@ export class GameRoom extends DurableObject<Env> {
       const type = (action as { type?: unknown } | null)?.type;
       if (room.finished) {
         // The playlist is over: nothing restarts it.
-      } else if (type === "room.finish" || (type === "room.next" && this.isLast())) {
-        if (this.isLast() && mod.isDone(room.game)) await this.finish();
-      } else if (type === "room.next" || type === "room.again") {
-        if (mod.isDone(room.game)) await this.startOnce(type === "room.next" ? room.index + 1 : room.index);
+      } else if (type === "room.next" || type === "room.again" || type === "room.finish") {
+        if (mod.isDone(room.game)) await this.vote(seat, type);
       } else {
         const ticked = mod.tick(room.game, this.gameCtx());
         await this.commit(room.game, mod.reduce(ticked, seat, action, this.gameCtx()));

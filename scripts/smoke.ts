@@ -191,7 +191,15 @@ async function main() {
 
     // D28: play all three games to the end through both seats. Finishing the last one stamps
     // both riders, celebrates on the kiosk and frees it, then rests them before a rematch.
-    type View = { gameId: string | null; done: boolean; last: boolean; finished: boolean; game: Record<string, unknown> & { phase?: string } };
+    type View = {
+      gameId: string | null;
+      done: boolean;
+      last: boolean;
+      finished: boolean;
+      run: number;
+      votes: { you: string | null; partner: string | null };
+      game: Record<string, unknown> & { phase?: string };
+    };
     const seats = [room.seat, mayaGame.seat] as const;
     const act = (seat: string, action: object) => api<View>("POST", `/api/game/rooms/${room.code}/act`, { seat, action });
     const look = (seat: string) => api<View>("GET", `/api/game/rooms/${room.code}?seat=${seat}`);
@@ -221,7 +229,15 @@ async function main() {
     await pause(1200);
     await both({ type: "call", call: "truth" });
     await until("tale reveals", (v) => v.done);
-    await act(room.seat, { type: "room.next" });
+    // The end-of-game buttons are votes: one pick waits, the same pick from both moves on.
+    const lone = await act(room.seat, { type: "room.next" });
+    if (lone.gameId !== "tale" || lone.votes.you !== "next" || lone.votes.partner !== null) {
+      fail(`games: one player's Next game should wait for the other: ${JSON.stringify({ gameId: lone.gameId, votes: lone.votes })}`);
+    }
+    const split = await act(mayaGame.seat, { type: "room.again" });
+    if (split.gameId !== "tale" || split.run !== lone.run) fail(`games: Next game vs Again should not move the room: ${JSON.stringify(split)}`);
+    await act(mayaGame.seat, { type: "room.next" });
+    ok("games only: Next game waits until both players pick it");
 
     // First impressions: five rounds of lock, rate, and the short wait after both rated.
     await until("impressions starts", (v) => v.gameId === "impressions");
@@ -234,7 +250,7 @@ async function main() {
       await until(`impressions round ${round + 1} ends`, (v) => v.game.phase !== "talk" || v.game.round !== round);
     }
     await until("impressions finishes", (v) => v.done);
-    await act(room.seat, { type: "room.next" });
+    await both({ type: "room.next" });
 
     // Left for you: answer three questions, step past each reveal, then skip leaving one.
     await until("trivia starts", (v) => v.gameId === "trivia");
@@ -250,13 +266,15 @@ async function main() {
     if (!end.last || end.finished) fail(`games: Left for you should be the last game and wait for Finish, got ${JSON.stringify(end)}`);
     ok("games only: the pair played Tall tale, First impressions and Left for you to the end");
     // The last game ends with Finish (it would also finish by itself after 20 s). Then nothing restarts it.
-    const over = await act(mayaGame.seat, { type: "room.finish" });
+    const half = await act(mayaGame.seat, { type: "room.finish" });
+    if (half.finished) fail("games: one Finish ended the room; both should have to pick it");
+    const over = await act(room.seat, { type: "room.finish" });
     if (!over.finished) fail(`games: Finish did not end the room: ${JSON.stringify(over)}`);
     for (const type of ["room.next", "room.again"]) {
       const still = await act(room.seat, { type });
       if (!still.finished || still.gameId !== "trivia") fail(`games: ${type} restarted a finished room: ${JSON.stringify(still)}`);
     }
-    ok("games only: Finish ends the room, and Next game / Again can't restart it");
+    ok("games only: Finish needs both players, ends the room, and Next game / Again can't restart it");
 
     const andresStamp = await phone.wait("stamp.awarded", 10_000);
     await mayaSock.wait("stamp.awarded", 10_000);

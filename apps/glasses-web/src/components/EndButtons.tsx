@@ -4,12 +4,37 @@
  * Played on its own a game ends with Restart. In the playlist at /g/ (Games.tsx) it ends
  * with "Next game", focused, and "Again" beside it: scroll moves between them, a tap picks.
  * The last game of the playlist ends with one Finish button (`last`), which calls onNext.
+ * These are votes (`votes`): the room only moves once both players picked the same, so the
+ * picked button shows a tick and a line says who you are waiting for.
  * Handles its own input, so the game's handler ignores the last screen.
  */
 import { useState } from "react";
+import type { EndChoice, EndVotes } from "@questline/protocol/games";
 import { useInput } from "../lib/input";
 
-export function EndButtons({ onAgain, onNext, last }: { onAgain: () => void; onNext?: () => void; last?: boolean }) {
+const LABEL: Record<EndChoice, string> = { next: "Next game", again: "Again", finish: "Finish" };
+
+/** The line under the buttons: who is waiting for whom. */
+function voteLine(votes: EndVotes | undefined): string | null {
+  if (!votes) return null;
+  const { you, partner } = votes;
+  if (you && partner && you !== partner) return `Your partner picked ${LABEL[partner]}`;
+  if (you) return "Waiting for your partner";
+  if (partner) return `Your partner picked ${LABEL[partner]}`;
+  return "You both pick to go on";
+}
+
+export function EndButtons({
+  onAgain,
+  onNext,
+  last,
+  votes,
+}: {
+  onAgain: () => void;
+  onNext?: () => void;
+  last?: boolean;
+  votes?: EndVotes;
+}) {
   const [focus, setFocus] = useState(0);
 
   useInput(
@@ -25,13 +50,20 @@ export function EndButtons({ onAgain, onNext, last }: { onAgain: () => void; onN
     { pointer: true },
   );
 
+  const mine = votes?.you ?? null;
+  const line = voteLine(votes);
+  const hint = line ? <div className="guess-hint">{line}</div> : null;
+
   if (onNext && last) {
     return (
-      <div className="guess-row">
-        <div className="hud-btn guess-btn is-focused" role="button">
-          Finish
+      <>
+        <div className="guess-row">
+          <div className="hud-btn guess-btn is-focused" role="button" aria-pressed={mine === "finish"}>
+            {mine === "finish" ? "✓ Finish" : "Finish"}
+          </div>
         </div>
-      </div>
+        {hint}
+      </>
     );
   }
   if (!onNext) {
@@ -44,12 +76,15 @@ export function EndButtons({ onAgain, onNext, last }: { onAgain: () => void; onN
     );
   }
   return (
-    <div className="guess-row">
-      {["Next game", "Again"].map((label, i) => (
-        <div key={label} className={`hud-btn guess-btn ${focus === i ? "is-focused" : ""}`} role="button" aria-pressed={focus === i}>
-          {label}
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="guess-row">
+        {(["next", "again"] as const).map((choice, i) => (
+          <div key={choice} className={`hud-btn guess-btn ${focus === i ? "is-focused" : ""}`} role="button" aria-pressed={mine === choice}>
+            {mine === choice ? `✓ ${LABEL[choice]}` : LABEL[choice]}
+          </div>
+        ))}
+      </div>
+      {hint}
+    </>
   );
 }

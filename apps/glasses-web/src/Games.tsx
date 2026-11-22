@@ -147,6 +147,7 @@ export function Games({ follow, waiting }: { follow?: SeatRef; waiting?: ReactNo
       send={send}
       serverNow={serverNow}
       last={room.last}
+      votes={room.votes}
       onNext={() => send({ type: room.last ? "room.finish" : "room.next" })}
       onAgain={() => send({ type: "room.again" })}
     />

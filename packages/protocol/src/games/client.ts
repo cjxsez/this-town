@@ -7,7 +7,8 @@
  *   POST /api/game/rooms/:code/join                      -> { ok }     404 if no such room
  *   GET  /api/game/rooms/:code?seat=a                    -> RoomView
  *   POST /api/game/rooms/:code/act    { seat, action }   -> RoomView   action "room.next" /
- *        "room.again" between games, "room.finish" after the last one (RoomView.finished)
+ *        "room.again" between games, "room.finish" after the last one (RoomView.finished).
+ *        These are votes: the room moves once both seats picked the same (RoomView.votes)
  *   POST /api/game/rooms/:code/lens   { seat, to }       -> RoomView  move this seat onto the
  *        glasses showing code `to`, or back to the phone with to: null. 404 if no glasses
  *        are waiting with that code.

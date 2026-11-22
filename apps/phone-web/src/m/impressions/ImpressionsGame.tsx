@@ -193,9 +193,9 @@ function tallyText(t: ImpressionsTally): string {
   return `${t.spot} spot on, ${t.close} close`;
 }
 
-function Done({ view, onNext, onAgain, last }: Props & { view: Of<"done"> }) {
+function Done({ view, onNext, onAgain, last, votes }: Props & { view: Of<"done"> }) {
   return (
-    <Screen label="M-impressions-done" footer={<EndButtons onNext={onNext} onAgain={onAgain} last={last} />}>
+    <Screen label="M-impressions-done" footer={<EndButtons onNext={onNext} onAgain={onAgain} last={last} votes={votes} />}>
       <Eyebrow>First impressions</Eyebrow>
       <Title>{IMPRESSIONS_VERDICT_LABEL[view.verdict]}</Title>
       <Card tight>

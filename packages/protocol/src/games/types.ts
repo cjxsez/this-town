@@ -67,6 +67,11 @@ export interface RoomView {
   finishAt: number | null;
   /** The pair played the whole playlist and pressed Finish (or it timed out): show the end screen. */
   finished: boolean;
+  /**
+   * On a game's last screen: what each player picked. The room only moves when both picked
+   * the same thing (two "next", two "again", or two "finish"); a lone pick waits for the partner.
+   */
+  votes: EndVotes;
   /** Goes up each time a game starts (first game, "Next game", "Again"). Screens are keyed on it. */
   run: number;
   /** Server time when this view was made, to line the client clock up with deadlines. */
@@ -81,6 +86,15 @@ export interface RoomView {
    * them: the seat the glasses now play. They follow it instead of waiting in this room.
    */
   moved: SeatRef | null;
+}
+
+/** A pick on a game's last screen. */
+export type EndChoice = "next" | "again" | "finish";
+
+/** Both players' picks on a game's last screen, from this seat's side. null: no pick yet. */
+export interface EndVotes {
+  you: EndChoice | null;
+  partner: EndChoice | null;
 }
 
 /** Actions the room handles itself. Everything else goes to the current game. */
@@ -101,4 +115,6 @@ export interface GameProps<V> {
   onAgain: () => void;
   /** This is the last game of the playlist: the end screen shows one Finish button. */
   last?: boolean;
+  /** Both players' picks on the last screen; the room moves once they match. */
+  votes?: EndVotes;
 }
