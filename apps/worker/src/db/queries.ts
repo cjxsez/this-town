@@ -594,6 +594,10 @@ export async function insertBlock(db: D1Database, blockerId: string, blockedId: 
     .run();
 }
 
+export async function deleteBlock(db: D1Database, blockerId: string, blockedId: string): Promise<void> {
+  await db.prepare("DELETE FROM blocks WHERE blocker_id = ? AND blocked_id = ?").bind(blockerId, blockedId).run();
+}
+
 export async function insertReport(db: D1Database, r: NewReport): Promise<void> {
   await db
     .prepare(
@@ -661,19 +665,35 @@ export interface RecentMatchRow {
   line: Line;
   at: number;
   stamped: boolean;
+  /** Where this rider's stamp from the match was awarded; null without a stamp. */
+  stationId: string | null;
+  /** This rider blocked the partner. */
+  blocked: boolean;
 }
 
 export async function recentMatches(db: D1Database, userId: string, limit = 20): Promise<RecentMatchRow[]> {
   const { results } = await db
     .prepare(
       `SELECT m.id, m.color, m.line, m.created_at, u.first_name,
-              EXISTS (SELECT 1 FROM stamps s WHERE s.match_id = m.id AND s.user_id = ?1) AS stamped
+              (SELECT s.station_id FROM stamps s WHERE s.match_id = m.id AND s.user_id = ?1 AND s.station_id <> ''
+                ORDER BY s.awarded_at DESC LIMIT 1) AS station_id,
+              EXISTS (SELECT 1 FROM stamps s WHERE s.match_id = m.id AND s.user_id = ?1) AS stamped,
+              EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id = ?1 AND b.blocked_id = u.id) AS blocked
        FROM matches m JOIN users u ON u.id = CASE WHEN m.user_a = ?1 THEN m.user_b ELSE m.user_a END
        WHERE m.user_a = ?1 OR m.user_b = ?1
        ORDER BY m.created_at DESC LIMIT ?2`,
     )
     .bind(userId, limit)
-    .all<{ id: string; color: string; line: string; created_at: number; first_name: string; stamped: number }>();
+    .all<{
+      id: string;
+      color: string;
+      line: string;
+      created_at: number;
+      first_name: string;
+      station_id: string | null;
+      stamped: number;
+      blocked: number;
+    }>();
   return results.map((r) => ({
     matchId: r.id,
     partnerFirstName: r.first_name,
@@ -681,5 +701,7 @@ export async function recentMatches(db: D1Database, userId: string, limit = 20):
     line: LineSchema.parse(r.line),
     at: r.created_at,
     stamped: r.stamped === 1,
+    stationId: r.station_id,
+    blocked: r.blocked === 1,
   }));
 }
