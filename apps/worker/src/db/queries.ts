@@ -248,6 +248,23 @@ export async function getUserEmail(db: D1Database, userId: string): Promise<stri
   return row?.email ?? null;
 }
 
+/**
+ * Gives a guest a verified email. "taken" when another account has it (also when a
+ * concurrent request won the unique index), "has-email" when this rider already has one.
+ */
+export async function attachEmail(db: D1Database, userId: string, email: string): Promise<"ok" | "taken" | "has-email"> {
+  const owner = await getUserIdByEmail(db, email);
+  if (owner && owner !== userId) return "taken";
+  if (owner === userId) return "ok";
+  try {
+    const res = await db.prepare("UPDATE users SET email = ? WHERE id = ? AND email IS NULL").bind(email, userId).run();
+    return res.meta.changes === 1 ? "ok" : "has-email";
+  } catch (e) {
+    if (String(e).includes("UNIQUE")) return "taken";
+    throw e;
+  }
+}
+
 // ---------- email sign-in ----------
 
 const loginCodeHash = (email: string, code: string) => sha256Hex(`${email}:${code}`);
