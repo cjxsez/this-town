@@ -16,7 +16,8 @@
  *
  * Polling mode: send() maps rider.arrived / rider.notNow to their REST twins.
  * Poll cadence: 2 s while matched or in a mission, 5 s otherwise (ridePollIntervalMs).
- * While polling, retry the WebSocket every WS_RETRY_WHILE_POLLING_MS.
+ * While polling, retry the WebSocket as soon as a poll shows the rider checked in, and
+ * otherwise every WS_RETRY_WHILE_POLLING_MS.
  * Pause when document.hidden; resume on visible.
  */
 import { WS_CLOSE, type RideSnapshot, type RiderToServer, type ServerToRider } from "@questline/protocol";
@@ -184,8 +185,16 @@ export function connectRiderSocket(opts: RiderSocketOptions): RiderSocket {
         }
         if (!res.ok) return;
         const snapshot = (await res.json()) as RideSnapshot;
+        const wasOff = !lastSnapshot || lastSnapshot.state.status === "off";
         lastSnapshot = snapshot;
         opts.onEvent({ type: "ride.snapshot", snapshot });
+        // The rider just checked in: the room now accepts a socket, so go live right away
+        // instead of polling until the next retry. Glasses are usually linked before the
+        // ride, when the socket is refused, and polling misses live moments like the stamp.
+        if (wasOff && snapshot.state.status !== "off") {
+          open();
+          return;
+        }
       } catch {
         // network blip: try again next tick
       } finally {
