@@ -95,6 +95,19 @@ body {
   color: var(--warn);
 }
 
+.hud-send-error {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  width: 600px;
+  margin: 0 auto;
+  text-align: center;
+  font-size: 22px;
+  color: var(--warn);
+  pointer-events: none;
+}
+
 .hud-rare {
   color: var(--warn);
 }
