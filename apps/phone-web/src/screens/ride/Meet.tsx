@@ -7,8 +7,16 @@ import { useRide } from "../../state/store";
 import { Body, Button, ButtonRow, Card, Eyebrow, Hint, PairToken, Screen, TextLink } from "../../ui";
 import { MeetTopBar } from "./parts/MeetTopBar";
 
-/** "Kiosk 1 car forward, car 1413" / "Stay put" / "In your car". */
-export function whereToGo(meet: MeetInfo, name: string): { headline: string; detail: string } {
+/** "Kiosk 1 car forward, car 1413" / "Stay put" / "In your car" / "Go to car …" when order is unknown. */
+export function whereToGo(
+  meet: MeetInfo,
+  name: string,
+  currentCar?: string | null,
+): { headline: string; detail: string } {
+  // Worker sends carDelta 0 when a car is missing from carOrder; do not call that "same car".
+  if (meet.carDelta === 0 && currentCar && meet.car !== currentCar) {
+    return { headline: `Go to car ${meet.car}`, detail: `Walk to car ${meet.car}.` };
+  }
   if (meet.carDelta === 0 && !meet.youWalk) return { headline: "The kiosk in your car", detail: `${name} is in your car too.` };
   if (!meet.youWalk) return { headline: "Stay put", detail: `${name} is coming to the kiosk in your car.` };
   if (meet.carDelta === 0) return { headline: "You're there", detail: "This car's kiosk is the meeting point." };
@@ -30,7 +38,7 @@ export default function Meet() {
   const { match, meet } = ride;
   if (!match || !meet) return null;
   const hex = PAIR_COLOR_HEX[match.color];
-  const where = whereToGo(meet, match.firstName);
+  const where = whereToGo(meet, match.firstName, ride.checkIn?.car);
   const shared = match.shared.map((id) => interestById(id)?.label ?? id);
 
   return (

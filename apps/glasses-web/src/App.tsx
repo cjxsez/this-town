@@ -238,7 +238,13 @@ export function App() {
     case "match":
       return (
         <>
-          <MatchCard match={screen.match} arrived={screen.arrived} onArrived={onArrived} onNotNow={onNotNow} />
+          <MatchCard
+            match={screen.match}
+            currentCar={state.ride?.car}
+            arrived={screen.arrived}
+            onArrived={onArrived}
+            onNotNow={onNotNow}
+          />
           {banner}
         </>
       );
