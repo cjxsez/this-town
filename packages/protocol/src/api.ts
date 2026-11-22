@@ -136,6 +136,10 @@ export const RecentMatchesRes = z.object({
       line: Line,
       at: z.number().int(),
       stamped: z.boolean(),
+      /** Catalog id of the station where the pair got their stamp; null if they didn't. */
+      stationId: z.string().nullable().default(null),
+      /** The caller blocked this partner (from People or a report). */
+      blocked: z.boolean().default(false),
     }),
   ),
 });
@@ -144,6 +148,10 @@ export type RecentMatchesRes = z.infer<typeof RecentMatchesRes>;
 // POST /api/report   { matchId, reason, block } -> OkRes
 export const ReportReq = z.object({ matchId: z.string(), reason: z.string().max(280), block: z.boolean() });
 export type ReportReq = z.infer<typeof ReportReq>;
+
+// POST /api/unblock  { matchId } -> OkRes. Lifts the caller's block on that match's partner.
+export const UnblockReq = z.object({ matchId: z.string() });
+export type UnblockReq = z.infer<typeof UnblockReq>;
 
 // Re-exported for convenience.
 export type { MatchInfo };
