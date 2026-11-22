@@ -1,6 +1,6 @@
 # kiosk-pi
 
-Python agent for the Raspberry Pi in each train car. Status: **scaffold**. Config, protocol parsing, the NDEF builder and the fake hardware work; the socket loop, real LED drivers, animations and I2C tag writers are stubs with TODO lists.
+Python agent for the Raspberry Pi in each train car. Status: **ready for Pi bring-up**. Socket loop, LED animations, WS281x / SPI drivers, dynamic NTAG I2C + ST25DV writers (with read-back verify), and the Chromium launcher all work. Use `--fake` on a laptop; wire real hardware on the Pi.
 
 ## What the Pi does
 
@@ -53,7 +53,7 @@ pnpm dev                                    # from the repo root, in another ter
 python -m questline_kiosk urls              # check the URLs (key masked)
 python -m questline_kiosk --fake            # run the agent
 python scripts/led_test.py --fake           # preview animations
-pytest                                      # NDEF tests
+pytest                                      # NDEF, LED mapping, NFC writers, browser helpers
 ```
 
 ## Deploy to a Pi
