@@ -6,6 +6,7 @@ from questline_kiosk.nfc_tag import (
     URI_PREFIXES,
     build_ndef_uri_record,
     build_tag_payload,
+    parse_tag_url,
     pick_uri_prefix,
     wrap_ndef_tlv,
 )
@@ -89,3 +90,14 @@ def test_typical_kiosk_url_fits_ntag215():
     # NTAG215 has 504 bytes of user memory; keep tag URLs well under that.
     data = build_tag_payload("https://questline.example.com/k/1412?n=0123456789ab")
     assert len(data) < 100
+
+
+def test_parse_tag_url_round_trip():
+    url = "https://q.example/k/1412?n=ab12cd34"
+    data = build_tag_payload(url, block_size=16)
+    assert parse_tag_url(data) == url
+
+
+def test_parse_tag_url_empty():
+    assert parse_tag_url(b"") is None
+    assert parse_tag_url(b"\xfe") is None

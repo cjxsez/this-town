@@ -132,6 +132,64 @@ def build_tag_payload(url: str, block_size: int = 1) -> bytes:
     return data
 
 
+def parse_tag_url(data: bytes) -> str | None:
+    """Parse a single NDEF URI from Type-2 style user memory (NDEF TLV).
+
+    Returns None if the buffer has no usable URI record.
+    """
+    i = 0
+    n = len(data)
+    while i < n:
+        tlv_type = data[i]
+        if tlv_type == TLV_TERMINATOR:
+            return None
+        if tlv_type == 0x00:  # null TLV
+            i += 1
+            continue
+        if i + 1 >= n:
+            return None
+        length = data[i + 1]
+        hdr = 2
+        if length == 0xFF:
+            if i + 3 >= n:
+                return None
+            length = int.from_bytes(data[i + 2 : i + 4], "big")
+            hdr = 4
+        start = i + hdr
+        end = start + length
+        if end > n:
+            return None
+        if tlv_type == TLV_NDEF:
+            return _parse_ndef_uri_message(data[start:end])
+        i = end
+    return None
+
+
+def _parse_ndef_uri_message(message: bytes) -> str | None:
+    if len(message) < 5 or message[3:4] != RTD_URI:
+        return None
+    header = message[0]
+    sr = bool(header & NDEF_SR)
+    if sr:
+        payload_len = message[2]
+        payload = message[4 : 4 + payload_len]
+    else:
+        if len(message) < 8:
+            return None
+        payload_len = int.from_bytes(message[2:6], "big")
+        payload = message[7 : 7 + payload_len]
+    if not payload:
+        return None
+    code = payload[0]
+    if code >= len(URI_PREFIXES):
+        return None
+    try:
+        rest = payload[1:].decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    return URI_PREFIXES[code] + rest
+
+
 class NfcTag(ABC):
     """Something the kiosk URL lives on."""
 
