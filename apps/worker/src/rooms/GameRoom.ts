@@ -36,7 +36,17 @@
  * only key. Fine for a demo between two people at a table, not for anything private.
  */
 import { DurableObject } from "cloudflare:workers";
-import { GAMES, type EndChoice, type GameCtx, type RoomView, type Seat, type SeatRef } from "@questline/protocol/games";
+import {
+  applyEndVote,
+  canAcceptEndVote,
+  endChoiceFromAction,
+  GAMES,
+  type EndChoice,
+  type GameCtx,
+  type RoomView,
+  type Seat,
+  type SeatRef,
+} from "@questline/protocol/games";
 import type { Env } from "../env";
 import { HOOKS, type SharedStore } from "../games/hooks";
 import { ROOM_STORAGE_TTL_MS, roomStorageExpired } from "./gameRoomExpiry";
@@ -277,14 +287,13 @@ export class GameRoom extends DurableObject<Env> {
    */
   private async vote(seat: Seat, type: "room.next" | "room.again" | "room.finish"): Promise<void> {
     const room = this.room!;
-    const last = this.isLast();
-    if (!last && type === "room.finish") return;
-    const choice: EndChoice = last ? "finish" : type === "room.again" ? "again" : "next";
-    room.votes = { ...room.votes, [seat]: choice };
-    const other: Seat = seat === "a" ? "b" : "a";
-    if (room.votes[other] !== choice) return;
-    if (choice === "finish") await this.finish();
-    else await this.startOnce(choice === "next" ? room.index + 1 : room.index);
+    const choice = endChoiceFromAction(this.isLast(), type);
+    if (!choice) return;
+    const { votes, consensus } = applyEndVote(room.votes ?? {}, seat, choice);
+    room.votes = votes;
+    if (!consensus) return;
+    if (consensus === "finish") await this.finish();
+    else await this.startOnce(consensus === "next" ? room.index + 1 : room.index);
   }
 
   /** The pair played the whole playlist: their TrainRoom stamps them and lights the kiosk. */
@@ -342,11 +351,9 @@ export class GameRoom extends DurableObject<Env> {
     if (room.game !== null) {
       const mod = GAMES[room.index]!;
       const type = (action as { type?: unknown } | null)?.type;
-      if (room.finished) {
-        // The playlist is over: nothing restarts it.
-      } else if (type === "room.next" || type === "room.again" || type === "room.finish") {
-        if (mod.isDone(room.game)) await this.vote(seat, type);
-      } else {
+      if (type === "room.next" || type === "room.again" || type === "room.finish") {
+        if (canAcceptEndVote(room.finished === true, mod.isDone(room.game))) await this.vote(seat, type);
+      } else if (!room.finished) {
         const ticked = mod.tick(room.game, this.gameCtx());
         await this.commit(room.game, mod.reduce(ticked, seat, action, this.gameCtx()));
       }

@@ -11,6 +11,7 @@ import type { GameId, GameModule } from "./types";
 export * from "./types";
 export * from "./client";
 export * from "./stub";
+export * from "./votes";
 export * from "./tale";
 export * from "./impressions";
 export * from "./trivia";
