@@ -22,9 +22,7 @@ What we changed from the v1 spec (`docs/archive/questline-spec-v1.md`) and why. 
 
 ## Still open
 
-- Email sending domain: onboard it (`wrangler email sending enable <domain>`) and set `EMAIL_FROM` in `wrangler.toml`. Until then local dev only simulates sending.
-
-- Domain name.
+- Move `husshusshuss.boston` DNS to Cloudflare (registered at Porkbun; Email Service needs Cloudflare DNS), then `wrangler email sending enable husshusshuss.boston`. Until then local dev only simulates sending.
 - Can we get an NTAG I2C plus or ST25DV board this weekend, or do we ship static stickers?
 - Confirm WebSockets work in the glasses browser. If not, glasses-web falls back to polling `GET /api/ride/state`.
 - Live MBTA: only Orange and new Red Line cars report car-level data, so live check-in will start there. The demo runs on a scripted Green Line trip (D14).

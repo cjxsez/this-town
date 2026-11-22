@@ -2,7 +2,7 @@
  * email/loginCode.ts: sends the 6-digit sign-in code through Cloudflare Email Sending.
  *
  * - Uses the `send_email` binding `EMAIL` (wrangler.toml). The From address must be on a
- *   domain onboarded to Email Sending (`wrangler email sending enable <domain>`).
+ *   domain onboarded to Email Sending (`wrangler email sending enable husshusshuss.boston`).
  * - Under `wrangler dev` the binding is simulated: nothing is sent, and the message (with
  *   the code in the subject) is printed in the worker's log, with the HTML saved to a file.
  *   Set `remote = true` on the binding to send real mail from local dev.

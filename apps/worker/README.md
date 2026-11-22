@@ -96,7 +96,7 @@ Override any `[vars]` in `.dev.vars`. Set `PUBLIC_ORIGIN` to an address your pho
 
 Under `wrangler dev` the `EMAIL` binding is simulated: nothing is sent, and each sign-in email is printed in the worker log, code in the subject (`Subject: 402 524 is your Questline code`). To send real mail from local dev, add `remote = true` under `[[send_email]]` in `wrangler.toml`.
 
-Before deploying: onboard the sending domain with `npx wrangler email sending enable <domain>` (Cloudflare adds the SPF/DKIM records) and set `EMAIL_FROM` in `[vars]` to an address on it. Apply `migrations/0003_email_signin.sql` and `0004_rate_limits.sql` with `pnpm db:migrate:remote`.
+Before deploying: onboard the sending domain with `npx wrangler email sending enable husshusshuss.boston` (Cloudflare adds the SPF/DKIM records on `cf-bounce.husshusshuss.boston`). `EMAIL_FROM` in `[vars]` is `signin@husshusshuss.boston`. Sending to any recipient needs the Workers Paid plan. Apply `migrations/0003_email_signin.sql` and `0004_rate_limits.sql` with `pnpm db:migrate:remote`.
 
 ### Rate limits
 

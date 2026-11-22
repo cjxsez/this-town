@@ -6,6 +6,11 @@ main = "src/index.ts"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Served at https://husshusshuss.boston (Workers Custom Domain: wrangler creates the DNS
+# record and certificate on deploy). Needs the zone on Cloudflare DNS first, with no other
+# A/AAAA/CNAME record on the apex (delete Porkbun's parking records after the import).
+routes = [{ pattern = "husshusshuss.boston", custom_domain = true }]
+
 [observability]
 enabled = true
 
@@ -48,14 +53,14 @@ new_sqlite_classes = ["TrainRoom"]
 # Secrets (ANTHROPIC_API_KEY, MBTA_API_KEY, KIOSK_KEY): see .dev.vars.example.
 # Cloudflare Email Sending for the sign-in code (src/email/loginCode.ts). Simulated under
 # `wrangler dev` (the email, code included, is printed in the log). Add `remote = true` to
-# send real mail from local dev. Before deploying: `wrangler email sending enable <domain>`
-# and point EMAIL_FROM at that domain.
+# send real mail from local dev. Before deploying: `wrangler email sending enable husshusshuss.boston`
+# (adds SPF/DKIM on cf-bounce.husshusshuss.boston). EMAIL_FROM must be on that domain.
 [[send_email]]
 name = "EMAIL"
 
 [vars]
-PUBLIC_ORIGIN = "https://questline.example.com"
-EMAIL_FROM = "signin@questline.example.com"
+PUBLIC_ORIGIN = "https://husshusshuss.boston"
+EMAIL_FROM = "signin@husshusshuss.boston"
 MIN_SHARED_TAGS = "1"
 LATE_BONUS_MIN_DELAY_S = "180"
 NOT_NOW_COOLDOWN_S = "600"

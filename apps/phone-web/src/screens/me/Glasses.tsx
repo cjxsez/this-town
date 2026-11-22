@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
+import { backend } from "../../api";
+import { api as rest, errorMessage } from "../../lib/api";
 import { useApp } from "../../state/store";
-import { ArtSlot, BackLink, Button, Card, Hint, Screen, Toggle } from "../../ui";
+import { ArtSlot, BackLink, Button, Card, Eyebrow, Hint, Screen, TextField, Toggle } from "../../ui";
 
 /** Small status pill: "CONNECTED" (leaf) or "NOT CONNECTED" (paper). */
 export function StatusPill({ children, tone = "leaf" }: { children: ReactNode; tone?: "leaf" | "paper" | "ink" }) {
@@ -46,10 +48,29 @@ export default function Glasses() {
   const g = state.glasses;
   const navigate = useNavigate();
   const [pairing, setPairing] = useState(false);
+  const [code, setCode] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
 
-  // Pairing is simulated in the web build; the real link lives in the iPhone app.
+  // Against the worker: the lens shows a 4-digit code (glasses-web), the rider types it here
+  // and POST /api/glasses/link ties the glasses to this rider (docs/architecture.md "Identity").
+  const link = async () => {
+    setPairing(true);
+    setLinkError(null);
+    try {
+      await rest.linkGlasses(code);
+      actions.setGlasses({ connected: true });
+      actions.updateProfile({ hasGlasses: true });
+      setCode("");
+    } catch (e) {
+      setLinkError(errorMessage(e));
+    } finally {
+      setPairing(false);
+    }
+  };
+
+  // Simulator mode: pairing is faked.
   useEffect(() => {
-    if (!pairing) return;
+    if (!pairing || backend) return;
     const t = setTimeout(() => {
       actions.setGlasses({ connected: true });
       actions.updateProfile({ hasGlasses: true });
@@ -71,6 +92,10 @@ export default function Glasses() {
         g.connected ? (
           <Button onClick={start} tilt={-0.7}>
             Start session
+          </Button>
+        ) : backend ? (
+          <Button onClick={() => void link()} disabled={pairing || code.length !== 4} tilt={-0.7}>
+            {pairing ? "Linking…" : "Link glasses"}
           </Button>
         ) : (
           <Button onClick={() => setPairing(true)} disabled={pairing} tilt={-0.7}>
@@ -100,6 +125,29 @@ export default function Glasses() {
           {g.connected ? `Battery ${g.battery}% · ${g.neuralBand ? "Neural Band paired" : "Neural Band not paired"}` : "Not connected"}
         </div>
       </Card>
+      {backend && !g.connected && (
+        <Card>
+          <Eyebrow>Code on your glasses</Eyebrow>
+          <TextField
+            label="4-digit code on your glasses"
+            inputMode="numeric"
+            maxLength={4}
+            placeholder="0000"
+            value={code}
+            onChange={(v) => {
+              setCode(v.replace(/\D/g, "").slice(0, 4));
+              setLinkError(null);
+            }}
+          />
+          {linkError ? (
+            <Hint style={{ color: "var(--brick)" }}>
+              <span role="alert">{linkError}</span>
+            </Hint>
+          ) : (
+            <Hint>Open Questline on your glasses. It shows 4 digits.</Hint>
+          )}
+        </Card>
+      )}
       <Card>
         <SettingRow title="Read badges with camera" sub="7 fps · frames checked for a tag, then thrown away">
           <Toggle checked={g.readBadges} onChange={(v) => actions.setGlasses({ readBadges: v })} label="Read badges with camera" />
@@ -109,9 +157,11 @@ export default function Glasses() {
           <Toggle checked={g.nodToAccept} onChange={(v) => actions.setGlasses({ nodToAccept: v })} label="Nod to accept (experimental)" />
         </SettingRow>
       </Card>
-      <Hint style={{ color: "var(--onsea)", fontSize: 16 }}>
-        In production this lives in the iPhone app. On the web it's a simulation.
-      </Hint>
+      {!backend && (
+        <Hint style={{ color: "var(--onsea)", fontSize: 16 }}>
+          In the simulator, pairing is pretend. Against the worker you type the code from the lens.
+        </Hint>
+      )}
     </Screen>
   );
 }
