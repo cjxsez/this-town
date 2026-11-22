@@ -9,11 +9,9 @@
  *
  * Protocol types: CarId, SocialBattery.
  *
- * TODO:
- * - novelty(): needs lifetime met counts (met_pairs.times_met), not just the 7-day list.
- *   Load into RoomRider at check-in, then score never-met pairs highest.
- * - askMeAbout similarity is a crude token overlap. Good enough for a hackathon.
- * - Unknown cars (not in carOrder) get a large distance so known-adjacent pairs win.
+ * novelty() uses RoomRider.metCounts (lifetime met_pairs.times_met loaded at check-in).
+ * askMeAbout similarity is a crude token overlap (good enough for a hackathon).
+ * Unknown cars (not in carOrder) get a large distance so known-adjacent pairs win.
  */
 import type { CarId, SocialBattery } from "@questline/protocol";
 import type { RiderProfileLite, RoomRider, RoomState } from "../rooms/state";
@@ -64,9 +62,14 @@ export function batteryMatch(a: SocialBattery, b: SocialBattery): number {
   return 1 - Math.abs(BATTERY_ORDER.indexOf(a) - BATTERY_ORDER.indexOf(b)) / 2;
 }
 
+/** Lifetime times this pair has met (0 if never). Uses either rider's metCounts map. */
+export function timesMet(a: RoomRider, b: RoomRider): number {
+  return a.metCounts?.[b.userId] ?? b.metCounts?.[a.userId] ?? 0;
+}
+
+/** 1 = never met; decays as 1/(1+timesMet). Last tiebreaker after battery. */
 export function novelty(a: RoomRider, b: RoomRider): number {
-  // TODO: use lifetime times_met; 1 = never met.
-  return 1;
+  return 1 / (1 + timesMet(a, b));
 }
 
 export function scorePair(a: RoomRider, b: RoomRider, state: RoomState): PairScore {

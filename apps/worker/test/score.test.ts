@@ -53,3 +53,34 @@ test("scorePair counts shared tags plus ask-me-about overlap", () => {
   assert.equal(s.carDistance, 2);
   assert.equal(s.interest, 2 + 1 / 3);
 });
+
+test("novelty: never-met scores 1, met-twice scores 1/3", () => {
+  const fresh = rider("a");
+  const stranger = rider("b");
+  const twice = rider("c", { metCounts: { a: 2 } });
+  assert.equal(scorePair(fresh, stranger, room()).novelty, 1);
+  assert.equal(scorePair(fresh, twice, room()).novelty, 1 / 3);
+});
+
+test("when everything else ties, never-met beats met-twice", () => {
+  const me = rider("me", { car: "1", interests: ["ramen"] });
+  const never = rider("never", { car: "2", interests: ["ramen"] });
+  const twice = rider("twice", { car: "2", interests: ["ramen"], metCounts: { me: 2 } });
+  const sNever = scorePair(me, never, room());
+  const sTwice = scorePair(me, twice, room());
+  assert.equal(sNever.carDistance, sTwice.carDistance);
+  assert.equal(sNever.interest, sTwice.interest);
+  assert.equal(sNever.battery, sTwice.battery);
+  assert.ok(comparePairScores(sNever, sTwice) < 0);
+});
+
+test("closeness still wins over novelty: adjacent met-twice beats far never-met", () => {
+  const me = rider("me", { car: "1", interests: ["ramen"] });
+  const nearTwice = rider("near", { car: "2", interests: ["ramen"], metCounts: { me: 2 } });
+  const farNever = rider("far", { car: "4", interests: ["ramen"] });
+  const near = scorePair(me, nearTwice, room());
+  const far = scorePair(me, farNever, room());
+  assert.ok(near.carDistance < far.carDistance);
+  assert.ok(near.novelty < far.novelty);
+  assert.ok(comparePairScores(near, far) < 0);
+});
