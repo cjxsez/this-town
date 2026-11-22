@@ -189,6 +189,14 @@ then), type size / color on the waveguide.
 
 ## 4. Phone web app (`apps/phone-web`)
 
+**Status (2026-11-22):** Shipped — worker errors parsed as `ErrorRes` (with `code` and
+`issues`), 8 s request timeout, one retry for reads only, any 401 on a signed-in request
+drops the token and profile, socket stops after `checkedOut` / `noRide` / `forbidden`
+(a bad token is an HTTP 401 at the handshake, caught by the REST re-sync), Sign out on Me
+with a guest warning. Also: People keep blocks and the meeting station across phones, and
+Unblock reaches the worker (`POST /api/unblock`). 33 tests in `apps/phone-web/test`. Mock
+mode unchanged.
+
 - `lib/api.ts`: request timeout with `AbortController` (8 s default), one retry for GETs.
 - Global 401: clear the token and route to `/` (sign-in), so a stale token after a DB reset
   never leaves the app stuck. `api/backend/ride.ts` already handles it for one call; make it global.
@@ -233,6 +241,15 @@ deployed worker for the unattended path.
 ---
 
 ## 7. Tests and CI (do alongside, not last)
+
+**Status (2026-11-22):** Shipped — `.github/workflows/ci.yml` (typecheck, build, `pnpm test`,
+kiosk-pi pytest) on every push and PR. `pnpm test` runs node:test via tsx in protocol (the
+three games), worker (matching, missions, live MBTA parsers), phone, glasses, kiosk, t-map
+and start-screen; the worker uses pure-function tests rather than vitest-pool-workers.
+`pnpm smoke` reads `GET /api/health` and checks whichever flow the worker runs (games-only
+by default, D26; missions with `--var GAMES_ONLY:false`), and now covers People
+block/unblock and a report mid-match. Not covered: the Durable Objects themselves (only
+through `pnpm smoke`), and anything on real glasses or a real Pi.
 
 - There is no CI. Add `.github/workflows/ci.yml`: pnpm install, `pnpm -r --if-present typecheck`,
   `pnpm build`, `pnpm -r --if-present test`, and `pytest` in `apps/kiosk-pi`.
