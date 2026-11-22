@@ -15,6 +15,8 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+import time
+from pathlib import Path
 from typing import NoReturn
 
 from .config import Config
@@ -34,23 +36,36 @@ def chromium_command(cfg: Config) -> list[str]:
 def wait_for_display(timeout_s: float = 60.0) -> bool:
     """Block until a Wayland or X display is available.
 
-    TODO:
-    - Wayland: $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY socket exists
-    - X11: /tmp/.X11-unix/X0 exists
-    - poll every 0.5 s up to timeout_s; return False on timeout
-    (systemd ExecStartPre already does a basic version of this)
+    Wayland: ``$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY`` socket exists.
+    X11: ``/tmp/.X11-unix/X0`` exists.
+    Polls every 0.5 s up to ``timeout_s``; returns False on timeout.
     """
-    raise NotImplementedError
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        wayland = os.environ.get("WAYLAND_DISPLAY")
+        runtime = os.environ.get("XDG_RUNTIME_DIR", "")
+        if wayland and runtime and Path(runtime, wayland).exists():
+            return True
+        if Path("/tmp/.X11-unix/X0").exists():
+            return True
+        # Also accept $DISPLAY pointing at a real X socket (:0 -> X0, :1 -> X1).
+        display = os.environ.get("DISPLAY", "")
+        if display.startswith(":"):
+            num = display[1:].split(".")[0]
+            if num.isdigit() and Path(f"/tmp/.X11-unix/X{num}").exists():
+                return True
+        time.sleep(0.5)
+    return False
 
 
 def launch(cfg: Config) -> NoReturn:
     """Replace this process with Chromium."""
     if not cfg.browser.enabled:
         raise SystemExit("browser.enabled = false in config.toml (screenless kiosk)")
+    if not wait_for_display():
+        raise SystemExit("no X/Wayland display found; is the desktop running?")
     argv = chromium_command(cfg)
     if shutil.which(argv[0]) is None:
         raise SystemExit(f"browser binary {argv[0]!r} not found; set browser.binary in config.toml")
     log.info("launching %s for car %s", argv[0], cfg.car)
-    # TODO: clear Chromium's "exited_cleanly"/"exit_type" in Preferences under
-    #       --user-data-dir so a power cut doesn't show the restore bubble.
     os.execvp(argv[0], argv)
