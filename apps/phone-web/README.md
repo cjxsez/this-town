@@ -49,7 +49,7 @@ Landing (B1) has two ways in: **Sign in with email** (a one-time code; the code 
 
 ## Waiting song
 
-While a rider waits for a match on the Riding screen (C2) a song loops, and "♪ Music on/off" there mutes it (kept in settings). It stops on a match, at the end of the ride, or offline, and pauses while the page is hidden. Browsers only play sound after a tap, so "Turn on Ride Mode" and "Got it" on the kiosk-tap screen unlock it; otherwise it starts on the rider's next touch. Code: `src/lib/music.ts`.
+From Ride Mode on until the pair's first game starts, a song loops: on Riding (C2) while waiting for a match, on the match screen (Meet) while you find each other, and on `/m` until the game begins. It stops when the first game starts, at the end of the ride, or offline, and pauses while the page is hidden. "♪ Music on/off" on Riding mutes it (kept in settings). Each screen calls `useWaitingMusic` (`src/lib/useWaitingMusic.ts`), so moving between them doesn't restart the song. Browsers only play sound after a tap, so "Turn on Ride Mode" and "Got it" on the kiosk-tap screen unlock it; otherwise it starts on the rider's next touch. Code: `src/lib/music.ts`.
 
 The file is `public/sounds/waiting.m4a` and is **not in git** (a commercial track, and this repo is public): it ships with whatever build you deploy from a machine that has it. Without it the screen is just quiet. To make it from an MP3:
 

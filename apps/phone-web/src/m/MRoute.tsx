@@ -6,6 +6,7 @@ import { Body, Button, Display, Eyebrow, Hint, Screen, TextField, TextLink, Titl
 import { SCREENS } from "./games";
 import { useRoom } from "./room";
 import { useApp } from "../state/store";
+import { useWaitingMusic } from "../lib/useWaitingMusic";
 import "./m.css";
 
 /**
@@ -96,6 +97,8 @@ export default function MRoute() {
   const [lensCode, setLensCode] = useState("");
   const { room, gone, send, lens, serverNow } = useRoom(joined?.code ?? null, joined?.seat ?? "b");
   const navigate = useNavigate();
+  // The waiting song plays on until the pair's first game starts, then stays off.
+  useWaitingMusic(!room?.gameId && !room?.finished);
   const app = useApp().state;
   const phase = app.ride.phase;
   const lastPhase = useRef(phase);

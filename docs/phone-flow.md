@@ -30,7 +30,7 @@ Other things a tag tap can show: "You're in car N now" (moved cars), "You made i
 
 | Id | Screen |
 |---|---|
-| C2 | Riding. Car, stops, riders on the train, ghost toggle, mood, and the waiting song on loop ("♪ Music on/off" mutes it). The Ride Mode switch asks "Turn off Ride Mode?" ("Keep it on" / "Turn it off") |
+| C2 | Riding. Car, stops, riders on the train, ghost toggle, mood, and the waiting song on loop ("♪ Music on/off" mutes it). The song keeps going through the match screen and `/m` until the pair's first game starts. The Ride Mode switch asks "Turn off Ride Mode?" ("Keep it on" / "Turn it off") |
 | C3 | Riding, offline banner |
 | E1 | Matched. Name, pair color, why you two, where to go (kiosk N cars forward or back). "I'm at the kiosk", and "Not now" with a confirm |
 | E2 | Matched, they come to you |

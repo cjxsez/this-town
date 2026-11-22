@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { LINES } from "../../../shared/catalog";
 import type { SocialBattery } from "../../../shared/types";
 import { sim } from "../../api";
-import { startWaitingMusic, stopWaitingMusic } from "../../lib/music";
+import { useWaitingMusic } from "../../lib/useWaitingMusic";
 import { useApp, useRide } from "../../state/store";
 import { ArtSlot, Body, Button, ButtonRow, Card, Eyebrow, Hint, Screen, Segmented, TextLink, Title } from "../../ui";
 import {
@@ -23,8 +23,8 @@ const MOODS: { value: SocialBattery; label: string }[] = [
 
 /**
  * C2: Ride Mode on, in the pool. Turning it off asks first, because it ends matching for
- * the rest of the ride. The waiting song loops while this is on screen (lib/music.ts), so a
- * match, the ride ending or going offline stops it; "Music on/off" mutes it.
+ * the rest of the ride. The waiting song starts here and keeps going through the match
+ * screen until the pair's first game starts (lib/useWaitingMusic.ts); "Music on/off" mutes it.
  */
 export default function Riding() {
   const { ride, act, profile } = useRide();
@@ -36,11 +36,7 @@ export default function Riding() {
   const dest = ride.checkIn?.destinationName ?? "your stop";
   const music = state.settings.music !== false;
 
-  useEffect(() => {
-    if (!music) return;
-    startWaitingMusic();
-    return stopWaitingMusic;
-  }, [music]);
+  useWaitingMusic(true);
 
   const turnOff = () => {
     act.checkOut();

@@ -3,6 +3,7 @@ import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
 import { interestById } from "../../../shared/catalog";
 import type { Meet as MeetInfo } from "../../../shared/types";
 import { sim } from "../../api";
+import { useWaitingMusic } from "../../lib/useWaitingMusic";
 import { useRide } from "../../state/store";
 import { Body, Button, ButtonRow, Card, Eyebrow, Hint, PairToken, Screen, TextLink } from "../../ui";
 import { MeetTopBar } from "./parts/MeetTopBar";
@@ -33,6 +34,8 @@ export function whereToGo(
  * how you say you're there; "Not now" is always here too.
  */
 export default function Meet() {
+  // Still waiting: the song from Riding keeps going until the game starts.
+  useWaitingMusic(true);
   const { ride, act } = useRide();
   const [confirmSkip, setConfirmSkip] = useState(false);
   const { match, meet } = ride;
