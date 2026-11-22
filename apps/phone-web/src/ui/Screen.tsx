@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { doorsOpening } from "../state/doors";
 import { TabBar } from "./TabBar";
 
 /** Foam blob presets, matching the two background clouds each hi-fi screen draws. */
@@ -29,11 +30,18 @@ export interface ScreenProps {
   bodyStyle?: CSSProperties;
   className?: string;
   label?: string; // screen id from the wireframe, e.g. "C2"; useful in devtools
+  /**
+   * When the start screen's doors open onto this screen, its pieces rise in one after
+   * another as the doors part (default). Pass false for a screen with its own entrances.
+   */
+  doorsEntrance?: boolean;
 }
 
-export function Screen({ children, footer, tabs, blobs = "a", background, bodyStyle, className, label }: ScreenProps) {
+export function Screen({ children, footer, tabs, blobs = "a", background, bodyStyle, className, label, doorsEntrance = true }: ScreenProps) {
+  // Read once, when the screen mounts: are the train doors opening onto it right now?
+  const [entering] = useState(() => doorsEntrance && doorsOpening());
   return (
-    <div className={`q-screen ${className ?? ""}`} style={background ? { background } : undefined} data-screen={label}>
+    <div className={`q-screen${entering ? " q-screen--doors" : ""} ${className ?? ""}`} style={background ? { background } : undefined} data-screen={label}>
       {blobs && BLOBS[blobs].map((s, i) => <div key={i} className="q-blob" style={s} />)}
       <div className="q-screen__body" style={bodyStyle}>
         {children}

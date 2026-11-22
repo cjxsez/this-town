@@ -63,7 +63,7 @@ const screen = mountStartScreen(element, {
 });
 ```
 
-The hold and the opening are `reveal` in `config.ts`; the `doors-open` cue fires as they start to part. With reduced motion they open at once.
+While they hold shut, the island's last frame fades out of the door windows, which are tinted glass with a reflection, so the next page never shows crisp through them. The hold and the opening are `reveal` in `config.ts`; the `doors-open` cue fires as they start to part. With reduced motion they open at once.
 
 ### In the phone app
 

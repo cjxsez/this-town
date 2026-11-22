@@ -34,6 +34,7 @@ export default function Landing() {
     <Screen
       label="B1"
       blobs="a"
+      doorsEntrance={false}
       footer={
         <>
           <ButtonRow>

@@ -45,7 +45,7 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 
 ## Landing
 
-Landing (B1) has two ways in: **Sign in with email** (a one-time code; the code screens and accounts are PR #4, `feat/email-signin`; until it lands the button continues like the guest path) and **Just play today** (first name only). There is no Apple sign-in. Its pieces enter in order (island, name tile by tile, line, buttons), held back while the start screen's doors are opening onto it.
+Landing (B1) has two ways in: **Sign in with email** (a one-time code; the code screens and accounts are PR #4, `feat/email-signin`; until it lands the button continues like the guest path) and **Just play today** (first name only). There is no Apple sign-in. Its pieces enter in order (island, name tile by tile, line, buttons), held back while the start screen's doors are opening onto it. Any other screen the doors open onto (Ride Mode, for a returning rider) does the same through `<Screen>`: its pieces stay hidden behind the shut doors and rise in as they part (`doorsEntrance`, on by default).
 
 ## Look
 

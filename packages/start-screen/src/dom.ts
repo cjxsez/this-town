@@ -145,6 +145,7 @@ export function createOverlay(container: HTMLElement, config: Config, sea: SeaCo
     reveal(instant, onOpening) {
       stopBoil();
       root.classList.remove("qls--loading", "qls--fallback");
+      root.style.setProperty("--qls-hold", `${config.reveal.holdSeconds}s`);
       root.classList.add("qls--revealing");
       overlay.setCover(1);
       if (instant) {

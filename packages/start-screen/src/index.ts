@@ -87,12 +87,22 @@ export function mountStartScreen(container: HTMLElement, options: StartScreenOpt
     if (disposed) return;
     options.onBegin?.();
     if (!options.revealAfterBegin || disposed) return;
-    // The 3D scene is done: free the GPU now, and let the doors carry the transition.
-    runtime?.dispose();
-    runtime = null;
-    void overlay.reveal(reducedMotion, () => options.onCue?.("doors-open")).then(() => {
-      if (!disposed) options.onRevealed?.();
-    });
+    // The doors carry the transition. The island's last frame fades out of the windows
+    // while they hold shut; once they start to part, the 3D scene is freed.
+    const freeScene = () => {
+      runtime?.dispose();
+      runtime = null;
+    };
+    if (reducedMotion) freeScene();
+    void overlay
+      .reveal(reducedMotion, () => {
+        freeScene();
+        options.onCue?.("doors-open");
+      })
+      .then(() => {
+        freeScene();
+        if (!disposed) options.onRevealed?.();
+      });
   };
 
   const ready = loadFonts().then(() => {

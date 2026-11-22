@@ -97,6 +97,13 @@
   box-shadow: 0 0 0 200vmax var(--qls-paper);
 }
 .qls__door--right .qls__window { border-radius: 20px 14px 22px 16px; }
+/* Glass: a sea tint and two streaks of reflection, so the windows read as windows
+   and whatever is behind them is seen through glass, never crisp. */
+.qls__window {
+  background:
+    linear-gradient(118deg, transparent 0 30%, rgb(255 255 255 / .24) 30% 43%, transparent 43% 55%, rgb(255 255 255 / .13) 55% 61%, transparent 61%),
+    color-mix(in srgb, var(--qls-sea) 55%, transparent);
+}
 
 /* The trolley's line stripe runs across both doors. */
 .qls__stripe {
@@ -137,7 +144,8 @@
 
 /* ---------- after BEGIN with revealAfterBegin: only the doors remain, over the next page ---------- */
 .qls--revealing { background: transparent; pointer-events: none; cursor: default; }
-.qls--revealing .qls__canvas,
+/* While the doors hold shut, the island fades out of the windows (no swap). */
+.qls--revealing .qls__canvas { opacity: 0; transition: opacity var(--qls-hold, .3s) ease; }
 .qls--revealing .qls__begin,
 .qls--revealing .qls__title { visibility: hidden; }
 
