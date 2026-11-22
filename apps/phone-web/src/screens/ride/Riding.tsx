@@ -2,7 +2,9 @@ import { useRef, useState, type RefObject } from "react";
 import { LINES } from "../../../shared/catalog";
 import type { SocialBattery } from "../../../shared/types";
 import { sim } from "../../api";
+import { ridingStayOnHint } from "../../lib/rideModeCopy";
 import { useWaitingMusic } from "../../lib/useWaitingMusic";
+import { useGamesOnly } from "../../lib/useWorkerMode";
 import { useApp, useRide } from "../../state/store";
 import { ArtSlot, Body, Button, ButtonRow, Card, Eyebrow, Hint, Screen, Segmented, TextLink, Title } from "../../ui";
 import {
@@ -30,6 +32,7 @@ export default function Riding() {
   const { ride, act, profile } = useRide();
   const { state, actions } = useApp();
   const ghost = state.settings.ghost;
+  const gamesOnly = useGamesOnly();
   const [confirmOff, setConfirmOff] = useState(false);
   const frame = useRef<HTMLDivElement>(null);
   const [flat, setFlat] = useState(false);
@@ -80,7 +83,7 @@ export default function Riding() {
               {profile.glassesLinked ? "Pocket it. Your glasses will show who and where." : "Keep this open. We'll show who and where."}
             </Hint>
             <Hint style={{ marginTop: -6 }}>
-              {ride.ridersOnTrain > 1 ? `${ride.ridersOnTrain - 1} other riders on this train. ` : ""}Ride Mode turns off at {dest}.
+              {ridingStayOnHint(ride.ridersOnTrain, dest, gamesOnly)}
             </Hint>
           </>
         )}
