@@ -28,7 +28,7 @@ export function Mission({ mission, partner, tapped = 0 }: MissionProps) {
         {mission.title}
       </div>
       <div className="hud-body">{mission.prompt}</div>
-      {partner && <div className="hud-dim">with {partner.firstName}</div>}
+      <div className="hud-dim">{partner ? `with ${partner.firstName}` : "with your partner"}</div>
       {tapped === 1 && (
         <div className="hud-warn" role="status" aria-live="polite">
           1 of 2 tapped
@@ -36,7 +36,7 @@ export function Mission({ mission, partner, tapped = 0 }: MissionProps) {
       )}
       {tapped === 2 && (
         <div className="hud-dim" role="status" aria-live="polite">
-          Both tapped
+          Both tapped!
         </div>
       )}
     </main>

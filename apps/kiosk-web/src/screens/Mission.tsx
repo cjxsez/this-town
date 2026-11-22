@@ -73,10 +73,14 @@ export function Mission({ color, mission, firstNames, startedAt, tapped }: Missi
       <section className="k-card k-card--yellow k-stamp-bar" style={{ borderRadius: "var(--r2)" }}>
         <NfcMark size={58} />
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span className="k-title" style={{ fontSize: 22 }}>Both tap the tag</span>
-          <span className="k-hint" style={{ color: "var(--ink)", fontSize: 20 }}>That's how you get your stamp.</span>
+          <span className="k-title" style={{ fontSize: 22 }}>
+            {tapped >= 2 ? "Both tapped!" : tapped === 1 ? "1 of 2 tapped" : "Both tap the tag"}
+          </span>
+          <span className="k-hint" style={{ color: "var(--ink)", fontSize: 20 }}>
+            {tapped >= 2 ? "Stamp coming up." : "That's how you get your stamp."}
+          </span>
         </div>
-        <div className="k-taps" aria-label={`${tapped} of 2 tapped`}>
+        <div className="k-taps" aria-label={tapped >= 2 ? "Both tapped" : `${tapped} of 2 tapped`}>
           <span className="k-taps__dot" data-on={tapped >= 1} />
           <span className="k-taps__dot" data-on={tapped >= 2} />
         </div>
