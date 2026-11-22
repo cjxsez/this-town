@@ -18,7 +18,7 @@ import {
 import type { Config } from "../config";
 import { GeoBuilder, type IdAllocator, place, placeTurned } from "../scene/builder";
 import { buildWorld, carGeometry, SHADOW_LAYER, wallQuad, type SceneMaterials } from "../scene/world";
-import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
+import { PAIR_COLOR_HEX, PAIR_COLORS, type PairColorName } from "@questline/protocol/colors";
 import { figureGeometry, glassesGeometry, type FigurePose, type FigureLook } from "./models";
 
 export interface StudioContext {
@@ -206,6 +206,26 @@ const celebrations: Shot[] = [
   ...FRIEND_COLORS.map((c) => posedRider(`highfive-friend-${c}`, friend(PAIR_COLOR_HEX[c]), { arms: [152, 14] }, -42)),
 ];
 
+// ---------------------------------------------------------------- portraits
+// The rider avatars on People, Meet, Recap, the stamp page and Me: the same toy rider as
+// the celebrations, head and shoulders, in the person's pair colour. PairToken sits one
+// on a tinted disc and falls back to the initial if the file is missing.
+
+const portrait = (color: PairColorName): Shot => ({
+  id: `portrait-${color}`,
+  width: 72,
+  height: 72,
+  scale: 3,
+  background: "clear",
+  camera: { azimuthDeg: 14, elevationDeg: 6, fovDeg: 20, fill: 1 },
+  build(ctx) {
+    const figure = solid(figureGeometry(friend(PAIR_COLOR_HEX[color])(ctx.config.colors), ctx.config.colors, ctx.ids), ctx);
+    return { root: figure, center: new Vector3(0, 0.71, 0), radius: 0.39 };
+  },
+});
+
+const portraits: Shot[] = PAIR_COLORS.map(portrait);
+
 /** A short slice of platform, yellow edge at the front, for the riders to stand on. */
 function platformSlice(ctx: StudioContext, length: number, depth: number) {
   const C = ctx.config.colors;
@@ -261,6 +281,7 @@ export const SHOTS: Shot[] = [
   house("sprite-house-pink", "#c9a9a6"),
   house("sprite-house-red", "#d9604a"),
   ...celebrations,
+  ...portraits,
   stage,
   recapBackdrop,
 ];
