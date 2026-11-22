@@ -36,6 +36,15 @@ export interface DemoControls {
   readonly online: boolean;
 }
 
+/** The other riders the simulator matches you with, in order. Maya first, as in the demo script. */
+const CAST: { firstName: string; color: PairColor }[] = [
+  { firstName: "Maya", color: "orange" },
+  { firstName: "Leo", color: "blue" },
+  { firstName: "Priya", color: "pink" },
+  { firstName: "Jonah", color: "green" },
+  { firstName: "Ava", color: "purple" },
+];
+
 export class RideSim implements RideChannel {
   private listeners = new Set<Listener>();
   private timers = new Set<ReturnType<typeof setTimeout>>();
@@ -52,6 +61,8 @@ export class RideSim implements RideChannel {
   private match?: Match;
   private meet?: Meet;
   private notNowUntil = 0;
+  /** Which of CAST the next match is: each match this ride is someone new. */
+  private castIdx = 0;
   private mission?: { mission: Mission; endsAt: number; sessionId: string };
   private taps = new Set<"you" | "partner">();
   private stamped = false;
@@ -64,7 +75,12 @@ export class RideSim implements RideChannel {
     const sim = this;
     this.demo = {
       autoplay: true,
-      matchNow: () => this.makeMatch(),
+      // The presenter's button: it overrides the 10-minute cooldown after "Not now", so a
+      // demo that showed skipping can still show a match. Ghost mode still wins.
+      matchNow: () => {
+        this.notNowUntil = 0;
+        this.makeMatch();
+      },
       partnerLeaves: () => this.clearMatch("partner"),
       partnerTaps: () => this.tapStamp("partner"),
       timeUp: () => this.endMission(),
@@ -201,13 +217,16 @@ export class RideSim implements RideChannel {
   private makeMatch() {
     if (!this.riding || this.match || this.ghost || Date.now() < this.notNowUntil || !this.ctx) return;
     const mine = this.ctx.profile.interests;
-    const shared = mine.slice(0, 2);
+    const who = CAST[this.castIdx % CAST.length]!;
+    // each rider in the cast shares a different pair of your interests
+    const shared = mine.length <= 2 ? mine.slice() : [mine[this.castIdx % mine.length]!, mine[(this.castIdx + 1) % mine.length]!];
+    this.castIdx++;
     const labels = shared.map((id) => interestById(id)?.label ?? id);
     const youWalk = this.car !== FRONT_CAR;
     this.match = {
       id: `mat-${Date.now().toString(36)}`,
-      firstName: "Maya",
-      color: "orange" as PairColor,
+      firstName: who.firstName,
+      color: who.color,
       shared,
       why: labels.length ? `You both like ${labels.join(" and ")}` : "You're riding the same train",
     };
@@ -313,6 +332,7 @@ export class RideSim implements RideChannel {
         };
       }
       this.riding = true;
+      this.castIdx = 0;
       this.car = body.car;
       this.destIdx = destIdx;
       this.lastDest = body.destinationStop ?? null;

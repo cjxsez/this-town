@@ -16,6 +16,7 @@ Hackathon project. Renamed from Questline (D16): players see "In This Town"; cod
 - `apps/kiosk-web`: kiosk screen (React + Vite, base `/kiosk/`)
 - `apps/kiosk-pi`: Python agent on the Raspberry Pi (LEDs, dynamic NFC tag)
 - `packages/protocol`: shared zod schemas and types
+- `packages/t-map`: the T map (SVG) and the catalog of all 124 subway and light-rail stations, from the MBTA V3 API. Used by the phone's Passport and `/passport/map`.
 - `packages/start-screen`: 3D start screen (three.js + Vite), shown by the phone app at `/` once per visit. Own preview page: `pnpm dev:start` (port 5180). Every number is in `src/config.ts`.
 - `scripts`: seed, ghost riders, asset build
 

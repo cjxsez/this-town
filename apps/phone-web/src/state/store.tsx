@@ -60,9 +60,12 @@ function commitQuest(s: AppState, prev: RideState, next: RideState): AppState {
   const now = new Date().toISOString();
   const stationId = stamp?.stationId ?? c.nextStationId;
   const existing = s.people.find((p) => p.id === m.id);
+  // `quests` is what People shows as stamps (the worker's toPerson counts stamps too), so a
+  // quest whose time ran out adds the person without adding a stamp.
+  const earned = stamp ? 1 : 0;
   const person: Person = existing
-    ? { ...existing, quests: existing.quests + 1, metAt: now, metAtStationId: stationId }
-    : { id: m.id, firstName: m.firstName, color: m.color, metAtStationId: stationId, metAt: now, quests: 1 };
+    ? { ...existing, quests: existing.quests + earned, metAt: now, metAtStationId: stationId }
+    : { id: m.id, firstName: m.firstName, color: m.color, metAtStationId: stationId, metAt: now, quests: earned };
   const recap: QuestRecap = {
     stationId,
     at: now,

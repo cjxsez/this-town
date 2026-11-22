@@ -53,7 +53,7 @@ export default function Person() {
           <h1 className="cl-hero__name">{p.firstName.toUpperCase()}</h1>
           <p className="cl-hero__meta">
             Met {p.metAtStationId ? `at ${station} · ` : ""}
-            {shortDate(p.metAt)} · {p.quests} stamp{p.quests === 1 ? "" : "s"}
+            {shortDate(p.metAt)} · {p.quests > 0 ? `${p.quests} stamp${p.quests === 1 ? "" : "s"}` : "no stamp yet"}
           </p>
         </div>
       </div>
