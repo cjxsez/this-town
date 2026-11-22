@@ -68,6 +68,10 @@ jobs:
             > apps/worker/.dev.vars
       - name: Migrate local D1
         run: pnpm db:migrate:local
+      # wrangler.toml assets.directory=./public; smoke only hits /api and /ws, so an empty
+      # dir is enough (same as `mkdir -p` in apps/worker/README.md for a fresh clone).
+      - name: Ensure worker public/ exists
+        run: mkdir -p apps/worker/public
       - name: Smoke games-only (default)
         run: |
           set -euo pipefail
