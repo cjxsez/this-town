@@ -29,7 +29,7 @@ export function wranglerBindingsAndVars(source: string): { bindings: string[]; v
       if (m) vars.push(m[1]!);
       continue;
     }
-    if (section === "assets" || section === "d1_databases") {
+    if (section === "assets" || section === "d1_databases" || section === "r2_buckets") {
       const m = line.match(/^binding\s*=\s*"([^"]+)"/);
       if (m) bindings.push(m[1]!);
       continue;
@@ -92,7 +92,7 @@ test("wrangler.toml [vars] are read in readConfig", () => {
 
 test("wranglerBindingsAndVars finds the known worker bindings", () => {
   const { bindings, vars } = wranglerBindingsAndVars(toml);
-  for (const b of ["ASSETS", "DB", "TRAIN_ROOM", "GAME_ROOM", "EMAIL"]) {
+  for (const b of ["ASSETS", "DB", "MEDIA", "TRAIN_ROOM", "GAME_ROOM", "EMAIL"]) {
     assert.ok(bindings.includes(b), `missing binding ${b}`);
   }
   assert.ok(vars.includes("GAMES_ONLY"));
