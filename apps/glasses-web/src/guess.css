@@ -1,0 +1,267 @@
+/*
+ * guess.css (glasses-web): the Questline phone look for Guess who, redrawn for the lens.
+ *
+ * Same fonts, colors and wobbly corners as phone-web (src/styles/tokens.css and ui.css
+ * there), but the additive display rules still hold: the background stays black and
+ * nothing large is filled. Paper cards become teal outlines, the offset shadow becomes a
+ * thin line, and only the focused button and the scale ticks are filled.
+ *
+ * Everything is scoped under .guess so the ride HUD screens keep the plain styles.css look.
+ * The buttons and the clock also carry .hud-btn and .countdown, so their rules are written
+ * as .guess .x to win over styles.css whatever the import order.
+ * Fonts are bundled (fontsource), not fetched from a CDN.
+ *
+ * Trail trivia (HikeGame) wears these rules too and adds its own in hike.css, so a change
+ * here changes both games.
+ */
+@import "@fontsource/gaegu/latin-400.css";
+@import "@fontsource/gaegu/latin-700.css";
+@import "@fontsource/bungee/latin-400.css";
+
+.hud.guess {
+  --paper: #f4f5ec;
+  --ink: #26343b;
+  --sea: #62c1bc;
+  --foam: #9ae4d6;
+  --line: #3f8f8b;
+  --stone: #b7bfb2;
+  --yellow: #f2c84b;
+  --yellow-dk: #c9982e;
+  --sky: #6bbde6;
+  --leaf: #8fcf95;
+  --orange: #e8893a;
+  --font-hand: "Gaegu", "Comic Sans MS", "Chalkboard SE", cursive;
+  --font-display: "Bungee", "Arial Black", Impact, sans-serif;
+  --r1: 6px 11px 8px 12px;
+  --r2: 12px 8px 11px 6px;
+  --r3: 8px 12px 6px 11px;
+  --r4: 11px 6px 12px 8px;
+  --wob: url(#guess-wob);
+
+  gap: 18px;
+  font-family: var(--font-hand);
+  color: var(--paper);
+}
+
+.guess-fx {
+  position: absolute;
+}
+
+.guess-title {
+  font: 400 54px/1 var(--font-display);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  rotate: -2deg;
+}
+
+.guess-title-sm {
+  font-size: 40px;
+  rotate: -1deg;
+}
+
+.guess-eyebrow {
+  font: 400 24px/1 var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--foam);
+}
+
+.guess-body {
+  font-size: 32px;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.guess-hint {
+  font-size: 25px;
+  line-height: 1.15;
+  color: var(--foam);
+}
+
+/* The phone's paper card as an outline; the offset shadow shows as a line on two sides. */
+.guess-card {
+  padding: 16px 20px;
+  border: 2px solid var(--sea);
+  border-radius: var(--r3);
+  box-shadow: 4px 6px 0 var(--line);
+  filter: var(--wob);
+  rotate: -0.6deg;
+  font: 700 36px/1.1 var(--font-hand);
+  text-wrap: balance;
+}
+
+.guess-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.guess-progress {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guess-steps {
+  display: flex;
+  gap: 6px;
+  max-width: 250px;
+}
+
+.guess-step {
+  flex: 1;
+  height: 12px;
+  border: 2px solid var(--sea);
+  border-radius: 3px;
+}
+
+.guess-step.is-on {
+  border-color: var(--sky);
+  background: var(--sky);
+}
+
+/* The phone's dark "TRAIN 3:00" pill, outlined. The wobble is on the outline only, so the
+   digits stay crisp. */
+.guess .guess-clock {
+  position: relative;
+  min-width: 190px;
+  padding: 6px 14px 4px;
+  rotate: 1deg;
+  font: 400 56px/1 var(--font-display);
+  text-align: center;
+}
+
+.guess .guess-clock::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--paper);
+  border-radius: var(--r2);
+  filter: var(--wob);
+}
+
+.guess-row {
+  display: flex;
+  gap: 18px;
+  align-items: stretch;
+}
+
+/* Unfocused: a dim outline. Focused: the phone's yellow primary button, the one bright fill. */
+.guess .guess-btn {
+  flex: 1;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 2px solid var(--line);
+  border-radius: var(--r1);
+  filter: var(--wob);
+  rotate: 0.5deg;
+  font: 400 24px/1.1 var(--font-display);
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--stone);
+}
+
+.guess .guess-btn:nth-child(2n) {
+  border-radius: var(--r4);
+  rotate: -0.5deg;
+}
+
+.guess .guess-btn.is-focused {
+  border-color: var(--yellow);
+  background: var(--yellow);
+  box-shadow: inset 0 -6px 0 var(--yellow-dk), 4px 5px 0 var(--sea);
+  color: var(--ink);
+  outline: none;
+}
+
+/* Start and Restart stand alone: keep the fill small. */
+.guess .guess-btn:only-child {
+  flex: none;
+  min-width: 260px;
+  font-size: 30px;
+}
+
+.scale {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scale-value {
+  font: 400 88px/0.95 var(--font-display);
+  text-align: center;
+  color: var(--yellow);
+}
+
+.scale-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  filter: var(--wob);
+}
+
+.scale-tick {
+  flex: 1;
+  height: 22px;
+  border: 2px solid var(--line);
+  border-radius: 3px 5px 4px 6px;
+}
+
+.scale-tick.is-under {
+  border-color: var(--sky);
+  background: var(--sky);
+}
+
+.scale-tick.is-focused {
+  height: 36px;
+  border-color: var(--yellow);
+  background: var(--yellow);
+  box-shadow: inset 0 -5px 0 var(--yellow-dk);
+}
+
+.scale-ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 25px;
+  line-height: 1;
+  color: var(--foam);
+}
+
+.guess-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.guess-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 2px dashed var(--line);
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--foam);
+}
+
+.guess-line:last-child {
+  border-bottom: 0;
+}
+
+.guess-answer {
+  font-weight: 700;
+  color: var(--paper);
+  text-align: right;
+}
+
+.guess-answer.is-none {
+  color: var(--orange);
+}
