@@ -12,6 +12,7 @@ apps/worker/public/
 # python (kiosk-pi)
 __pycache__/
 *.pyc
+*.egg-info/
 .venv/
 apps/kiosk-pi/config.toml
 
