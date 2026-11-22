@@ -267,7 +267,8 @@ class KioskAgent:
             await anim.flash(self.leds, anim.WHITE, duration_s=0.18)
             await anim.pulse(self.leds, pair_rgb(color))
 
-        self.player.play("flash", flash_then_pulse())
+        # Named "pulse" because that is the lasting state after the flash.
+        self.player.play("pulse", flash_then_pulse())
 
     async def on_celebrate(self, event: CelebrateEvent) -> None:
         self.active_match, self.active_color = event["matchId"], event["color"]
