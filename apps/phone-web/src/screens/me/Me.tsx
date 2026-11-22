@@ -2,7 +2,8 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
 import { INTERESTS } from "../../../shared/catalog";
 import type { SocialBattery, TimeOfDay } from "../../../shared/types";
-import { sim } from "../../api";
+import { api, sim } from "../../api";
+import { ApiError, errorMessage } from "../../lib/api";
 import { useApp } from "../../state/store";
 import { Button, ButtonRow, Card, Chip, Hint, PairToken, Screen, Segmented, TextField, Toggle, TileTitle } from "../../ui";
 
@@ -61,6 +62,8 @@ export default function Me() {
   const { settings, profile } = state;
   const [panel, setPanel] = useState<Panel>(null);
   const [confirm, setConfirm] = useState<"delete" | "signout" | null>(null);
+  // Arrived as a guest: keep the card up after the email is saved, so its "Saved" shows.
+  const [wasGuest] = useState(() => !!profile && !profile.email);
   const [deleting, setDeleting] = useState(false);
 
   const blocked = state.people.filter((p) => p.blocked);
@@ -88,6 +91,8 @@ export default function Me() {
   return (
     <Screen label="I1" tabs blobs="b">
       <TileTitle text="SAFETY & PRIVACY" />
+
+      {profile && (wasGuest || !profile.email) && <KeepStamps />}
 
       <Card style={{ borderRadius: "var(--r2)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -166,7 +171,7 @@ export default function Me() {
             <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }}>
               {profile?.email
                 ? `Ride Mode turns off on this phone. Sign back in with ${profile.email} anytime and your stamps and people are still there.`
-                : "You're playing as a guest, so there's no way back in: your stamps and people stay behind. Ride Mode turns off."}
+                : "You're playing as a guest, so there's no way back in: your stamps and people stay behind. Add an email above first to keep them. Ride Mode turns off."}
             </div>
           </div>
           <ButtonRow>
@@ -256,5 +261,122 @@ function ProfileEditor({ onDone }: { onDone: () => void }) {
         </Button>
       </ButtonRow>
     </div>
+  );
+}
+
+const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+
+/**
+ * A "Just play today" guest adds an email to keep their stamps and people: the same
+ * 6-digit code as sign-in, sent to the address, typed here (POST /api/me/email).
+ */
+function KeepStamps() {
+  const { actions } = useApp();
+  const [email, setEmail] = useState("");
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  const send = async () => {
+    const addr = email.trim().toLowerCase();
+    if (!looksLikeEmail(addr) || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.auth.sendCode(addr);
+      setSentTo(addr);
+    } catch (e) {
+      // A code already on its way is fine: go on to typing it.
+      if (e instanceof ApiError && e.code === "too-soon") setSentTo(addr);
+      else setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const save = async (digits: string) => {
+    if (!sentTo || digits.length !== 6 || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await actions.attachEmail(sentTo, digits);
+      setDone(sentTo);
+    } catch (e) {
+      setError(errorMessage(e));
+      setCode("");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <Card style={{ borderRadius: "var(--r3)" }}>
+        <div className="q-title--sm">Saved</div>
+        <Hint>
+          <span role="status">Sign in with {done} on any phone and your stamps and people come with you.</span>
+        </Hint>
+      </Card>
+    );
+  }
+
+  return (
+    <Card style={{ borderRadius: "var(--r3)" }}>
+      <div className="q-title--sm">Keep your stamps</div>
+      <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }}>
+        You're playing as a guest. Add an email so you can sign back in on any phone. No password, just a code.
+      </div>
+      {!sentTo ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void send();
+          }}
+          style={{ display: "contents" }}
+        >
+          <TextField label="Email" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={setEmail} />
+          <ButtonRow>
+            <Button disabled={!looksLikeEmail(email) || busy} onClick={() => void send()}>
+              {busy ? "Sending…" : "Email me a code"}
+            </Button>
+          </ButtonRow>
+        </form>
+      ) : (
+        <>
+          <Hint>
+            We sent a 6-digit code to <strong style={{ overflowWrap: "anywhere" }}>{sentTo}</strong>.
+          </Hint>
+          <TextField
+            label="6-digit code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            placeholder="000000"
+            value={code}
+            onChange={(v) => {
+              const digits = v.replace(/\D/g, "").slice(0, 6);
+              setCode(digits);
+              setError(null);
+              if (digits.length === 6) void save(digits);
+            }}
+          />
+          <ButtonRow>
+            <Button variant="secondary" disabled={busy} onClick={() => { setSentTo(null); setCode(""); setError(null); }}>
+              Different email
+            </Button>
+            <Button disabled={code.length !== 6 || busy} onClick={() => void save(code)}>
+              {busy ? "Saving…" : "Save"}
+            </Button>
+          </ButtonRow>
+        </>
+      )}
+      {error && (
+        <Hint style={{ color: "var(--brick)" }}>
+          <span role="alert">{error}</span>
+        </Hint>
+      )}
+    </Card>
   );
 }

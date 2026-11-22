@@ -265,6 +265,11 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
         await api.deleteMyData();
         dispatch({ type: "reset" });
       },
+      /** A guest adds an email (with the code just sent to it) so they can sign back in later. */
+      attachEmail: async (email: string, code: string) => {
+        await api.auth.attachEmail(email, code);
+        dispatch({ type: "updateProfile", patch: { email } });
+      },
       /** Sign out on this device. An email account signs back in with a code; a guest starts fresh. */
       signOut: async () => {
         await api.signOut();
