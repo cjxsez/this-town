@@ -42,6 +42,7 @@ export function inPool(rider: RoomRider, state: RoomState, now: number, ignoreSt
   if (rider.ghost) return false;
   if (rider.pairId !== null) return false;
   if (rider.notNowUntil > now) return false;
+  if ((rider.restUntil ?? 0) > now) return false;
   if (ignoreStops) return true;
   if (state.nextStopIdx === null || state.nextStopIdx < rider.eligibleFromStopIdx) return false;
   return remainingSegments(rider, state) >= 1;

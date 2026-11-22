@@ -26,6 +26,13 @@ test("ghosts, riders already paired and riders cooling down after Not now are ou
   assert.equal(inPool(rider("a", { notNowUntil: NOW - 1 }), s, NOW), true);
 });
 
+test("after the games stamp a rider rests, even in games-only where stops don't count", () => {
+  const s = room();
+  assert.equal(inPool(rider("a", { restUntil: NOW + 1 }), s, NOW, true), false);
+  assert.equal(inPool(rider("a", { restUntil: NOW + 1 }), s, NOW), false);
+  assert.equal(inPool(rider("a", { restUntil: NOW - 1 }), s, NOW, true), true);
+});
+
 test("after a mission a rider waits for the next segment", () => {
   const s = room({ nextStopIdx: 1 });
   assert.equal(inPool(rider("a", { eligibleFromStopIdx: 2 }), s, NOW), false);

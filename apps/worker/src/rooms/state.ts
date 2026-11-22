@@ -101,6 +101,8 @@ export interface RoomRider {
   blocked: string[];
   /** Loaded from D1 at check-in, appended on mission start: last 10 template ids. */
   recentTemplates: string[];
+  /** GAMES_ONLY: epoch ms until which the rider sits out matching after the games stamp. */
+  restUntil?: number;
   /** After a mission, not matchable until state.nextStopIdx >= this ("next segment"). */
   eligibleFromStopIdx: number;
   /** matchId of the current pair, or null. */

@@ -14,6 +14,9 @@
  *   the room those glasses opened for themselves points at the seat (`moved`), and the
  *   glasses follow it. The game state never moves, so nothing can go out of step.
  * - Hooks (games/hooks.ts): prepare before a game starts, effect after each change.
+ * - A room TrainRoom opened for a matched pair remembers that pair (`pair`). The first time
+ *   the last game of the playlist finishes there, it tells the TrainRoom (`gamesDone`), which
+ *   stamps both riders and celebrates on the kiosk (decisions D28).
  * - `sharedGet` / `sharedPut`: the instance named SHARED_ROOM keeps values that outlive a
  *   room, such as the trivia questions pairs leave for the next pair.
  * - Idle alarm: after ROOM_STORAGE_TTL_MS with no open/view/act (or lens moves), `alarm`
@@ -44,11 +47,17 @@ export const ROOM_IDLE_MS = 2 * 60 * 60 * 1000;
 
 const ROOM_KEY = "room";
 
+/** The matched pair a room was opened for, so the TrainRoom hears when they finish. */
+export interface PairRef {
+  tripId: string;
+  matchId: string;
+}
+
 /** Open a room on a code nobody is using. null when none was free after a few tries. */
-export async function openFreeRoom(env: Env, names: string | null = null): Promise<string | null> {
+export async function openFreeRoom(env: Env, names: string | null = null, pair?: PairRef): Promise<string | null> {
   for (let attempt = 0; attempt < 8; attempt++) {
     const code = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-    if (await env.GAME_ROOM.get(env.GAME_ROOM.idFromName(`room:${code}`)).open(code, false, names)) return code;
+    if (await env.GAME_ROOM.get(env.GAME_ROOM.idFromName(`room:${code}`)).open(code, false, names, pair)) return code;
   }
   return null;
 }
@@ -68,6 +77,10 @@ interface Room {
   lens?: Partial<Record<Seat, string>>;
   /** This room belongs to a pair of glasses that now play this seat of another room. */
   moved?: SeatRef | null;
+  /** Set when TrainRoom opened this room for a matched pair. */
+  pair?: PairRef;
+  /** The pair finished the last game once; TrainRoom has been told. */
+  finished?: boolean;
 }
 
 export class GameRoom extends DurableObject<Env> {
@@ -130,10 +143,10 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   /** Open this room. False when the code is in use by a room that is still active. */
-  async open(code: string, reuse: boolean, names: string | null = null): Promise<boolean> {
+  async open(code: string, reuse: boolean, names: string | null = null, pair?: PairRef): Promise<boolean> {
     const live = this.room && Date.now() - this.room.touchedAt < ROOM_IDLE_MS;
     if (live) return reuse;
-    this.room = { code, index: 0, game: null, run: 0, touchedAt: Date.now(), names };
+    this.room = { code, index: 0, game: null, run: 0, touchedAt: Date.now(), names, ...(pair && { pair }) };
     this.seen = { a: 0, b: 0 };
     await this.save();
     return true;
@@ -212,8 +225,11 @@ export class GameRoom extends DurableObject<Env> {
     const room = this.room;
     if (!room || next === prev) return;
     room.game = next;
-    await this.save();
     const mod = GAMES[room.index]!;
+    const finishedNow = Boolean(room.pair) && !room.finished && room.index === GAMES.length - 1 && mod.isDone(next);
+    if (finishedNow) room.finished = true;
+    await this.save();
+    if (finishedNow) this.ctx.waitUntil(this.tellPairDone(room.pair!));
     const job = HOOKS[mod.id]?.effect?.(this.env, this.shared(), prev, next, { names: room.names ?? null });
     if (!job) return;
     const run = room.run;
@@ -226,6 +242,15 @@ export class GameRoom extends DurableObject<Env> {
         })
         .catch((err) => console.error("game effect failed", mod.id, err)),
     );
+  }
+
+  /** The pair played the whole playlist: their TrainRoom stamps them and lights the kiosk. */
+  private async tellPairDone(pair: PairRef): Promise<void> {
+    try {
+      await this.env.TRAIN_ROOM.get(this.env.TRAIN_ROOM.idFromName(pair.tripId)).gamesDone(pair.matchId);
+    } catch (err) {
+      console.error("gamesDone failed", pair.matchId, err);
+    }
   }
 
   private render(seat: Seat): string {

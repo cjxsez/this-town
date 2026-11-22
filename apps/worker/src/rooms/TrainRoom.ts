@@ -147,6 +147,10 @@ import {
 const STATE_KEY = "state";
 /** How long the kiosk gets to celebrate before pair.cleared sends it back to idle. */
 const CELEBRATE_MS = 6 * SECOND;
+/** GAMES_ONLY: after the games stamp, both riders sit out matching this long (D28). */
+export const GAMES_DONE_REST_MS = 90 * SECOND;
+/** mission_sessions.template_id for a stamp earned by finishing the games, not a deck mission. */
+export const GAMES_TEMPLATE_ID = "games-playlist";
 /** Longest a mission runs, even with a long segment ahead. */
 const MAX_MISSION_SEC = 180;
 const DEFAULT_KIOSK_HW: KioskHw = { leds: false, nfc: "static" };
@@ -736,12 +740,14 @@ export class TrainRoom extends DurableObject<Env> {
       if (!s.riders[p.a.userId] || !s.riders[p.b.userId] || p.a.pairId || p.b.pairId) continue;
 
       // A game room for the pair, so their phones can open the two-player games without a code.
-      // It knows their first names, so a trivia question they leave says who it is from.
+      // It knows their first names, so a trivia question they leave says who it is from, and
+      // it knows the pair, so finishing the last game stamps them (gamesDone).
       const names = `${p.a.profile.firstName} and ${p.b.profile.firstName}`;
-      const gameCode = (await openFreeRoom(this.env, names).catch(() => null)) ?? undefined;
+      const matchId = newId("mat");
+      const gameCode =
+        (await openFreeRoom(this.env, names, { tripId: s.trip.tripId, matchId }).catch(() => null)) ?? undefined;
       if (!s.riders[p.a.userId] || !s.riders[p.b.userId] || p.a.pairId || p.b.pairId) continue;
 
-      const matchId = newId("mat");
       const pair: RoomPair = {
         matchId,
         a: p.a.userId,
@@ -881,7 +887,55 @@ export class TrainRoom extends DurableObject<Env> {
     }
   }
 
+  /**
+   * GAMES_ONLY (D28): the pair's GameRoom says they finished the last game of the playlist.
+   * Both get a stamp, the meeting kiosk celebrates, and the pair ends. A games stamp hangs
+   * off a mission_sessions row (template GAMES_TEMPLATE_ID) so passport queries and the
+   * stamps foreign key work unchanged. Both riders then rest for GAMES_DONE_REST_MS so they
+   * are not matched again while the stamp is still on screen.
+   */
+  async gamesDone(matchId: string): Promise<void> {
+    const s = this.state;
+    const pair = s.pairs[matchId];
+    if (!pair || pair.sessionId || !this.cfg.gamesOnly) return;
+    const now = Date.now();
+    const sessionId = newId("ses");
+    const station = s.stops[s.nextStopIdx ?? s.currentStopIdx];
+    await insertMissionSession(this.env.DB, {
+      id: sessionId,
+      matchId,
+      pairKey: pair.pairKey,
+      templateId: GAMES_TEMPLATE_ID,
+      category: "quick-game",
+      rare: false,
+      car: pair.meetAtCar,
+      station: station?.stopId ?? null,
+      startedAt: pair.createdAt,
+      endsAt: now,
+    });
+    await endMissionSession(this.env.DB, sessionId, "stamped", now);
+    await recordMet(this.env.DB, pair.a, pair.b, now);
+    await this.insertPairStamps(pair, sessionId, false, now);
+    this.sendToKiosks(pair.meetAtCar, { type: "celebrate", matchId, color: pair.color, rare: false });
+    for (const uid of [pair.a, pair.b]) {
+      const r = s.riders[uid];
+      if (r) r.restUntil = now + GAMES_DONE_REST_MS;
+    }
+    await this.clearPair(matchId, "mission-done", now, {}, "mission-done", true);
+    await this.persist();
+    this.broadcastRideStates();
+    await this.scheduleAlarm(now);
+  }
+
   private async awardStamps(pair: RoomPair, m: MissionSessionState, now: number): Promise<Record<string, Stamp>> {
+    const out = await this.insertPairStamps(pair, m.sessionId, m.rare, now);
+    this.sendToKiosks(m.car, { type: "celebrate", matchId: pair.matchId, color: pair.color, rare: m.rare });
+    await this.finishMission(m.sessionId, "stamped", now);
+    return out;
+  }
+
+  /** One stamp per rider in the pair, saved to D1 and sent to each rider. */
+  private async insertPairStamps(pair: RoomPair, sessionId: string, rare: boolean, now: number): Promise<Record<string, Stamp>> {
     const s = this.state;
     const where = this.stampStation();
     const out: Record<string, Stamp> = {};
@@ -893,7 +947,7 @@ export class TrainRoom extends DurableObject<Env> {
         station: where.stationName,
         line: s.trip?.line ?? "Green-D",
         partnerFirstName: s.riders[partner]?.profile.firstName ?? "",
-        rare: m.rare,
+        rare,
         awardedAt: now,
       };
       out[uid] = stamp;
@@ -902,7 +956,7 @@ export class TrainRoom extends DurableObject<Env> {
         userId: uid,
         partnerUserId: partner,
         matchId: pair.matchId,
-        sessionId: m.sessionId,
+        sessionId,
       };
     });
     await insertStamps(this.env.DB, rows);
@@ -910,8 +964,6 @@ export class TrainRoom extends DurableObject<Env> {
       const stamp = out[uid];
       if (stamp) this.sendToRider(uid, { type: "stamp.awarded", stamp });
     }
-    this.sendToKiosks(m.car, { type: "celebrate", matchId: pair.matchId, color: pair.color, rare: m.rare });
-    await this.finishMission(m.sessionId, "stamped", now);
     return out;
   }
 
