@@ -240,6 +240,28 @@ async function main() {
   await kaiSock.wait("mission.end", 8000, (e) => e.reason === "cancelled");
   ok("Not now cleared the pair and cancelled the mission");
 
+  // A report mid-match: the pair ends, the reported rider only hears their partner left, and
+  // the two are never matched again on this trip.
+  const ivy = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Ivy", ["cycling", "robotics", "history"]));
+  const max = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Max", ["cycling", "robotics", "cannoli"]));
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST, rideMode: true }, ivy.token);
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST, rideMode: true }, max.token);
+  const ivySock = new Sock<ServerToRider>(`${WS_BASE}/ws/rider?token=${ivy.token}`, { type: "rider.hello", client: "phone" }, "Ivy phone");
+  const maxSock = new Sock<ServerToRider>(`${WS_BASE}/ws/rider?token=${max.token}`, { type: "rider.hello", client: "phone" }, "Max phone");
+  const ivySnap = await ivySock.wait("ride.snapshot");
+  if (!ivySnap.snapshot.match) fail("Ivy and Max should be matched");
+  await maxSock.wait("ride.snapshot");
+  await api("POST", "/api/report", { matchId: ivySnap.snapshot.match!.matchId, reason: "Made me uncomfortable", block: false }, ivy.token);
+  const ivyCleared = await ivySock.wait("match.cleared");
+  const maxCleared = await maxSock.wait("match.cleared");
+  if (ivyCleared.reason !== "reported" || maxCleared.reason !== "partner-left") fail(`report reasons: ${ivyCleared.reason} / ${maxCleared.reason}`);
+  const ivyAfter = await api<{ match: unknown }>("GET", "/api/ride/state", undefined, ivy.token);
+  const maxAfter = await api<{ match: unknown }>("GET", "/api/ride/state", undefined, max.token);
+  if (ivyAfter.match || maxAfter.match) fail(`a reported pair was matched again: ${JSON.stringify([ivyAfter.match, maxAfter.match])}`);
+  await api("POST", "/api/ride/end", undefined, ivy.token);
+  await api("POST", "/api/ride/end", undefined, max.token);
+  ok("a report ends the pair, tells the reported rider only that their partner left, and never re-pairs them");
+
   // Late-train bonus: a scripted delay unlocks it for the next mission.
   const demo = (path: string, body: object = {}) =>
     fetch(`${BASE}/api/demo/${path}`, { method: "POST", headers: { "x-kiosk-key": KIOSK_KEY, "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -268,7 +290,7 @@ async function main() {
   if (afterDelete.status !== 401) fail(`deleted rider's token should stop working, got ${afterDelete.status}`);
   ok("delete my data signs the rider out");
 
-  for (const s of [phone, glasses, mayaSock, screen, pi, kaiSock, zoeSock, anaSock]) s.close();
+  for (const s of [phone, glasses, mayaSock, screen, pi, kaiSock, zoeSock, ivySock, maxSock, anaSock]) s.close();
   await demo("reset");
   console.log("\nAll good.");
   process.exit(0);
