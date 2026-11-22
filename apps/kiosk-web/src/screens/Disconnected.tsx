@@ -10,16 +10,19 @@ import { Screen, Wordmark } from "../components/Ui";
 
 interface DisconnectedProps {
   car: string | null;
-  /** Config error; when absent we are just reconnecting. */
+  /** Config error; when absent we are connecting or reconnecting. */
   error?: string;
+  /** First connect vs drop — changes the title only. */
+  connecting?: boolean;
 }
 
-export function Disconnected({ car, error }: DisconnectedProps) {
+export function Disconnected({ car, error, connecting }: DisconnectedProps) {
+  const title = error ? "Kiosk not set up" : connecting ? "Connecting" : "Reconnecting";
   return (
     <Screen label="Kiosk offline" blobs="a" className="k-screen--night k-offline">
       <Wordmark size={26} style={{ marginBottom: 8 }} />
       <section className="k-card" aria-live="polite">
-        <h1 className="k-title">{error ? "Kiosk not set up" : "Reconnecting"}</h1>
+        <h1 className="k-title">{title}</h1>
         {error ? (
           <p className="k-hint">{error}</p>
         ) : (
@@ -29,7 +32,9 @@ export function Disconnected({ car, error }: DisconnectedProps) {
               <i />
               <i />
             </span>
-            <p className="k-hint">Back in a moment. You can still tap the tag.</p>
+            <p className="k-hint">
+              {connecting ? "Linking to this train…" : "Back in a moment. You can still tap the tag."}
+            </p>
           </>
         )}
       </section>

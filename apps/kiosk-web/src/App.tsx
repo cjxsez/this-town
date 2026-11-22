@@ -88,6 +88,10 @@ function KioskScreen({ car, kioskKey }: { car: string; kioskKey: string }) {
       </Shell>
     );
   }
+  // Connecting and offline share the night screen so riders never see Tap to play before the socket is up.
+  if (state.status === "connecting") {
+    return <Shell bg={NIGHT}><Disconnected car={car} connecting /></Shell>;
+  }
   if (state.status === "offline") return <Shell bg={NIGHT}><Disconnected car={car} /></Shell>;
 
   const idle = <Shell bg={SEA}><Idle car={car} stats={state.stats} nextStopAt={state.nextStopAt} /></Shell>;
