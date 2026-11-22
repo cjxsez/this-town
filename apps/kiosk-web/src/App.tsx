@@ -20,16 +20,18 @@
  * Privacy: this screen is public. Only first names and colors ever reach state here;
  * ServerToKiosk does not carry interests or the why line, keep it that way.
  *
- * TODO:
- * - Two pairs meeting at the same kiosk at once: today the newest event wins the screen.
- *   Decide on split screen or a queue once the worker can produce that case.
- * - Confirm with the worker whether kiosk.idle is a periodic stats push or a "reset to
- *   idle" command. Treated as stats while a pair is active.
+ * One pair per kiosk: the worker matcher only assigns one pair to a busy kiosk, so there
+ * is no split screen. A second pair.incoming for a different matchId simply replaces the
+ * first; pair.cleared for an old matchId must not blank the new one.
+ *
+ * kiosk.idle is a periodic stats push (protocol.md), not a reset-to-idle command — we only
+ * update riders/ETA counts and never change the active pair screen from it.
  */
 import { useEffect, useReducer, useState, type ReactNode } from "react";
 import { PAIR_COLOR_HEX, RARE_ACCENT_HEX, type Mission as MissionModel, type PairColor } from "@questline/protocol";
 import { Stage } from "./components/Stage";
 import { HandDrawnFilters } from "./components/Ui";
+import { setServerNow } from "./lib/clock";
 import { parseCar, readConfig, type ConfigResult } from "./lib/config";
 import { PREVIEW_SCREENS, readPreview, SAMPLE, type PreviewMode, type PreviewScreen } from "./lib/preview";
 import { connectKioskSocket, type KioskSocketStatus, type ScreenEvent } from "./lib/socket";
@@ -84,17 +86,21 @@ function withoutPair(pairs: Record<string, PairInfo>, matchId: string): Record<s
 function onEvent(state: State, event: ScreenEvent, at: number): State {
   switch (event.type) {
     case "kiosk.idle": {
-      const { type: _type, serverNow: _serverNow, ...stats } = event; // TODO: clock offset from serverNow
+      // Stats push only — do not reset an active pair screen.
+      setServerNow(event.serverNow, at);
+      const { type: _type, serverNow: _serverNow, ...stats } = event;
       const nextStopAt = stats.nextStopEtaSec === null ? null : at + stats.nextStopEtaSec * 1000;
       return { ...state, stats, nextStopAt };
     }
     case "pair.incoming":
+      // Newest pair wins the screen (worker allows one pair per kiosk; no split view).
       return {
         ...state,
         pairs: { ...state.pairs, [event.matchId]: { color: event.color, firstNames: event.firstNames, arrived: event.arrived } },
         screen: { name: "pair", matchId: event.matchId },
       };
     case "mission.show": {
+      setServerNow(event.serverNow, at);
       // A repeat mission.show (e.g. after a reconnect) keeps the bar's start and the taps.
       const same = state.screen.name === "mission" && state.screen.mission.sessionId === event.mission.sessionId ? state.screen : null;
       return {
@@ -119,6 +125,7 @@ function onEvent(state: State, event: ScreenEvent, at: number): State {
       return { ...state, screen: { ...state.screen, tapped: event.tapped } };
     case "pair.cleared": {
       // Let a running celebration finish (with names); celebrateDone drops the pair.
+      // Stale clears for an old matchId must not blank a newer pair on screen.
       if (state.screen.name === "celebrate" && state.screen.matchId === event.matchId) return state;
       const pairs = withoutPair(state.pairs, event.matchId);
       const screen = activeMatchId(state.screen) === event.matchId ? IDLE : state.screen;
