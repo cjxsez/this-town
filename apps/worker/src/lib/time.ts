@@ -26,6 +26,8 @@ export const ALARM_INTERVAL_MS = 20 * SECOND;
 export const MISSION_AUTOSTART_DELAY_MS = 20 * SECOND;
 /** Stamp taps are accepted until mission.endsAt plus this grace. */
 export const STAMP_GRACE_MS = 15 * SECOND;
+/** How long a stamp stays on RideSnapshot.recentStamp for reconnecting clients. */
+export const RECENT_STAMP_MS = 15 * SECOND;
 /** Matching skips pairs who met within this window. */
 export const MET_RECENTLY_WINDOW_MS = 7 * DAY;
 /** Glasses link codes live this long. */

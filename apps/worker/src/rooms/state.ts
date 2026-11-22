@@ -31,6 +31,7 @@ import type {
   PairColor,
   RideState,
   SocialBattery,
+  Stamp,
 } from "@questline/protocol";
 import type { CheckoutReason } from "../db/queries";
 
@@ -107,6 +108,11 @@ export interface RoomRider {
   eligibleFromStopIdx: number;
   /** matchId of the current pair, or null. */
   pairId: string | null;
+  /**
+   * Most recent stamp awarded while on this trip (optional so older rooms still load).
+   * Snapshots expose it as recentStamp for ~15 s so a reconnecting client can catch up.
+   */
+  lastStamp?: Stamp;
 }
 
 /** Same values as checkins.checkout_reason. */

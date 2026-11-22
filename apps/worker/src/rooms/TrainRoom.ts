@@ -111,6 +111,7 @@ import {
   MISSION_AUTOSTART_DELAY_MS,
   MISSION_END_BUFFER_MS,
   SECOND,
+  RECENT_STAMP_MS,
   STAMP_GRACE_MS,
   secondsUntil,
 } from "../lib/time";
@@ -962,7 +963,10 @@ export class TrainRoom extends DurableObject<Env> {
     await insertStamps(this.env.DB, rows);
     for (const uid of [pair.a, pair.b]) {
       const stamp = out[uid];
-      if (stamp) this.sendToRider(uid, { type: "stamp.awarded", stamp });
+      if (!stamp) continue;
+      const r = s.riders[uid];
+      if (r) r.lastStamp = stamp;
+      this.sendToRider(uid, { type: "stamp.awarded", stamp });
     }
     return out;
   }
@@ -1156,11 +1160,16 @@ export class TrainRoom extends DurableObject<Env> {
   }
 
   private snapshotFor(userId: string): RideSnapshot {
+    const now = Date.now();
+    const stamp = this.state.riders[userId]?.lastStamp;
+    const recentStamp =
+      stamp && now - stamp.awardedAt <= RECENT_STAMP_MS ? stamp : undefined;
     return {
       state: this.rideStateFor(userId),
       match: this.matchPayloadFor(userId),
       mission: this.missionFor(userId),
-      serverNow: Date.now(),
+      serverNow: now,
+      ...(recentStamp ? { recentStamp } : {}),
     };
   }
 
