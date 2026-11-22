@@ -6,14 +6,14 @@ import { useApp } from "../../state/store";
  * B1 Landing. Rendered at "/", and where a kiosk tag tap lands a rider with no profile in
  * simulator mode (against the worker a signed-out tap goes to S1 /signin instead; the tap is
  * replayed after sign-in or onboarding). Email goes to S1 (6-digit code: returning riders
- * sign straight back in, new ones carry on to B2 as an account). The others go to B2.
+ * sign straight back in, new ones carry on to B2 as an account). "Just play today" goes to B2
+ * as a guest.
  */
 export default function Landing() {
   const navigate = useNavigate();
   const { actions } = useApp();
 
-  // TODO(backend): Sign in with Apple is still a stub that continues like "Just play today".
-  const signIn = (method: "apple" | "email" | "guest") => navigate(method === "email" ? "/signin" : "/join/name");
+  const signIn = (method: "email" | "guest") => navigate(method === "email" ? "/signin" : "/join/name");
 
   const skipSetup = () => {
     actions.useDemoProfile();
@@ -27,12 +27,7 @@ export default function Landing() {
       footer={
         <>
           <ButtonRow>
-            <Button variant="dark" tilt={-0.7} onClick={() => signIn("apple")}>
-              Continue with Apple
-            </Button>
-          </ButtonRow>
-          <ButtonRow>
-            <Button variant="secondary" tilt={0.5} onClick={() => signIn("email")}>
+            <Button variant="dark" tilt={-0.7} onClick={() => signIn("email")}>
               Sign in with email
             </Button>
           </ButtonRow>
