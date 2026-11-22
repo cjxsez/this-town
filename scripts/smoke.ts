@@ -10,6 +10,7 @@
 // thing that's wrong.
 import { readFileSync } from "node:fs";
 import type { Profile, ServerToKiosk, ServerToRider, TapRes } from "@questline/protocol";
+import { IMPRESSIONS_ROUNDS, TRIVIA_ROUNDS } from "@questline/protocol/games";
 
 const BASE = (process.env.WORKER_URL ?? "http://localhost:8787").replace(/\/+$/, "");
 const WS_BASE = BASE.replace(/^http/, "ws");
@@ -239,10 +240,10 @@ async function main() {
     await act(mayaGame.seat, { type: "room.next" });
     ok("games only: Next game waits until both players pick it");
 
-    // First impressions: five rounds of lock, rate, and the short wait after both rated.
+    // First impressions: IMPRESSIONS_ROUNDS of lock, rate, and the short wait after both rated.
     await until("impressions starts", (v) => v.gameId === "impressions");
     await both({ type: "ready" });
-    for (let round = 0; round < 5; round++) {
+    for (let round = 0; round < IMPRESSIONS_ROUNDS; round++) {
       await until(`impressions round ${round + 1} guess`, (v) => v.game.phase === "guess" || v.done);
       await both({ type: "lock", value: 0 });
       await until(`impressions round ${round + 1} talk`, (v) => v.game.phase === "talk");
@@ -252,10 +253,10 @@ async function main() {
     await until("impressions finishes", (v) => v.done);
     await both({ type: "room.next" });
 
-    // Left for you: answer three questions, step past each reveal, then skip leaving one.
+    // Left for you: answer TRIVIA_ROUNDS questions, step past each reveal, then skip leaving one.
     await until("trivia starts", (v) => v.gameId === "trivia");
     await both({ type: "ready" });
-    for (let q = 0; q < 3; q++) {
+    for (let q = 0; q < TRIVIA_ROUNDS; q++) {
       await until(`trivia question ${q + 1}`, (v) => v.game.phase === "question" && v.game.index === q);
       await act(room.seat, { type: "lock", q, choice: 0 });
       await act(mayaGame.seat, { type: "next", q });

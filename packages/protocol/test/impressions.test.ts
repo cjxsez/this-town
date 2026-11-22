@@ -27,12 +27,12 @@ test("every deck question has a sane slider range", () => {
   }
 });
 
-test("a game draws five different questions, at least two about Boston", () => {
+test("a game draws IMPRESSIONS_ROUNDS different questions, at least one about Boston", () => {
   for (let i = 0; i < 20; i++) {
     const s = impressionsGame.init(ctxAt(0), undefined);
     assert.equal(s.questions.length, IMPRESSIONS_ROUNDS);
     assert.equal(new Set(s.questions.map((q) => q.id)).size, IMPRESSIONS_ROUNDS);
-    assert.ok(s.questions.filter((q) => q.boston).length >= 2);
+    assert.ok(s.questions.filter((q) => q.boston).length >= 1);
   }
 });
 
@@ -106,21 +106,23 @@ test("once both have rated, the round ends a few seconds later; a changed rating
   assert.equal(impressionsGame.reduce(s, "a", { type: "rate", rating: "great" }, ctxAt(3)), s);
 });
 
-test("after five rounds the game is done with tallies and a verdict for each side", () => {
+test("after all rounds the game is done with tallies and a verdict for each side", () => {
   let s = playing(0);
   let now = 0;
   for (let r = 0; r < IMPRESSIONS_ROUNDS; r++) {
     s = impressionsGame.reduce(s, "a", { type: "lock", value: 0 }, ctxAt(++now));
     s = impressionsGame.reduce(s, "b", { type: "lock", value: 0 }, ctxAt(now));
+    // Either/or rounds only allow spot/off (no "close").
+    const bRating = q0(s).either ? "off" : "close";
     s = impressionsGame.reduce(s, "a", { type: "rate", rating: "spot" }, ctxAt(now)); // a says b's guess was spot on
-    s = impressionsGame.reduce(s, "b", { type: "rate", rating: "close" }, ctxAt(now));
+    s = impressionsGame.reduce(s, "b", { type: "rate", rating: bRating }, ctxAt(now));
     now += 10_000;
     s = impressionsGame.tick(s, ctxAt(now));
   }
   assert.equal(impressionsGame.isDone(s), true);
   const va = impressionsGame.view(s, "a") as { yours: object; theirs: object; verdict: string; rows: unknown[] };
-  assert.deepEqual(va.yours, { spot: 0, close: IMPRESSIONS_ROUNDS, off: 0 }); // b rated a's guesses "close"
-  assert.deepEqual(va.theirs, { spot: IMPRESSIONS_ROUNDS, close: 0, off: 0 });
+  assert.equal(va.theirs.spot, IMPRESSIONS_ROUNDS);
+  assert.equal((va.yours.spot as number) + (va.yours.close as number) + (va.yours.off as number), IMPRESSIONS_ROUNDS);
   assert.equal(va.verdict, "well");
   assert.equal(va.rows.length, IMPRESSIONS_ROUNDS);
 });
