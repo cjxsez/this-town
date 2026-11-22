@@ -12,8 +12,7 @@
  *   select on "I'm here" (default focus) -> onArrived -> App sends rider.arrived
  *   select on "Not now", or back         -> onNotNow  -> App sends rider.notNow
  *   arrows move focus between the two buttons
- * Buttons are not real <button>s with DOM focus, so a select pinch never double-fires
- * (native click + our keydown handler).
+ * After I'm here: show "You're here. Waiting for <partner>" and hide the I'm here button.
  *
  * carDelta is relative to the rider's current car toward meetAtCar (worker matching).
  * Direction copy lives in lib/whereToGo.ts. Long why lines clamp to two lines (.match-why).
@@ -21,6 +20,7 @@
 import { useState } from "react";
 import { ColorSwatch } from "../components/ColorSwatch";
 import { useInput } from "../lib/input";
+import { matchArrivedStatus } from "../lib/matchCopy";
 import type { MatchFound } from "../lib/socket";
 import { whereToGo } from "../lib/whereToGo";
 
@@ -42,15 +42,15 @@ export function MatchCard({ match, currentCar, arrived, onArrived, onNotNow }: M
     switch (action) {
       case "left":
       case "up":
-        setFocus("here");
+        if (!arrived) setFocus("here");
         return;
       case "right":
       case "down":
         setFocus("notNow");
         return;
       case "select":
-        if (focus === "notNow") onNotNow();
-        else if (!arrived) onArrived();
+        if (focus === "notNow" || arrived) onNotNow();
+        else onArrived();
         return;
       case "back":
         onNotNow();
@@ -66,12 +66,20 @@ export function MatchCard({ match, currentCar, arrived, onArrived, onNotNow }: M
       </div>
       <div className="hud-body hud-strong">{whereToGo(match, currentCar)}</div>
       <div className="hud-body match-why">{match.why}</div>
-      <div className="hud-hint">Tap the kiosk tag when you get there</div>
-      <div className="hud-row">
-        <div className={`hud-btn ${focus === "here" ? "is-focused" : ""}`} role="button" aria-pressed={arrived}>
-          {arrived ? `Waiting for ${match.partner.firstName}…` : "I'm here"}
+      {arrived ? (
+        <div className="hud-warn" role="status" aria-live="polite">
+          {matchArrivedStatus(match.partner.firstName)}
         </div>
-        <div className={`hud-btn ${focus === "notNow" ? "is-focused" : ""}`} role="button">
+      ) : (
+        <div className="hud-hint">Tap the kiosk tag when you get there</div>
+      )}
+      <div className="hud-row">
+        {!arrived && (
+          <div className={`hud-btn ${focus === "here" ? "is-focused" : ""}`} role="button">
+            I'm here
+          </div>
+        )}
+        <div className={`hud-btn ${focus === "notNow" || arrived ? "is-focused" : ""}`} role="button">
           Not now
         </div>
       </div>
