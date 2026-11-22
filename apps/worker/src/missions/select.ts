@@ -11,11 +11,6 @@
  * - Rarity: rare templates (outside late-bonus) are picked with weight * RARE_WEIGHT_FACTOR.
  *
  * Protocol types: MissionCategory (via MissionTemplate), Mission.rare.
- *
- * TODO:
- * - selectMission(): filter (fits, unlocked, not repeated), prefer late-bonus when unlocked,
- *   then weighted random pick with input.random ?? Math.random.
- * - If anti-repeat empties the eligible set, relax the per-user rule (keep the per-pair rule).
  */
 import { DECK, type MissionTemplate } from "./deck";
 
@@ -58,15 +53,16 @@ function weightedPick(items: readonly MissionTemplate[], random: () => number): 
 
 /**
  * When the late-train bonus is unlocked, a fitting late-bonus mission wins. Otherwise pick
- * from the regular categories. Repeats are avoided, but if every fitting template is a
- * repeat we allow one rather than leave the pair with nothing.
+ * from the regular categories. Templates either rider did recently are avoided, but if that
+ * leaves nothing, one of those is allowed. A template this pair already did is never given
+ * again (architecture.md "Missions"): with nothing left the pair waits for the next segment.
  */
 export function selectMission(input: SelectInput): MissionTemplate | null {
   const deck = input.deck ?? DECK;
   const random = input.random ?? Math.random;
-  const fitting = deck.filter((t) => fitsBefore(t, input.availableSec));
+  const fitting = deck.filter((t) => fitsBefore(t, input.availableSec) && !input.pairHistory.includes(t.id));
   const fresh = (ts: MissionTemplate[]) => ts.filter((t) => !isRepeat(t, input));
-  const pick = (ts: MissionTemplate[]) => weightedPick(fresh(ts).length > 0 ? fresh(ts) : ts, random);
+  const pick = (ts: MissionTemplate[]) => (ts.length === 0 ? null : weightedPick(fresh(ts).length > 0 ? fresh(ts) : ts, random));
 
   if (input.lateBonusUnlocked) {
     const bonus = fitting.filter((t) => t.category === "late-bonus");

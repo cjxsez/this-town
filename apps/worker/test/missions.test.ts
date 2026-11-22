@@ -95,8 +95,18 @@ test("fresh templates are preferred over repeats", () => {
   assert.equal(selectMission({ ...base, deck, pairHistory: ["done"] })?.id, "new");
 });
 
-test("if every fitting template is a repeat, one is still given rather than nothing", () => {
-  assert.equal(selectMission({ ...base, deck: [tpl("done")], pairHistory: ["done"] })?.id, "done");
+test("if every fitting template is one a rider did recently, one of those is still given", () => {
+  assert.equal(selectMission({ ...base, deck: [tpl("done")], userHistories: [["done"], []] })?.id, "done");
+});
+
+test("a pair never gets a template twice, even when nothing else fits", () => {
+  assert.equal(selectMission({ ...base, deck: [tpl("done")], pairHistory: ["done"] }), null);
+  assert.equal(selectMission({ ...base, deck: [tpl("done"), tpl("rider-did")], pairHistory: ["done"], userHistories: [["rider-did"], []] })?.id, "rider-did");
+});
+
+test("the late-train bonus also never repeats for a pair", () => {
+  const deck = [tpl("bonus", { category: "late-bonus" }), tpl("reg")];
+  assert.equal(selectMission({ ...base, deck, lateBonusUnlocked: true, pairHistory: ["bonus"] })?.id, "reg");
 });
 
 test("an unlocked late-train bonus wins over regular missions", () => {
