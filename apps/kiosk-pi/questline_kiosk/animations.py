@@ -155,6 +155,12 @@ async def rainbow(strip: LedStrip, duration_s: float | None = None, speed: int =
         elapsed += FRAME_S
 
 
+async def flash(strip: LedStrip, rgb: RGB = WHITE, duration_s: float = 0.2) -> None:
+    """Short solid flash, then return (caller resumes the previous animation)."""
+    await solid(strip, rgb)
+    await asyncio.sleep(duration_s)
+
+
 async def celebrate(strip: LedStrip, rgb: RGB, rare: bool, duration_s: float = 4.0) -> None:
     """burst, then rainbow for the rest of duration_s if rare, then hold the pair color."""
     burst_s = min(2.0, duration_s)
