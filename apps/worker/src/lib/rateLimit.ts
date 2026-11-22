@@ -28,6 +28,10 @@ export const LIMITS = {
   createUserIp: { limit: 20, windowMs: 10 * MINUTE },
   /** 4-digit glasses codes issued to one IP. */
   glassesCodeIp: { limit: 30, windowMs: 10 * MINUTE },
+  /** Two-player game rooms opened from one IP (`POST /game/rooms`). */
+  gameCreateIp: { limit: 30, windowMs: 10 * MINUTE },
+  /** Join / move-to-glasses attempts from one IP (`POST /game/rooms/:code/join|lens`). */
+  gameJoinIp: { limit: 60, windowMs: 10 * MINUTE },
 } as const;
 
 export type LimitName = keyof typeof LIMITS;

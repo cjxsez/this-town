@@ -3,14 +3,19 @@
  * The client side is roomApi in @questline/protocol/games (client.ts lists the calls).
  *
  * A room is a GameRoom Durable Object named by its 4-digit code. No auth: the code is the
- * only key, and a client names its own seat.
+ * only key, and a client names its own seat. Create / join / lens are rate-limited per IP
+ * (lib/rateLimit.ts); GET view and POST act are not. Act bodies over ACT_MAX_BYTES get 413.
  */
 import { Hono } from "hono";
 import { ROOM_CODE, type Seat } from "@questline/protocol/games";
 import type { AppEnv, Env } from "../env";
+import { limitByIp } from "../lib/rateLimit";
 import { openFreeRoom } from "../rooms/GameRoom";
 
 export const gameRoutes = new Hono<AppEnv>();
+
+/** Reject oversized act payloads (questions / guesses) before parsing JSON. */
+export const ACT_MAX_BYTES = 4 * 1024;
 
 function room(env: Env, code: string) {
   return env.GAME_ROOM.get(env.GAME_ROOM.idFromName(`room:${code}`));
@@ -25,7 +30,7 @@ function json(body: string | null): Response {
   return new Response(body, { headers: { "content-type": "application/json", "cache-control": "no-store" } });
 }
 
-gameRoutes.post("/game/rooms", async (c) => {
+gameRoutes.post("/game/rooms", limitByIp("gameCreateIp"), async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { code?: unknown };
   if (typeof body.code === "string") {
     if (!ROOM_CODE.test(body.code)) return c.json({ error: "bad code" }, 400);
@@ -36,7 +41,7 @@ gameRoutes.post("/game/rooms", async (c) => {
   return code ? c.json({ code }) : c.json({ error: "no free room code" }, 503);
 });
 
-gameRoutes.post("/game/rooms/:code/join", async (c) => {
+gameRoutes.post("/game/rooms/:code/join", limitByIp("gameJoinIp"), async (c) => {
   const code = c.req.param("code");
   if (!ROOM_CODE.test(code) || !(await room(c.env, code).joinable())) return c.json({ error: "no such room" }, 404);
   return c.json({ ok: true });
@@ -51,7 +56,16 @@ gameRoutes.get("/game/rooms/:code", async (c) => {
 
 gameRoutes.post("/game/rooms/:code/act", async (c) => {
   const code = c.req.param("code");
-  const body = (await c.req.json().catch(() => null)) as { seat?: unknown; action?: unknown } | null;
+  const raw = await c.req.text();
+  if (raw.length > ACT_MAX_BYTES) {
+    return c.json({ error: "Request body too large.", code: "payload-too-large" }, 413);
+  }
+  let body: { seat?: unknown; action?: unknown } | null = null;
+  try {
+    body = raw ? (JSON.parse(raw) as { seat?: unknown; action?: unknown }) : null;
+  } catch {
+    body = null;
+  }
   const seat = seatOf(body?.seat);
   if (!ROOM_CODE.test(code) || !seat) return c.json({ error: "bad code or seat" }, 400);
   return json(await room(c.env, code).act(seat, body?.action));
@@ -62,7 +76,7 @@ gameRoutes.post("/game/rooms/:code/act", async (c) => {
  * show at /g/), or back (`to: null`). Only where the game is drawn changes; the game stays
  * in this room.
  */
-gameRoutes.post("/game/rooms/:code/lens", async (c) => {
+gameRoutes.post("/game/rooms/:code/lens", limitByIp("gameJoinIp"), async (c) => {
   const code = c.req.param("code");
   const body = (await c.req.json().catch(() => null)) as { seat?: unknown; to?: unknown } | null;
   const seat = seatOf(body?.seat);
