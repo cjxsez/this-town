@@ -23,9 +23,8 @@
  *
  * Protocol types: CarId (kiosk path param). Socket payloads are handled in TrainRoom.
  *
- * TODO:
- * - CORS for local dev if phone-web's Vite server does not proxy /api and /ws to :8787.
- * - Structured error logging in onError.
+ * No CORS: every client is served from this origin, and the Vite dev servers proxy /api and
+ * /ws to :8787.
  */
 import { Hono } from "hono";
 import { z } from "zod";
@@ -121,9 +120,22 @@ async function serveSpa(env: Env, req: Request): Promise<Response> {
 
 app.get("*", (c) => serveSpa(c.env, c.req.raw));
 
+// Unexpected errors: the details go to the Worker's logs (wrangler tail), never to the
+// client, which only gets a request id to quote.
 app.onError((err, c) => {
-  console.error(err);
-  return c.json({ error: err.message }, 500);
+  const requestId = crypto.randomUUID();
+  console.error(
+    JSON.stringify({
+      level: "error",
+      requestId,
+      method: c.req.method,
+      path: new URL(c.req.url).pathname,
+      error: err.name,
+      message: err.message,
+      stack: err.stack,
+    }),
+  );
+  return c.json({ error: "Something went wrong on our side. Try again.", code: "internal", requestId }, 500);
 });
 
 export default app;
