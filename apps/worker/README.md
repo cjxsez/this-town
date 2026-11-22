@@ -28,7 +28,7 @@ The happy path works on the demo trip and is covered by `pnpm smoke` (see "Run l
 - "Not now" (socket or `POST /api/ride/not-now`), report, check-out at the destination stop
 - demo controls: `POST /api/demo/delay | advance | reset` (header `x-kiosk-key`)
 
-Live MBTA (when `DEMO_MODE=false`): `resolveLiveCarTrip` polls Orange/Red `/vehicles` (10 s cache, `carriages` labels → trip) and `fetchTripTimeline` builds stops/ETAs from predictions + schedule; empty polls end the trip (`WS_CLOSE.tripChanged` for kiosks). Demo cars in `DEMO_CAR_TRIPS` still win when `DEMO_MODE=true`.
+Live MBTA (when `DEMO_MODE=false`): `resolveLiveCarTrip` polls Orange/Red `/vehicles` (10 s cache, `carriages` labels → trip) and `fetchTripTimeline` builds stops/ETAs from predictions + schedule; empty polls end the trip (`WS_CLOSE.tripChanged` for kiosks). On 429 the client honors `Retry-After`; on 5xx or network errors the room keeps the last timeline (does not count toward empty polls) and backs off the next poll from 20 s doubling to 2 min. Demo cars in `DEMO_CAR_TRIPS` still win when `DEMO_MODE=true`.
 
 Not done yet:
 

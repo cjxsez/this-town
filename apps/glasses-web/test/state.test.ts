@@ -79,7 +79,7 @@ test("ride.snapshot with match and mission restores the right screen after a rel
   assert.equal(withMission.screen.partner?.firstName, "Maya");
 });
 
-test("stamp.progress shows 1 of 2 (tapped: 1)", () => {
+test("stamp.progress shows 1 of 2 then both tapped", () => {
   let s: GlassesState = onGlassesEvent(initGlassesState("tok"), {
     type: "match.found",
     ...matchInfo(),
@@ -89,6 +89,9 @@ test("stamp.progress shows 1 of 2 (tapped: 1)", () => {
   assert.equal(s.screen.name, "mission");
   if (s.screen.name !== "mission") throw new Error("expected mission");
   assert.equal(s.screen.tapped, 1);
+  s = onGlassesEvent(s, { type: "stamp.progress", sessionId: "ses1", tapped: 2 }, AT);
+  if (s.screen.name !== "mission") throw new Error("expected mission");
+  assert.equal(s.screen.tapped, 2);
 });
 
 test("mission.end stamped falls back to idle if no stamp.awarded (stampTimeout)", () => {

@@ -61,7 +61,9 @@
  *
  * Live trips (DEMO_MODE off): the alarm polls mbta/predictions.ts every ~20 s while anyone
  * is checked in. Two empty polls in a row end the trip and close kiosk sockets with
- * WS_CLOSE.tripChanged so they reconnect into the new trip's room.
+ * WS_CLOSE.tripChanged so they reconnect into the new trip's room. 429 / 5xx / network
+ * errors keep the last timeline (not counted as empty) and back off 20 s → 2 min
+ * (Retry-After honored on 429); see mbta/client.ts.
  */
 import { DurableObject } from "cloudflare:workers";
 import {
