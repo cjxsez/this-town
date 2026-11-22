@@ -100,6 +100,7 @@ Every screen follows the start screen:
 | Passport, People | `GET /api/passport`, `GET /api/matches/recent` |
 | Report / block | `POST /api/report` with the match id |
 | Unblock | `POST /api/unblock` with the match id |
+| Keep your stamps (Me, guests) | `POST /api/auth/email/start`, then `POST /api/me/email` with the code |
 | Sign out (Me) | `POST /api/ride/end` if riding, then the token is dropped on this device |
 | Delete my data | `DELETE /api/me` |
 
