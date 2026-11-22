@@ -119,7 +119,7 @@ Cloudflare Workers Builds then deploys `main` by itself, so `main` is always the
 
 # Tracks & tools
 
-## 🚇 Transit Gamification
+## Transit Gamification
 
 The track asks: *"How can we transform the common T ride from something that is dreaded to something people can look forward to?"* Here's how each part of our answer maps to the brief:
 
@@ -143,7 +143,7 @@ Rare stamps, line progress bars and pair colors give it texture. A 90-second res
 
 **What the demo shows:** two riders tap kiosks in cars 1412 and 1413. They're matched in seconds, the 1413 kiosk lights up orange, and they play all three games on their phones (or one on the glasses). Finish stamps both of them, and the kiosk celebrates.
 
-## 🖱️ Built with Cursor
+## Built with Cursor
 
 Cursor was a core teammate on this project. **109 of the 250+ commits on `main` are by Cursor's agent.** That's over 40% of the repo's history, landed in one overnight push of about 3 h 20 min: 220 file changes, +5,644 / −973 lines.
 
@@ -196,7 +196,7 @@ Cursor was a core teammate on this project. **109 of the 250+ commits on `main` 
 - **Atomic commits make an agent's work reviewable.** We could read 109 commit messages like a changelog.
 - **Tests are how you trust an agent.** The smoke ride caught every regression before it reached the live site.
 
-## 🌐 GoDaddy Registry: husshusshuss.boston
+## GoDaddy Registry: husshusshuss.boston
 
 We registered **husshusshuss.boston** during the hackathon (Nov 21, 7:34 PM EST). GoDaddy Registry runs the `.boston` domain ending, and it's the only home the project has:
 
@@ -205,7 +205,7 @@ We registered **husshusshuss.boston** during the hackathon (Nov 21, 7:34 PM EST)
 - **Sign-in codes** are emailed from the same domain, using Cloudflare Email Sending with SPF and DKIM.
 - A `.boston` address on a sticker in a Green Line car tells riders exactly where they are before they tap.
 
-## 🧠 Claude (Anthropic)
+## Claude (Anthropic)
 
 Claude has exactly two jobs, and never writes a fact:
 
