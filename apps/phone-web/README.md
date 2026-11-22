@@ -1,6 +1,6 @@
 # @questline/phone-web
 
-The rider's phone app. Mobile web (React 19 + Vite 8 + TypeScript, react-router 8), served by the worker at `/`.
+The rider's phone app for **In This Town** (the product was called Questline; code identifiers still are). Mobile web (React 19 + Vite 8 + TypeScript, react-router 8), served by the worker at `/`.
 
 The screens follow the product in `docs/architecture.md` and are listed one by one in `docs/phone-flow.md`: onboarding (B1 to B7), the kiosk tap with the Ride Mode confirmation (`/k/:car`), the ride (C1 to H1), passport, people, me, glasses, and the printable kiosk sign. They talk to the backend through one seam, `src/api/types.ts` (`QuestlineApi` + `RideChannel`), which has two implementations:
 
@@ -43,11 +43,21 @@ Other scripts (here, or `pnpm --filter @questline/phone-web <script>`):
 
 This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: it is on TypeScript 7 and Vite 8, and the screens were not written for `noUncheckedIndexedAccess`.
 
+## Look
+
+Every screen follows the start screen:
+
+- **Headings are block letters** (Bungee): `.q-title` and its sizes. Short section names use `<TileTitle>`, one letter per paper tile; the name itself is `<Wordmark>`, tiles with the T of TOWN as a green roundel. Handwriting (Gaegu) is for sentences.
+- **Nothing is tilted.** Buttons, chips, cards and tickets sit level.
+- **Train scenes are live 3D.** Riding (C2) and Ride Mode off (C4/C5) show `<PlatformScene3D>`: your rider on the platform and the trolley coming round the bend and pulling in. Without WebGL the flat scenes show instead.
+- **Artwork is rendered, not hand-drawn in CSS.** The files in `public/art/` come from the start screen's renderer (`pnpm art`, see `packages/start-screen/README.md`). `<ArtSlot id>` shows `public/art/<id>.webp`; `fit="contain"` is for cut-out art, the default `cover` for photos.
+
 ## Routes
 
 | Path | Screen |
 |---|---|
-| `/` | Landing (B1), or Ride Mode once a profile exists |
+| `/` | The 3D start screen once per visit (`packages/start-screen`), then Landing (B1), or Ride Mode once a profile exists |
+| `/start` | The start screen, every time (for demos). BEGIN goes to `/` |
 | `/join/name`, `/join/interests`, `/join/about`, `/join/battery`, `/join/ride-mode`, `/join/glasses` | Onboarding B2 to B7 |
 | `/k/:car?n=<nonce>` | Kiosk tag landing: pick your stop, confirm Ride Mode, or a car move / stamp tap |
 | `/ride` | Ride Mode. One URL; the screen follows the ride phase |

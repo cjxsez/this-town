@@ -4,7 +4,7 @@ import { INTERESTS } from "../../../shared/catalog";
 import type { SocialBattery, TimeOfDay } from "../../../shared/types";
 import { sim } from "../../api";
 import { useApp } from "../../state/store";
-import { Button, ButtonRow, Card, Chip, Hint, PairToken, Screen, Segmented, TextField, Toggle } from "../../ui";
+import { Button, ButtonRow, Card, Chip, Hint, PairToken, Screen, Segmented, TextField, Toggle, TileTitle } from "../../ui";
 
 const BATTERY: { value: SocialBattery; label: string }[] = [
   { value: "nod", label: "Nod" },
@@ -78,13 +78,11 @@ export default function Me() {
 
   return (
     <Screen label="I1" tabs blobs="b">
-      <h1 className="q-display" style={{ fontSize: 24, lineHeight: 1.02 }}>
-        SAFETY &amp; PRIVACY
-      </h1>
+      <TileTitle text="SAFETY & PRIVACY" />
 
-      <Card style={{ rotate: "-0.7deg", borderRadius: "var(--r2)" }}>
+      <Card style={{ borderRadius: "var(--r2)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ font: "700 34px/1.08 var(--font-hand)" }}>Ghost mode</div>
+          <div className="q-title--md">Ghost mode</div>
           <Toggle large checked={settings.ghost} onChange={(ghost) => actions.setSettings({ ghost })} label="Ghost mode" />
         </div>
         <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }}>Ride Mode stays on, but nobody is matched with you. Turn it off when you're up for it again.</div>
@@ -99,7 +97,7 @@ export default function Me() {
               <div key={p.id} style={subRow}>
                 <PairToken color={p.color} name={p.firstName} size={36} />
                 <span style={{ flex: 1 }}>{p.firstName}</span>
-                <Button variant="secondary" tilt={0} style={smallBtn} onClick={() => actions.unblock(p.id)} aria-label={`Unblock ${p.firstName}`}>
+                <Button variant="secondary" style={smallBtn} onClick={() => actions.unblock(p.id)} aria-label={`Unblock ${p.firstName}`}>
                   Unblock
                 </Button>
               </div>
@@ -149,15 +147,15 @@ export default function Me() {
           </Button>
         </ButtonRow>
       ) : (
-        <Card style={{ rotate: "0.4deg" }}>
+        <Card>
           <div role="alert" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ font: "700 27px/1.08 var(--font-hand)" }}>Delete everything?</div>
+            <div className="q-title--sm">Delete everything?</div>
             <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }}>
               Ride Mode turns off, every device is signed out, and your profile, stamps and people go, here and on our server. This can't be undone.
             </div>
           </div>
           <ButtonRow>
-            <Button variant="secondary" tilt={-0.4} onClick={() => setConfirmDelete(false)} disabled={deleting}>
+            <Button variant="secondary" onClick={() => setConfirmDelete(false)} disabled={deleting}>
               Keep it
             </Button>
             <Button variant="danger" onClick={del} disabled={deleting}>
@@ -167,7 +165,7 @@ export default function Me() {
         </Card>
       )}
 
-      <Card style={{ rotate: "0.3deg", borderRadius: "var(--r3)" }}>
+      <Card style={{ borderRadius: "var(--r3)" }}>
         <div className="q-eyebrow">LOOK &amp; FEEL</div>
         <div style={{ font: "700 20px var(--font-hand)" }}>Time of day</div>
         <Segmented label="Time of day" options={TIMES} value={settings.timeOfDay} onChange={(timeOfDay) => actions.setSettings({ timeOfDay })} />
@@ -210,14 +208,14 @@ function ProfileEditor({ onDone }: { onDone: () => void }) {
       <TextField label="First name" value={firstName} onChange={setFirstName} maxLength={20} placeholder="First name" autoComplete="given-name" />
       <Segmented label="Social battery" options={BATTERY} value={battery} onChange={setBattery} />
       <div className="q-chips" role="group" aria-label="Interests">
-        {shown.map((i, n) => (
-          <Chip key={i.id} index={n} selected={interests.includes(i.id)} onToggle={() => flip(i.id)}>
+        {shown.map((i) => (
+          <Chip key={i.id} selected={interests.includes(i.id)} onToggle={() => flip(i.id)}>
             {i.label}
           </Chip>
         ))}
       </div>
       <ButtonRow>
-        <Button variant="secondary" tilt={-0.3} onClick={onDone}>
+        <Button variant="secondary" onClick={onDone}>
           Cancel
         </Button>
         <Button onClick={save} disabled={!name}>

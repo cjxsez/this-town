@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, Screen } from "../../ui";
+import { Card, Screen, TileTitle } from "../../ui";
 import { useApp } from "../../state/store";
 import { shortDate } from "../../state/format";
 import { LINES, LINE_STATION_COUNT, PASSPORT_LAYOUT, stationById } from "../../../shared/catalog";
@@ -9,7 +9,6 @@ import { TMap } from "./TMap";
 
 type Filter = LineColor | "all";
 const LINE_ORDER: LineColor[] = ["green", "red", "orange", "blue"];
-const TILTS = [-1.5, 1.8, -2.1, 1.5, -1.2, 2];
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -35,7 +34,7 @@ export default function Passport() {
   return (
     <Screen tabs label="H2">
       <div className="cl-head">
-        <h1 className="cl-h1">PASSPORT</h1>
+        <TileTitle text="PASSPORT" />
         <div className="cl-sub">
           {stamps.length === 0 ? "no stamps yet" : `${plural(stamps.length, "stamp")}${rare ? ` · ${rare} rare` : ""}`}
         </div>
@@ -76,7 +75,6 @@ export default function Passport() {
 function LineCard({ line, byStation, footnote }: { line: LineColor; byStation: Map<string, Stamp>; footnote: boolean }) {
   const onLine = [...byStation.values()].filter((s) => stationById(s.stationId)?.lines.includes(line));
   const rare = onLine.filter((s) => s.rare).length;
-  let n = 0; // running ticket index, so tilts don't repeat per group
 
   return (
     <Card className="cl-line">
@@ -93,7 +91,6 @@ function LineCard({ line, byStation, footnote }: { line: LineColor; byStation: M
                 const st = stationById(id);
                 if (!st) return null;
                 const stamp = byStation.get(id);
-                const tilt = TILTS[n++ % TILTS.length];
                 return (
                   <div className="cl-stop" key={id}>
                     <div className="cl-stop__dot" data-on={!!stamp} />
@@ -104,7 +101,6 @@ function LineCard({ line, byStation, footnote }: { line: LineColor; byStation: M
                         to={`/passport/${stamp.id}`}
                         rare={stamp.rare}
                         isNew={shortDate(stamp.earnedAt) === "today"}
-                        tilt={tilt}
                       />
                     ) : (
                       <EmptyTicket station={st} />

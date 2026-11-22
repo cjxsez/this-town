@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Body, Button, Card, PairToken, Screen } from "../../ui";
+import { Body, Button, Card, PairToken, Screen, TileTitle } from "../../ui";
 import { useApp } from "../../state/store";
 import { shortDate } from "../../state/format";
 import { stationById } from "../../../shared/catalog";
@@ -11,9 +11,7 @@ export default function People() {
 
   return (
     <Screen tabs blobs="c" label="H4">
-      <h1 className="cl-h1" style={{ fontSize: 24 }}>
-        PEOPLE YOU'VE MET
-      </h1>
+      <TileTitle text="PEOPLE" />
 
       {people.length === 0 ? (
         <Card>

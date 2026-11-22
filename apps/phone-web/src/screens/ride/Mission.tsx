@@ -156,11 +156,11 @@ export default function Mission() {
         <MissionRenameArt station={station} note={ride.note ?? ""} onNote={act.setNote} />
       )}
 
-      <Card style={{ rotate: "-0.5deg", gap: 6, borderRadius: "var(--r2)" }}>
+      <Card style={{ gap: 6, borderRadius: "var(--r2)" }}>
         <Eyebrow>
           {MISSION_GROUP_LABEL[mission.group].split(" · ")[0]} · {mission.rarity}
         </Eyebrow>
-        <h1 style={{ font: "700 38px/1.03 var(--font-hand)", textWrap: "balance" }}>
+        <h1 className="q-title">
           {missionText(mission.title, { station, name: match?.firstName, color: match?.color })}
         </h1>
         <p style={{ fontSize: 21, lineHeight: 1.2, textWrap: "pretty" }}>{mission.body}</p>

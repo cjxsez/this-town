@@ -59,7 +59,7 @@ export default function Person() {
       </div>
 
       {confirming ? (
-        <Card style={{ rotate: "-0.4deg" }}>
+        <Card>
           <div role="alertdialog" aria-labelledby="cl-block-q" aria-describedby="cl-block-d" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div id="cl-block-q" style={{ font: "700 25px/1.08 var(--font-hand)" }}>
               Block {p.firstName}?
@@ -70,10 +70,10 @@ export default function Person() {
               </span>
             </Hint>
             <ButtonRow>
-              <Button variant="secondary" tilt={-0.5} onClick={() => setConfirming(false)} autoFocus>
+              <Button variant="secondary" onClick={() => setConfirming(false)} autoFocus>
                 Cancel
               </Button>
-              <Button variant="danger" tilt={0.5} onClick={block}>
+              <Button variant="danger" onClick={block}>
                 Block
               </Button>
             </ButtonRow>
@@ -81,10 +81,10 @@ export default function Person() {
         </Card>
       ) : (
         <ButtonRow>
-          <Button variant="secondary" tilt={-0.7} to={`/people/${p.id}/report`}>
+          <Button variant="secondary" to={`/people/${p.id}/report`}>
             Report
           </Button>
-          <Button variant="danger" tilt={0.5} onClick={() => setConfirming(true)}>
+          <Button variant="danger" onClick={() => setConfirming(true)}>
             Block
           </Button>
         </ButtonRow>

@@ -3,9 +3,8 @@ import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
 import type { PairColor } from "../../shared/types";
 
 /**
- * Placeholder for illustration the art team hasn't delivered yet (the hi-fi
- * file's <image-slot>). Drop a file at public/art/<id>.webp (or .png) and it
- * replaces the dashed box everywhere, no code change needed.
+ * A picture from public/art/<id>.webp (or .png). The files there are rendered by
+ * the start screen's renderer (`pnpm art`); a slot with no file shows a dashed box.
  */
 export function ArtSlot({
   id,
@@ -13,18 +12,21 @@ export function ArtSlot({
   style,
   round,
   radius = 6,
+  fit = "cover",
 }: {
   id: string;
   placeholder: string;
   style?: CSSProperties;
   round?: boolean;
   radius?: number;
+  /** "cover" fills the box (photos). "contain" shows the whole picture (cut-out art). */
+  fit?: "cover" | "contain";
 }) {
   const [src, setSrc] = useState<string | null>(`/art/${id}.webp`);
   const shape: CSSProperties = { borderRadius: round ? "50%" : radius, ...style };
   if (src) {
     return (
-      <div className="q-art" style={shape}>
+      <div className={`q-art${fit === "contain" ? " q-art--contain" : ""}`} style={shape}>
         <img
           src={src}
           alt=""

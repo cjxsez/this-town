@@ -18,7 +18,7 @@ export default function RideModeRules() {
       blobs="a"
       footer={
         <ButtonRow>
-          <Button tilt={0.6} disabled={!agreed} onClick={() => navigate("/join/glasses")}>
+          <Button disabled={!agreed} onClick={() => navigate("/join/glasses")}>
             Next
           </Button>
         </ButtonRow>

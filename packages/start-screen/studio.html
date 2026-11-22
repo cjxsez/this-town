@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>In This Town art studio</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #62c1bc; color: #26343b; font: 13px/1.3 ui-monospace, Menlo, monospace; }
+      #wall { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+      figure { margin: 0; }
+      /* Half the wall on paper, to check the stills on both backgrounds. */
+      figure:nth-child(even) img { background: #f4f5ec; }
+      img { display: block; outline: 1px dashed rgba(38, 52, 59, 0.35); }
+    </style>
+  </head>
+  <body>
+    <div id="wall"></div>
+    <script type="module" src="/src/studio/studio.ts"></script>
+  </body>
+</html>

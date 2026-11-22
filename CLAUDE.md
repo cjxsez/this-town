@@ -1,6 +1,6 @@
-# Questline (repo: this-town)
+# In This Town (repo: this-town)
 
-Hackathon project. MBTA riders turn on Ride Mode and get matched with the closest rider on their train who shares their interests. Each train car has a kiosk (Pi + screen + LEDs + NFC tag). Meta Ray-Ban Display glasses show who your match is and where to go. The kiosk runs a short mission and hands out stamps.
+Hackathon project. Renamed from Questline (D16): players see "In This Town"; code identifiers (`@questline/*`, the `questline` database, `questline.page`) keep the old name. MBTA riders turn on Ride Mode and get matched with the closest rider on their train who shares their interests. Each train car has a kiosk (Pi + screen + LEDs + NFC tag). Meta Ray-Ban Display glasses show who your match is and where to go. The kiosk runs a short mission and hands out stamps.
 
 ## Read first
 
@@ -16,6 +16,7 @@ Hackathon project. MBTA riders turn on Ride Mode and get matched with the closes
 - `apps/kiosk-web`: kiosk screen (React + Vite, base `/kiosk/`)
 - `apps/kiosk-pi`: Python agent on the Raspberry Pi (LEDs, dynamic NFC tag)
 - `packages/protocol`: shared zod schemas and types
+- `packages/start-screen`: 3D start screen (three.js + Vite), shown by the phone app at `/` once per visit. Own preview page: `pnpm dev:start` (port 5180). Every number is in `src/config.ts`.
 - `scripts`: seed, ghost riders, asset build
 
 ## Rules
@@ -38,4 +39,5 @@ pnpm run deploy
 pnpm seed           # demo profiles
 pnpm ghosts         # fake riders on the demo train
 pnpm smoke          # end-to-end check of the happy path against a running worker
+pnpm art            # re-render the phone app's artwork (apps/phone-web/public/art) with the start screen's renderer
 ```
