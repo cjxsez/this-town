@@ -21,7 +21,8 @@
     "seed": "tsx scripts/seed.ts",
     "ghosts": "tsx scripts/ghost-riders.ts",
     "smoke": "tsx scripts/smoke.ts",
-    "art": "pnpm --filter @questline/start-screen art"
+    "art": "pnpm --filter @questline/start-screen art",
+    "diagrams": "node scripts/diagrams.mjs"
   },
   "devDependencies": {
     "@questline/protocol": "workspace:*",
