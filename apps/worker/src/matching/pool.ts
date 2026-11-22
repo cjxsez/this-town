@@ -12,12 +12,9 @@
  *
  * Protocol types: InterestTag.
  *
- * TODO:
- * - DEMO_MODE: the same two teammates rehearse the demo over and over, so the 7-day
- *   met-recently gate would block them after the first run. `ignoreMetRecently` is wired
- *   for that; TrainRoom passes config.demoMode.
- * - Decide whether a pair needs enough shared segments for a mission to fit (right now one
- *   remaining stop is enough, the mission selector then waits for a segment that fits).
+ * DEMO_MODE: TrainRoom passes `ignoreMetRecently: config.demoMode` so teammates can
+ * rehearse without the 7-day met gate. One remaining stop is enough to enter the pool;
+ * the mission selector waits for a segment that fits.
  */
 import type { InterestTag } from "@questline/protocol";
 import { pairKey } from "../lib/ids";
