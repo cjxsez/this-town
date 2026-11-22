@@ -8,11 +8,8 @@
  *     Falls back to localStorage when ?key= is absent.
  *
  * The key authenticates /ws/kiosk/:car?key=&role=screen (lib/socket.ts). It is the same
- * KIOSK_KEY the Pi agent uses (architecture.md "Identity").
- *
- * TODO:
- * - Strip ?key= from the URL with history.replaceState after saving it (no URL bar in
- *   kiosk mode, but keeps it out of screenshots of the dev browser).
+ * KIOSK_KEY the Pi agent uses (architecture.md "Identity"). After saving ?key= we strip it
+ * from the URL with history.replaceState so it does not linger in screenshots.
  */
 
 export interface KioskConfig {
@@ -52,10 +49,22 @@ export function parseCar(pathname: string, base: string = import.meta.env.BASE_U
   return CAR_RE.test(segment) ? segment : null;
 }
 
+export function stripKeyFromUrl(loc: Location = window.location): void {
+  const url = new URL(loc.href);
+  if (!url.searchParams.has("key")) return;
+  url.searchParams.delete("key");
+  const search = url.searchParams.toString();
+  const next = `${url.pathname}${search ? `?${search}` : ""}${url.hash}`;
+  history.replaceState(history.state, "", next);
+}
+
 export function readConfig(loc: Location = window.location): ConfigResult {
   const car = parseCar(loc.pathname);
   const fromQuery = new URLSearchParams(loc.search).get("key");
-  if (fromQuery) saveKey(fromQuery);
+  if (fromQuery) {
+    saveKey(fromQuery);
+    stripKeyFromUrl(loc);
+  }
   const key = fromQuery ?? loadKey();
 
   if (!car) return { ok: false, error: "No car in URL. Expected /kiosk/<car>", car: null };
