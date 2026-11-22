@@ -142,14 +142,17 @@ async def burst(strip: LedStrip, rgb: RGB, duration_s: float = 2.0) -> None:
 
 
 async def rainbow(strip: LedStrip, duration_s: float | None = None, speed: int = 3) -> None:
-    """Moving rainbow. Runs forever when duration_s is None.
-
-    TODO:
-    - offset += speed each frame
-    - pixel i = wheel((i * 256 // strip.count + offset) & 255)
-    - stop after duration_s if given
-    """
-    raise NotImplementedError
+    """Moving rainbow. Runs forever when duration_s is None."""
+    offset = 0
+    elapsed = 0.0
+    n = max(1, strip.count)
+    while duration_s is None or elapsed < duration_s:
+        for i in range(n):
+            strip.set_pixel(i, wheel((i * 256 // n + offset) & 255))
+        strip.show()
+        await asyncio.sleep(FRAME_S)
+        offset = (offset + speed) & 255
+        elapsed += FRAME_S
 
 
 async def celebrate(strip: LedStrip, rgb: RGB, rare: bool, duration_s: float = 4.0) -> None:
