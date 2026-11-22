@@ -13,7 +13,7 @@ Every screen of `apps/phone-web`, in order. Ids match `/screens/:id` in the dev 
 | B5 | `/join/battery` | Social battery: nod, chat, talk |
 | B6 | `/join/ride-mode` | Ride Mode rules. Required checkbox: "I'm 18+ and I get it: Ride Mode on means I can be matched." "Start riding" creates the rider and goes to Ride Mode (or back to a kiosk tap made before joining) |
 
-Glasses are not part of sign-up (D22). Riders with Meta Ray-Ban Display link them from Me > Glasses (J1) with the 4-digit code on the lens.
+Glasses are not part of sign-up (D24). Riders with Meta Ray-Ban Display link them from Me > Glasses (J1) with the 4-digit code on the lens.
 
 ## Turning Ride Mode on (every ride)
 

@@ -27,7 +27,8 @@ No native app. The phone and glasses are both web apps served by the same Worker
 ```
 https://<domain>/                 phone-web (SPA)
 https://<domain>/k/:car?n=<nonce> phone-web NFC landing (same SPA, client route)
-https://<domain>/g/               glasses-web (SPA)
+https://<domain>/g/               glasses-web (SPA): games at /g/, ride HUD at /g/?ride
+https://<domain>/m                phone-web: the phone seat of the two-player games
 https://<domain>/kiosk/:car       kiosk-web (SPA)
 https://<domain>/api/*            REST (Hono)
 wss://<domain>/ws/rider           rider socket (phone + glasses), auth via ?token=
@@ -98,6 +99,10 @@ Ride Mode on = consent. There is no accept step. The consent is explicit: onboar
 **One pair per kiosk.** A kiosk has one tag and one screen, so it hosts at most one pair at a time. If the natural meeting kiosk is busy, use the other rider's car, or wait.
 
 **carDelta** in `match.found` counts cars from your current car to `meetAtCar`: positive is toward the front of the train, negative toward the back.
+
+## Two-player games (`/g/` and `/m`)
+
+Separate from the ride flow for now. The glasses open a room and show a 4-digit code, a phone joins with it, and a `GameRoom` Durable Object (one per code) owns the game state. Game rules are pure modules in `packages/protocol/src/games` (`init`, `reduce`, `tick`, `view` per seat); both clients poll every 700 ms and only draw their seat's view, so the two screens cannot drift apart. Three games play in order: Tall tale, First impressions, Left for you. Left for you keeps a short list of questions that pairs leave for the next pair, in Durable Object storage (question, answers and a timestamp, nothing about who wrote it).
 
 ## Missions
 

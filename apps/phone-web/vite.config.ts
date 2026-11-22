@@ -15,22 +15,26 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+// Other ports for a second checkout: WORKER_PORT=8791 PORT=5184 pnpm dev
+const worker = `http://localhost:${process.env.WORKER_PORT ?? 8787}`;
+const port = Number(process.env.PORT ?? 5173);
+
 export default defineConfig({
   base: "/",
   plugins: [react()],
   server: {
-    port: 5173,
+    port,
     strictPort: true,
     host: true,
     // Quick Cloudflare tunnels for on-device testing over HTTPS.
     allowedHosts: [".trycloudflare.com"],
     proxy: {
-      "/api": { target: "http://localhost:8787", changeOrigin: true },
-      "/ws": { target: "http://localhost:8787", ws: true, changeOrigin: true },
+      "/api": { target: worker, changeOrigin: true },
+      "/ws": { target: worker, ws: true, changeOrigin: true },
     },
   },
   preview: {
-    port: 5173,
+    port,
     strictPort: true,
   },
 });

@@ -23,9 +23,16 @@ img, svg { display: block; max-width: 100%; }
 :focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
 
 /* One phone-width column. On a desktop it sits centred like a device so the
-   demo still reads as a phone; on a phone it is simply the whole viewport. */
+   demo still reads as a phone; on a phone it is simply the whole viewport.
+   On phones the document is pinned and the shell is sized to the visible area
+   (--app-h, from visualViewport in lib/viewport.ts), so the iOS keyboard can't
+   make the page scroll and jump while typing. */
+@media (max-width: 599.98px) {
+  html, body { position: fixed; inset: 0; overflow: hidden; }
+  .app-shell { transform: translateY(var(--app-top, 0px)); }
+}
 .app-shell {
-  height: 100dvh;
+  height: var(--app-h, 100dvh);
   max-width: var(--app-max);
   margin: 0 auto;
   position: relative;

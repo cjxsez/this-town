@@ -1,0 +1,158 @@
+/*
+ * tale.css (glasses-web): "Tall tale" on the lens. Adds to guess.css (same tokens, scoped
+ * under .guess). Additive display rules hold: black background, outlines, small fills only.
+ */
+.tale-center {
+  text-align: center;
+}
+
+.guess .tale-big {
+  font-size: 50px;
+  line-height: 1.05;
+  text-align: center;
+  rotate: -1.5deg;
+}
+
+/* The secret card: teal for truth, orange for a made-up story. */
+.guess .tale-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.guess .tale-card.is-fake {
+  border-color: var(--orange);
+  box-shadow: 4px 6px 0 #8a4f1e;
+}
+
+.tale-card-title {
+  font: 400 44px/1.05 var(--font-display);
+  text-transform: uppercase;
+  color: var(--foam);
+}
+
+.is-fake .tale-card-title {
+  color: var(--orange);
+}
+
+.tale-spark {
+  font: 700 32px/1.1 var(--font-hand);
+  color: var(--paper);
+}
+
+.guess .tale-row {
+  justify-content: center;
+}
+
+/* The card again while you tell, smaller. */
+.tale-reminder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.tale-reminder-card {
+  font: 400 28px/1.1 var(--font-display);
+  text-transform: uppercase;
+  color: var(--foam);
+}
+
+.tale-reminder.is-fake .tale-reminder-card {
+  color: var(--orange);
+}
+
+.tale-reminder-spark {
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--stone);
+}
+
+.guess .tale-call {
+  min-height: 96px;
+  font-size: 30px;
+}
+
+/* Your locked-in call. */
+.tale-word {
+  font: 400 64px/1 var(--font-display);
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--foam);
+}
+
+.tale-word.is-fake {
+  color: var(--orange);
+}
+
+.hud.guess.tale-reveal {
+  padding: 36px 40px;
+  gap: 16px;
+}
+
+.tale-stories {
+  display: flex;
+  gap: 16px;
+}
+
+.tale-story {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 10px 14px;
+  border: 2px solid var(--sea);
+  border-radius: var(--r3);
+  box-shadow: 4px 6px 0 var(--line);
+  text-align: center;
+}
+
+.tale-story:nth-child(2) {
+  border-radius: var(--r2);
+  rotate: 0.6deg;
+}
+
+.tale-story-word {
+  font: 400 36px/1 var(--font-display);
+  text-transform: uppercase;
+  color: var(--foam);
+}
+
+.tale-story-word.is-fake {
+  color: var(--orange);
+}
+
+.tale-story-note {
+  font: 700 27px/1.05 var(--font-hand);
+  color: var(--paper);
+}
+
+.tale-story-note.is-point {
+  color: var(--yellow);
+}
+
+.tale-summary {
+  font: 700 30px/1.1 var(--font-hand);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.tale-score {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  font: 400 24px/1 var(--font-display);
+  text-transform: uppercase;
+  color: var(--foam);
+}
+
+.tale-score b {
+  font-weight: 400;
+  font-size: 34px;
+  color: var(--yellow);
+}

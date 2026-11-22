@@ -1,0 +1,101 @@
+/* "Tall tale" on the phone: the bits the kit does not have. */
+
+.tale-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The secret card, face down (ink) until held, paper while held. Both cards look the same
+   face up, so the colour gives nothing away to a neighbour's glance. */
+.q-card.tale-peek {
+  width: 100%;
+  min-height: 150px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+  rotate: -0.6deg;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+.q-card.tale-peek.is-open {
+  background: var(--paper);
+  color: var(--ink);
+  translate: 0 2px;
+}
+
+.tale-peek-title {
+  font: 400 26px/1.05 var(--font-display);
+  text-transform: uppercase;
+}
+
+.tale-peek-spark {
+  font: 700 22px/1.1 var(--font-hand);
+}
+
+.q-card.tale-locked {
+  align-items: center;
+  rotate: -0.5deg;
+}
+
+.tale-word {
+  font: 400 40px/1 var(--font-display);
+  text-transform: uppercase;
+}
+
+.tale-story-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.tale-tag {
+  padding: 5px 10px 3px;
+  border: var(--ol) solid var(--ink);
+  border-radius: var(--r2);
+  background: var(--leaf);
+  font: 400 18px/1 var(--font-display);
+  text-transform: uppercase;
+}
+
+.tale-tag.is-fake {
+  background: var(--orange);
+}
+
+.tale-story-note {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font: 700 24px/1.1 var(--font-hand);
+}
+
+.tale-plus {
+  font: 400 20px/1 var(--font-display);
+  color: var(--green-dk);
+}
+
+.q-card.tale-score {
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: baseline;
+  font: 400 15px/1 var(--font-display);
+  text-transform: uppercase;
+  rotate: 0.4deg;
+}
+
+.tale-score b {
+  margin-left: 6px;
+  font-weight: 400;
+  font-size: 28px;
+  color: var(--yellow);
+}

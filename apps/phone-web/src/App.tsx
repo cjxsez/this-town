@@ -28,6 +28,7 @@ import Me from "./screens/me/Me";
 import Report from "./screens/me/Report";
 import Glasses from "./screens/me/Glasses";
 import LensGallery from "./screens/me/LensGallery";
+import MRoute from "./m/MRoute";
 
 /** Signed-in screens bounce to the landing page until a profile exists. */
 function RequireProfile({ children }: { children: ReactNode }) {
@@ -148,6 +149,15 @@ export default function App() {
         <Routes>
           {/* Print pages render at full page size, outside the phone shell. */}
           <Route path="/print/tag/:car" element={<Poster />} />
+          {/* The two-player games, phone side. No profile needed and no ride controls. */}
+          <Route
+            path="/m"
+            element={
+              <div className="app-shell">
+                <MRoute />
+              </div>
+            }
+          />
           <Route path="*" element={<Shell />} />
         </Routes>
       </BrowserRouter>
