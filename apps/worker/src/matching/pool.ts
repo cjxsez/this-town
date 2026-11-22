@@ -40,16 +40,18 @@ export function remainingSegments(rider: RoomRider, state: RoomState): number {
   return dest - state.currentStopIdx;
 }
 
-export function inPool(rider: RoomRider, state: RoomState, now: number): boolean {
+/** `ignoreStops` (GAMES_ONLY): where a rider gets off, and the next-segment wait, don't count. */
+export function inPool(rider: RoomRider, state: RoomState, now: number, ignoreStops = false): boolean {
   if (rider.ghost) return false;
   if (rider.pairId !== null) return false;
   if (rider.notNowUntil > now) return false;
+  if (ignoreStops) return true;
   if (state.nextStopIdx === null || state.nextStopIdx < rider.eligibleFromStopIdx) return false;
   return remainingSegments(rider, state) >= 1;
 }
 
-export function buildPool(state: RoomState, now: number): RoomRider[] {
-  return Object.values(state.riders).filter((r) => inPool(r, state, now));
+export function buildPool(state: RoomState, now: number, ignoreStops = false): RoomRider[] {
+  return Object.values(state.riders).filter((r) => inPool(r, state, now, ignoreStops));
 }
 
 export function sharedTags(a: RoomRider, b: RoomRider): InterestTag[] {

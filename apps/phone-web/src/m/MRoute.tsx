@@ -14,6 +14,7 @@ import "./m.css";
  *   /m              type the code
  *   /m?code=1234    join that room straight away
  *   /m?code=1234&seat=a   take that seat: the link two matched riders get on their match screen
+ *   /m?code=1234&seat=a&glasses   the same, opening on the "Play on glasses" code screen
  *   /m?host         open a room from this phone and show its code, for two phones
  *
  * "Play on glasses" moves this player's screen onto a pair of glasses mid-game: the glasses
@@ -159,6 +160,8 @@ export default function MRoute() {
     // A match link names the seat, and wins over a game left open in this tab.
     if (wanted && ROOM_CODE.test(wanted) && (seat === "a" || seat === "b")) {
       if (joined?.code !== wanted || joined.seat !== seat) enter({ code: wanted, seat });
+      // "Play it on my glasses" on the match screen: straight to the glasses code.
+      if (params.has("glasses")) setPicking(true);
       return;
     }
     if (joined) return;

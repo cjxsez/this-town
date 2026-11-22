@@ -75,4 +75,8 @@ MIN_SHARED_TAGS = "1"
 LATE_BONUS_MIN_DELAY_S = "180"
 NOT_NOW_COOLDOWN_S = "600"
 DEMO_MODE = "true"
+# A match leads to the three two-player games only: no kiosk mission starts, and riders'
+# stops no longer decide who can match or when a pair ends (decisions D26). "false" brings
+# missions back.
+GAMES_ONLY = "true"
 DEMO_CAR_TRIPS = '{"1412":"demo-trip-1","1413":"demo-trip-1"}'

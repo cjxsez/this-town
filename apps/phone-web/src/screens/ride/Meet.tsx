@@ -54,16 +54,21 @@ export default function Meet() {
           </Card>
         ) : (
           <>
-            {ride.arrived ? (
+            {match.game ? (
+              // The pair has a game room (GAMES_ONLY on the worker): the games are what happens next.
+              <>
+                <Button to={`/m?code=${match.game.code}&seat=${match.game.seat}`} style={{ minHeight: 60 }}>
+                  Play a game together
+                </Button>
+                <Button variant="secondary" to={`/m?code=${match.game.code}&seat=${match.game.seat}&glasses`}>
+                  Play on my glasses
+                </Button>
+              </>
+            ) : ride.arrived ? (
               <Hint style={{ textAlign: "center" }}>You're at the kiosk. The mission starts on its screen.</Hint>
             ) : (
               <Button onClick={act.arrived} style={{ minHeight: 60 }}>
                 I'm at the kiosk
-              </Button>
-            )}
-            {match.game && (
-              <Button variant="secondary" to={`/m?code=${match.game.code}&seat=${match.game.seat}`}>
-                Play a game together
               </Button>
             )}
             <TextLink onClick={() => setConfirmSkip(true)}>Not now</TextLink>
@@ -89,7 +94,11 @@ export default function Meet() {
           <span aria-hidden style={{ width: 28, height: 28, borderRadius: "50%", background: hex, border: "var(--ol) solid var(--ink)" }} />
           <span style={{ font: "700 21px/1.1 var(--font-hand)" }}>The kiosk is glowing {match.color}.</span>
         </div>
-        {!ride.arrived && <Hint>Tap its tag when you get there. That's how it knows you're both here.</Hint>}
+        {match.game ? (
+          <Hint>Find each other there, then start the game on your phones.</Hint>
+        ) : (
+          !ride.arrived && <Hint>Tap its tag when you get there. That's how it knows you're both here.</Hint>
+        )}
       </Card>
 
       {shared.length > 0 && (

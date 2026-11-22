@@ -150,9 +150,14 @@ export default function Mission() {
             )}
           </Card>
           {match?.game && (
-            <Button variant="secondary" to={`/m?code=${match.game.code}&seat=${match.game.seat}`}>
-              Play a game together
-            </Button>
+            <>
+              <Button variant="secondary" to={`/m?code=${match.game.code}&seat=${match.game.seat}`}>
+                Play a game together
+              </Button>
+              <TextLink small to={`/m?code=${match.game.code}&seat=${match.game.seat}&glasses`}>
+                Play it on my glasses
+              </TextLink>
+            </>
           )}
         </>
       }

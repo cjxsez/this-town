@@ -32,6 +32,8 @@ export interface Env {
   LATE_BONUS_MIN_DELAY_S: string;
   NOT_NOW_COOLDOWN_S: string;
   DEMO_MODE: string;
+  /** "true": a match leads to the two-player games only. No missions, and stops don't matter. */
+  GAMES_ONLY: string;
   /** JSON object: car label -> trip id, e.g. {"1412":"demo-trip-1"} */
   DEMO_CAR_TRIPS: string;
   /** From address for sign-in emails; its domain must be onboarded to Email Sending. */
@@ -56,6 +58,7 @@ export interface Config {
   lateBonusMinDelaySec: number;
   notNowCooldownSec: number;
   demoMode: boolean;
+  gamesOnly: boolean;
   demoCarTrips: Record<CarId, string>;
 }
 
@@ -86,6 +89,7 @@ export function readConfig(env: Env): Config {
     lateBonusMinDelaySec: intVar(env.LATE_BONUS_MIN_DELAY_S, 180),
     notNowCooldownSec: intVar(env.NOT_NOW_COOLDOWN_S, 600),
     demoMode: env.DEMO_MODE === "true",
+    gamesOnly: env.GAMES_ONLY === "true",
     demoCarTrips: parseCarTrips(env.DEMO_CAR_TRIPS),
   };
 }

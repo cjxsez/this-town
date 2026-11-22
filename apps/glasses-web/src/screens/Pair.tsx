@@ -13,17 +13,19 @@ export function Pair({ code, state }: { code: string | null; state: "opening" | 
       {state === "away" ? (
         <div className="guess-title guess-title-sm">Partner dropped out</div>
       ) : (
-        <div className="guess-eyebrow">Play with a phone</div>
+        <div className="guess-eyebrow">Play on glasses</div>
       )}
       {code ? (
         <>
           <div className="pair-code" aria-label={`Code ${code.split("").join(" ")}`}>
             {code}
           </div>
-          <div className="guess-body">
-            On a phone, open <span className="pair-url">{address}</span> and enter this code
-          </div>
-          {state === "waiting" && <div className="guess-hint">Already playing on your phone? Tap Play on glasses there.</div>}
+          <div className="guess-body">In your game on your phone, tap Play on glasses and enter this code</div>
+          {state === "waiting" && (
+            <div className="guess-hint">
+              No game yet? Open <span className="pair-url">{address}</span> on a phone and enter it there.
+            </div>
+          )}
         </>
       ) : (
         <div className="guess-body">{state === "error" ? "Can't reach Questline. Trying again…" : "Getting a code…"}</div>

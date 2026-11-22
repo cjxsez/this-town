@@ -40,6 +40,14 @@ test("a rider whose stop is the one we are at has no segments left", () => {
   assert.equal(inPool(rider("a", { destinationStop: "A" }), room(), NOW), false);
 });
 
+test("with stops ignored (GAMES_ONLY) a rider past their stop or waiting for a segment still matches", () => {
+  const s = room();
+  assert.equal(inPool(rider("a", { destinationStop: "A" }), s, NOW, true), true);
+  assert.equal(inPool(rider("a", { eligibleFromStopIdx: 2 }), s, NOW, true), true);
+  assert.equal(inPool(rider("a", { ghost: true }), s, NOW, true), false);
+  assert.equal(inPool(rider("a", { pairId: "mat_1" }), s, NOW, true), false);
+});
+
 test("buildPool keeps only the riders that can be matched", () => {
   const s = withRiders(room(), rider("a"), rider("b", { ghost: true }), rider("c"));
   assert.deepEqual(buildPool(s, NOW).map((r) => r.userId).sort(), ["a", "c"]);

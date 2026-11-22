@@ -537,7 +537,8 @@ export class TrainRoom extends DurableObject<Env> {
 
     // Riders whose stop was reached get off.
     if (s.currentStopIdx !== before) {
-      for (const r of Object.values(s.riders)) {
+      // GAMES_ONLY: a pair keeps playing whatever stops they picked, so nobody is put off here.
+      for (const r of this.cfg.gamesOnly ? [] : Object.values(s.riders)) {
         if (stopIndex(s, r.destinationStop) <= s.currentStopIdx) await this.checkOutInner(r.userId, "destination", now);
       }
     }
@@ -665,7 +666,7 @@ export class TrainRoom extends DurableObject<Env> {
   private async matchOnce(now: number): Promise<void> {
     const s = this.state;
     if (!s.trip) return;
-    const proposals = greedyPairs(buildPool(s, now), s, {
+    const proposals = greedyPairs(buildPool(s, now, this.cfg.gamesOnly), s, {
       minSharedTags: this.cfg.minSharedTags,
       ignoreMetRecently: this.cfg.demoMode,
     });
@@ -702,7 +703,8 @@ export class TrainRoom extends DurableObject<Env> {
         why,
         createdAt: now,
         arrived: [],
-        autoStartAt: now + MISSION_AUTOSTART_DELAY_MS,
+        // GAMES_ONLY: the pair plays the two-player games (gameCode), so no mission ever starts.
+        autoStartAt: this.cfg.gamesOnly ? null : now + MISSION_AUTOSTART_DELAY_MS,
         sessionId: null,
         gameCode,
       };
@@ -741,7 +743,7 @@ export class TrainRoom extends DurableObject<Env> {
     if (!pair.arrived.includes(userId)) pair.arrived.push(userId);
     this.sendToKiosks(pair.meetAtCar, this.pairIncoming(pair));
     const walkerHere = pair.walker === null ? pair.arrived.length > 0 : pair.arrived.includes(pair.walker);
-    if (walkerHere) await this.startMission(pair.matchId, now);
+    if (walkerHere && !this.cfg.gamesOnly) await this.startMission(pair.matchId, now);
     await this.persist();
     await this.scheduleAlarm(now);
   }
