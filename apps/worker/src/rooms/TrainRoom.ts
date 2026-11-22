@@ -59,7 +59,9 @@
  * 7. The alarm advances stops, checks riders out at their destination, ends missions on
  *    time, starts missions whose autostart is due, and rematches.
  *
- * Live MBTA timelines are not wired yet: only the demo trip (DEMO_MODE) has stops and ETAs.
+ * Live trips (DEMO_MODE off): the alarm polls mbta/predictions.ts every ~20 s while anyone
+ * is checked in. Two empty polls in a row end the trip and close kiosk sockets with
+ * WS_CLOSE.tripChanged so they reconnect into the new trip's room.
  */
 import { DurableObject } from "cloudflare:workers";
 import {
@@ -111,6 +113,7 @@ import {
 } from "../lib/time";
 import { writeWhy } from "../llm/why";
 import { advanceDemoClock, demoTimeline, newDemoClock } from "../mbta/demo";
+import { fetchTripTimeline } from "../mbta/predictions";
 import { assignColor, colorsInUse } from "../matching/colors";
 import { carDelta, greedyPairs } from "../matching/pair";
 import { openFreeRoom } from "./GameRoom";
@@ -152,6 +155,8 @@ export class TrainRoom extends DurableObject<Env> {
   private state: RoomState = emptyRoomState();
   private matchingRun: Promise<void> | null = null;
   private matchingAgain = false;
+  /** Consecutive empty live MBTA prediction polls; 2 ends the trip. */
+  private emptyPolls = 0;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -526,7 +531,9 @@ export class TrainRoom extends DurableObject<Env> {
     const s = this.state;
     if (!s.trip) return;
     const before = s.currentStopIdx;
-    this.refreshTimeline(now);
+    await this.refreshTimeline(now);
+    // Live trip may have been cleared by two empty MBTA polls.
+    if (!this.state.trip) return;
 
     // Riders whose stop was reached get off.
     if (s.currentStopIdx !== before) {
@@ -538,7 +545,7 @@ export class TrainRoom extends DurableObject<Env> {
     if (s.nextStopIdx === null) {
       for (const userId of Object.keys(s.riders)) await this.checkOutInner(userId, "trip-ended", now);
     }
-    // Missions out of time.
+    // Missions out of time (endsAt is nextStopEta - 30s from mission start).
     for (const m of Object.values(s.missions)) {
       if (now >= m.endsAt) await this.finishMission(m.sessionId, "time-up", now);
     }
@@ -574,11 +581,62 @@ export class TrainRoom extends DurableObject<Env> {
     await this.ctx.storage.setAlarm(Math.max(now + SECOND, Math.min(...deadlines)));
   }
 
-  /** Demo clock for demo trips. Live MBTA predictions are not wired yet (mbta/predictions.ts). */
-  private refreshTimeline(now: number): void {
+  /** Demo clock, or live MBTA predictions while anyone is checked in. */
+  private async refreshTimeline(now: number): Promise<void> {
     const s = this.state;
-    if (s.trip?.demo && s.demo) Object.assign(s, demoTimeline(s.demo, now));
+    if (s.trip?.demo && s.demo) {
+      Object.assign(s, demoTimeline(s.demo, now));
+      s.lastPolledAt = now;
+      return;
+    }
+    if (!s.trip || s.trip.demo) {
+      s.lastPolledAt = now;
+      return;
+    }
+    // Live polls only while riders are on board (kiosk-only rooms wait for a tap).
+    if (Object.keys(s.riders).length === 0) {
+      s.lastPolledAt = now;
+      return;
+    }
+    try {
+      const tl = await fetchTripTimeline(this.env, s.trip.tripId, s.stops, now);
+      if (tl === null) {
+        this.emptyPolls += 1;
+        if (this.emptyPolls >= 2) {
+          await this.endLiveTrip(now);
+          return;
+        }
+      } else {
+        this.emptyPolls = 0;
+        Object.assign(s, tl);
+      }
+    } catch (err) {
+      // Keep the last known timeline; do not count API errors as empty polls.
+      console.warn("mbta timeline poll failed", err);
+    }
     s.lastPolledAt = now;
+  }
+
+  /** Two empty live polls: clear the room and bounce kiosks onto the next trip. */
+  private async endLiveTrip(now: number): Promise<void> {
+    for (const m of Object.values(this.state.missions)) {
+      await this.finishMission(m.sessionId, "cancelled", now);
+    }
+    for (const userId of Object.keys(this.state.riders)) {
+      await this.checkOutInner(userId, "trip-ended", now);
+    }
+    for (const ws of this.ctx.getWebSockets()) {
+      const att = ws.deserializeAttachment() as SocketAttachment | null;
+      try {
+        if (att?.kind === "kiosk") ws.close(WS_CLOSE.tripChanged, "trip ended");
+      } catch {
+        // already closed
+      }
+    }
+    this.state = emptyRoomState();
+    this.emptyPolls = 0;
+    await this.persist();
+    await this.ctx.storage.deleteAlarm();
   }
 
   // ======================================================================
@@ -904,7 +962,8 @@ export class TrainRoom extends DurableObject<Env> {
     s.pairs = {};
     s.missions = {};
     s.declinedPairs = [];
-    this.refreshTimeline(now);
+    this.emptyPolls = 0;
+    await this.refreshTimeline(now);
     await this.persist();
   }
 
