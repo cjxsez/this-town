@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from "react-router";
 import { stationById } from "../shared/catalog";
 import { AppProvider, useApp } from "./state/store";
@@ -7,6 +7,7 @@ import { DemoPanel } from "./dev/DemoPanel";
 import { ScreenIndex, ScreenPreview } from "./dev/ScreenGallery";
 
 import Landing from "./screens/onboarding/Landing";
+import Start from "./screens/onboarding/Start";
 import Name from "./screens/onboarding/Name";
 import Interests from "./screens/onboarding/Interests";
 import Spots from "./screens/onboarding/Spots";
@@ -35,10 +36,53 @@ function RequireProfile({ children }: { children: ReactNode }) {
   return state.profile ? <>{children}</> : <Navigate to="/" replace />;
 }
 
-/** "/" is the landing page for new riders and Ride Mode for returning ones. */
+const STARTED_KEY = "its.started";
+const hasStarted = () => {
+  try {
+    return sessionStorage.getItem(STARTED_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const markStarted = () => {
+  try {
+    sessionStorage.setItem(STARTED_KEY, "1");
+  } catch {
+    // Private mode without storage: the start screen just shows again next time.
+  }
+};
+
+/** The 3D start screen, once per visit (tab session), then `children`. */
+function StartGate({ children }: { children: ReactNode }) {
+  const [started, setStarted] = useState(hasStarted);
+  if (started) return <>{children}</>;
+  return (
+    <Start
+      onBegin={() => {
+        markStarted();
+        setStarted(true);
+      }}
+    />
+  );
+}
+
+/** "/start" always shows the start screen (handy for demos), then goes home. */
+function StartAgain() {
+  const navigate = useNavigate();
+  return (
+    <Start
+      onBegin={() => {
+        markStarted();
+        navigate("/", { replace: true });
+      }}
+    />
+  );
+}
+
+/** "/" is the start screen, then the landing page for new riders and Ride Mode for returning ones. */
 function Home() {
   const { state } = useApp();
-  return state.profile ? <Navigate to="/ride" replace /> : <Landing />;
+  return <StartGate>{state.profile ? <Navigate to="/ride" replace /> : <Landing />}</StartGate>;
 }
 
 /**
@@ -53,7 +97,7 @@ function StationEntry() {
     if (station) actions.updateDraft({ homeStation: station.id });
   }, [station, actions]);
   if (!station) return <Navigate to="/" replace />;
-  return state.profile ? <Navigate to="/ride" replace /> : <Landing />;
+  return <StartGate>{state.profile ? <Navigate to="/ride" replace /> : <Landing />}</StartGate>;
 }
 
 const guard = (el: ReactNode) => <RequireProfile>{el}</RequireProfile>;
@@ -75,6 +119,7 @@ function Shell() {
     <div className="app-shell">
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/start" element={<StartAgain />} />
         <Route path="/join/name" element={<Name />} />
         <Route path="/join/interests" element={<Interests />} />
         <Route path="/join/spots" element={<Spots />} />

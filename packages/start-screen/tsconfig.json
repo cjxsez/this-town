@@ -1,0 +1,11 @@
+// start-screen TypeScript config. Strict settings come from tsconfig.base.json;
+// this adds DOM libs, Vite's client types (CSS imports) and Node types for the
+// tests in test/ (node:test, node:assert).
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src", "test", "vite.config.ts"]
+}

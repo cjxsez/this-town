@@ -74,7 +74,7 @@ export default function Poster() {
         </button>
       </div>
 
-      <article className="ql-poster" aria-label={`Questline poster for ${station.name}`}>
+      <article className="ql-poster" aria-label={`In This Town poster for ${station.name}`}>
         <header className="ql-poster__head">
           <h1 className="ql-poster__title">SIDE QUESTS WHILE YOU WAIT FOR THE T</h1>
         </header>
@@ -105,7 +105,7 @@ export default function Poster() {
               {station.id}
             </div>
           </div>
-          <div className="ql-poster__foot">Badges at the Questline table</div>
+          <div className="ql-poster__foot">Badges at the In This Town table</div>
         </div>
       </article>
     </div>

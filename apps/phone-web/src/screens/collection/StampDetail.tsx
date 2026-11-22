@@ -83,7 +83,7 @@ function BigStamp({ stamp, station, withName, number }: { stamp: Stamp; station:
             <div className="cl-bigstamp__paper">
               <div className="cl-bigstamp__main">
                 <div className="cl-bigstamp__top">
-                  <span>QUESTLINE</span>
+                  <span>IN THIS TOWN</span>
                   <span>{lineLabel(stamp).toUpperCase()}</span>
                 </div>
                 <div className="cl-bigstamp__name">{station.name.toUpperCase()}</div>

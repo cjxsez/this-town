@@ -1,6 +1,6 @@
 # @questline/phone-web
 
-The rider's phone app. Mobile web (React 19 + Vite 8 + TypeScript, react-router 8), served by the worker at `/`.
+The rider's phone app for **In This Town** (the product was called Questline; code identifiers still are). Mobile web (React 19 + Vite 8 + TypeScript, react-router 8), served by the worker at `/`.
 
 The screens are the "Questline screens v2" design: onboarding (B1 to B7), Ride Mode (C1 to H1), passport, people, memories, me, glasses, and the printable poster and badge. They talk to the backend through one seam, `src/api/types.ts` (`QuestlineApi` + `RideChannel`), which has two implementations:
 
@@ -47,7 +47,8 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 
 | Path | Screen |
 |---|---|
-| `/`, `/:stationId` | Landing (B1), or Ride Mode once a profile exists. `/:stationId` is what the platform poster's QR encodes. |
+| `/`, `/:stationId` | The 3D start screen once per visit (`packages/start-screen`), then Landing (B1), or Ride Mode once a profile exists. `/:stationId` is what the platform poster's QR encodes. |
+| `/start` | The start screen, every time (for demos). BEGIN goes to `/`. |
 | `/join/*` | Onboarding B2 to B7 |
 | `/ride` | Ride Mode. One URL; the screen follows the ride phase. |
 | `/k/:car?n=<nonce>` | Kiosk tag landing (`http` mode): `POST /api/taps`, destination picker, then `/ride` |

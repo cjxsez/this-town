@@ -20,7 +20,7 @@ export function Disconnected({ car, error }: DisconnectedProps) {
   return (
     <main className="screen disconnected">
       <div className="disc-title">{error ? "Kiosk not set up" : "Reconnecting…"}</div>
-      <div className="disc-sub">{error ?? "Questline will be back in a moment"}</div>
+      <div className="disc-sub">{error ?? "In This Town will be back in a moment"}</div>
       <footer className="screen-foot">{car ? `car ${car}` : "no car"}</footer>
     </main>
   );

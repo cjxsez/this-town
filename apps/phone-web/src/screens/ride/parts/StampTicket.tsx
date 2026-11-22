@@ -138,7 +138,7 @@ export function StampTicketLarge({
               letterSpacing: ".06em",
             }}
           >
-            <span>QUESTLINE</span>
+            <span>IN THIS TOWN</span>
             <span>{lineLabel}</span>
           </div>
           <div

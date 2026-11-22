@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { ArtSlot, Button, ButtonRow, Screen, TextLink } from "../../ui";
+import { ArtSlot, Button, ButtonRow, Screen, TextLink, Wordmark } from "../../ui";
 import { useApp } from "../../state/store";
 
 /**
@@ -74,7 +74,9 @@ export default function Landing() {
           demo: skip setup
         </TextLink>
       </div>
-      <h1 style={{ font: "400 46px/1 var(--font-shade)", textAlign: "center" }}>QUESTLINE</h1>
+      <h1>
+        <Wordmark size={44} />
+      </h1>
       <p style={{ fontSize: 21, lineHeight: 1.2, textWrap: "pretty", textAlign: "center" }}>
         Short games with one other rider while you wait. Spoken, face to face, done before the train.
       </p>
