@@ -736,7 +736,9 @@ export class TrainRoom extends DurableObject<Env> {
       if (!s.riders[p.a.userId] || !s.riders[p.b.userId] || p.a.pairId || p.b.pairId) continue;
 
       // A game room for the pair, so their phones can open the two-player games without a code.
-      const gameCode = (await openFreeRoom(this.env).catch(() => null)) ?? undefined;
+      // It knows their first names, so a trivia question they leave says who it is from.
+      const names = `${p.a.profile.firstName} and ${p.b.profile.firstName}`;
+      const gameCode = (await openFreeRoom(this.env, names).catch(() => null)) ?? undefined;
       if (!s.riders[p.a.userId] || !s.riders[p.b.userId] || p.a.pairId || p.b.pairId) continue;
 
       const matchId = newId("mat");

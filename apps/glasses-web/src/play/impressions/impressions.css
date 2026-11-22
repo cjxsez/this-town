@@ -47,14 +47,8 @@
   text-align: center;
 }
 
-/* Two guesses side by side: yours about them, theirs about you. */
-.impressions-pair {
-  display: flex;
-  gap: 18px;
-}
-
+/* The partner's guess about you. */
 .impressions-side {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -3,6 +3,7 @@ import {
   TRIVIA_MAX_ANSWER,
   TRIVIA_MAX_QUESTION,
   TRIVIA_MIN_QUESTION,
+  triviaFromLine,
   type GameProps,
   type TriviaView,
 } from "@questline/protocol/games";
@@ -71,7 +72,7 @@ export function TriviaGame({ view, send, serverNow, onNext, onAgain }: GameProps
             <Eyebrow>
               {view.index + 1} of {view.total}
             </Eyebrow>
-            <div className="trivia-from">{view.from === "pair" ? "Left by a pair before you" : "From the starter deck"}</div>
+            <div className="trivia-from">{triviaFromLine(view)}</div>
           </div>
           {reveal ? (
             <span className={`trivia-verdict ${got ? "is-right" : ""}`}>{view.picked === null ? "Out of time" : got ? "Got it!" : "Not this time"}</span>

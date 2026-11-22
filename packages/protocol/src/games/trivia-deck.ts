@@ -13,9 +13,12 @@ export interface TriviaCard {
   decoys: string[];
 }
 
+/** The longest "who left it" line kept with a question, e.g. "Maya and Sam". */
+export const TRIVIA_MAX_BY = 40;
+
 export const TRIVIA_STARTERS: TriviaCard[] = [
   { q: "How many branches does the Green Line have?", a: "Four", decoys: ["Two", "Three", "Five"] },
-  { q: "In what year did Boston's first subway open?", a: "1897", decoys: ["1863", "1904", "1912"] },
+  { q: "In what year did Boston's first subway open?", a: "1897", decoys: ["1863", "1904", "1921"] },
   {
     q: "The CharlieCard is named after a character in which song?",
     a: "M.T.A.",
@@ -28,7 +31,7 @@ export const TRIVIA_STARTERS: TriviaCard[] = [
   },
   { q: "Which line runs to Wonderland?", a: "Blue Line", decoys: ["Red Line", "Orange Line", "Green Line"] },
   { q: "The Orange Line runs from Oak Grove to where?", a: "Forest Hills", decoys: ["Braintree", "Ashmont", "Riverside"] },
-  { q: "What year did Fenway Park open?", a: "1912", decoys: ["1897", "1901", "1925"] },
+  { q: "What year did Fenway Park open?", a: "1912", decoys: ["1903", "1908", "1925"] },
   { q: "Which T line is made up of buses, not trains?", a: "Silver Line", decoys: ["Blue Line", "Orange Line", "Red Line"] },
   {
     q: "Which line still runs historic PCC trolleys?",

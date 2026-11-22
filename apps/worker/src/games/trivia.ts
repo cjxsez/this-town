@@ -7,13 +7,16 @@
  *   for three wrong answers (llm/decoys.ts). If the question is kept it is added to the
  *   shared list, and the outcome goes back to the module as a "written" action.
  *
- * The shared list (key `trivia:left`, newest first, at most LEFT_MAX) holds only the
- * question, its answers and a timestamp. Nothing about who left it.
+ * The shared list (key `trivia:left`, newest first, at most LEFT_MAX) holds the question,
+ * its answers, a timestamp and, when the room was opened for a matched pair, their first
+ * names ("Maya and Sam") so the next pair sees who left it. Nothing else about them.
  */
 import {
+  TRIVIA_MAX_BY,
   TRIVIA_ROUNDS,
   TRIVIA_STARTERS,
   triviaCardOk,
+  triviaClean,
   type TriviaCard,
   type TriviaSeed,
   type TriviaServerAction,
@@ -31,6 +34,8 @@ const MIN_WRITING_MS = 1500;
 export interface LeftQuestion extends TriviaCard {
   /** When it was left, epoch ms. */
   at: number;
+  /** First names of the pair who left it. Missing when the room had no names. */
+  by?: string;
 }
 
 function shuffled<T>(items: T[], rand: () => number): T[] {
@@ -56,7 +61,7 @@ export async function pickTrivia(shared: SharedStore, rand: () => number = Math.
   }
   const [newest, ...older] = left;
   const fromPairs = newest ? [newest, ...shuffled(older, rand)].slice(0, TRIVIA_ROUNDS) : [];
-  const questions: TriviaSeed["questions"] = fromPairs.map(({ q, a, decoys }) => ({ q, a, decoys, left: true }));
+  const questions: TriviaSeed["questions"] = fromPairs.map(({ q, a, decoys, by }) => ({ q, a, decoys, left: true, ...(by && { by }) }));
   const used = new Set(questions.map((c) => c.q.toLowerCase()));
   for (const card of shuffled(TRIVIA_STARTERS, rand)) {
     if (questions.length >= TRIVIA_ROUNDS) break;
@@ -66,10 +71,11 @@ export async function pickTrivia(shared: SharedStore, rand: () => number = Math.
 }
 
 /** Put a kept question at the front of the shared list, dropping an older copy of the same question. */
-export async function saveLeft(shared: SharedStore, card: TriviaCard, now: number): Promise<void> {
+export async function saveLeft(shared: SharedStore, card: TriviaCard, now: number, names: string | null = null): Promise<void> {
   const left = await readLeft(shared);
   const rest = left.filter((c) => c.q.trim().toLowerCase() !== card.q.trim().toLowerCase());
-  const entry: LeftQuestion = { q: card.q, a: card.a, decoys: card.decoys, at: now };
+  const by = triviaClean(names, TRIVIA_MAX_BY);
+  const entry: LeftQuestion = { q: card.q, a: card.a, decoys: card.decoys, at: now, ...(by && { by }) };
   await shared.put(LEFT_KEY, [entry, ...rest].slice(0, LEFT_MAX));
 }
 
@@ -79,13 +85,14 @@ export async function judgeAndSave(
   draft: { q: string; a: string },
   tries: number,
   write: (q: string, a: string) => Promise<DecoyResult>,
+  names: string | null = null,
 ): Promise<TriviaServerAction> {
   try {
     const out = await write(draft.q, draft.a);
     if (out.result !== "ok") return { type: "written", tries, result: out.result };
     const card: TriviaCard = { q: draft.q, a: draft.a, decoys: out.decoys };
     if (!triviaCardOk(card)) return { type: "written", tries, result: "failed" };
-    await saveLeft(shared, card, Date.now());
+    await saveLeft(shared, card, Date.now(), names);
     return { type: "written", tries, result: "ok", decoys: out.decoys };
   } catch (err) {
     console.error("trivia: could not save the question", err);
@@ -98,12 +105,12 @@ const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 export const triviaHooks: GameHooks = {
   prepare: (_env: Env, shared) => pickTrivia(shared),
 
-  effect(env, shared, prev, next) {
+  effect(env, shared, prev, next, room) {
     const before = prev as TriviaState | null;
     const after = next as TriviaState | null;
     // Only on the change into "writing", so one call per submission however often the room is polled.
     if (after?.phase !== "writing" || before?.phase === "writing" || !after.draft) return null;
-    const job = judgeAndSave(shared, after.draft, after.tries, (q, a) => writeDecoys(env, q, a));
+    const job = judgeAndSave(shared, after.draft, after.tries, (q, a) => writeDecoys(env, q, a), room.names);
     return Promise.all([job, pause(MIN_WRITING_MS)]).then(([action]) => action);
   },
 };

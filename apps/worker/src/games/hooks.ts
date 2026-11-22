@@ -18,9 +18,15 @@ export interface SharedStore {
   put(key: string, value: unknown): Promise<void>;
 }
 
+/** What a hook may know about the room it runs for. */
+export interface RoomInfo {
+  /** The pair's first names ("Maya and Sam") when the room was opened for a match, else null. */
+  names: string | null;
+}
+
 export interface GameHooks {
   prepare?(env: Env, shared: SharedStore): Promise<unknown>;
-  effect?(env: Env, shared: SharedStore, prev: unknown, next: unknown): Promise<unknown> | null;
+  effect?(env: Env, shared: SharedStore, prev: unknown, next: unknown, room: RoomInfo): Promise<unknown> | null;
 }
 
 export const HOOKS: Partial<Record<GameId, GameHooks>> = { trivia: triviaHooks };

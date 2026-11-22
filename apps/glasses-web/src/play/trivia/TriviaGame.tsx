@@ -11,7 +11,7 @@
  *   result    the shared End buttons
  */
 import { useState } from "react";
-import type { GameProps, TriviaView } from "@questline/protocol/games";
+import { triviaFromLine, type GameProps, type TriviaView } from "@questline/protocol/games";
 import { Clock } from "../../components/Clock";
 import { EndButtons } from "../../components/EndButtons";
 import { Wobble } from "../../components/Wobble";
@@ -99,7 +99,7 @@ export function TriviaGame({ view, send, serverNow, onNext, onAgain }: GameProps
             <span className="guess-eyebrow">
               {view.index + 1} of {view.total}
             </span>
-            <span className="trivia-from">{view.from === "pair" ? "Left by a pair before you" : "From the starter deck"}</span>
+            <span className="trivia-from">{triviaFromLine(view)}</span>
           </div>
           {reveal ? (
             <span className={`trivia-verdict ${view.picked === view.answer ? "is-right" : ""}`}>{verdict}</span>

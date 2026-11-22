@@ -4,18 +4,18 @@
  *
  *   intro  select: ready
  *   guess  left/up and right/down (or wheel) move the slider one position, select locks it in
- *   talk   left/right move between Spot on / Close / Way off, select picks (can be changed)
+ *   talk   shows the partner's guess about you; left/right move between Spot on / Close / Way off, select picks (can be changed)
  *   done   EndButtons
  */
 import { useState } from "react";
 import {
   IMPRESSIONS_RATING_LABEL,
   IMPRESSIONS_VERDICT_LABEL,
+  impressionsRatings,
   impressionsSnap,
   impressionsUnit,
   impressionsValue,
   type GameProps,
-  type ImpressionsRating,
   type ImpressionsTally,
   type ImpressionsView,
 } from "@questline/protocol/games";
@@ -28,7 +28,6 @@ import "./impressions.css";
 type Props = GameProps<ImpressionsView>;
 type Of<P extends ImpressionsView["phase"]> = Extract<ImpressionsView, { phase: P }>;
 
-const RATINGS: ImpressionsRating[] = ["spot", "close", "off"];
 /** -1 for the "previous" gestures, +1 for "next", 0 for anything else. */
 const direction = (a: InputAction) => (a === "left" || a === "up" ? -1 : a === "right" || a === "down" ? 1 : 0);
 
@@ -108,19 +107,31 @@ function Guess({ view, send, serverNow }: Props & { view: Of<"guess"> }) {
       <Top round={view.round} rounds={view.rounds} deadline={view.deadline} serverNow={serverNow} />
       <div className="guess-card impressions-card">{q.prompt}</div>
       <div className={`scale ${view.youLocked ? "impressions-locked" : ""}`} role="slider" aria-valuemin={q.min} aria-valuemax={q.max} aria-valuenow={value}>
-        <div className="impressions-value">
-          <span className="scale-value">{impressionsValue(q, value)}</span>
-          <span className="impressions-unit">{impressionsUnit(q)}</span>
-        </div>
-        <div className="scale-track">
-          {Array.from({ length: ticks }, (_, n) => (
-            <span key={n} className={`scale-tick ${n === at ? "is-focused" : n < at ? "is-under" : ""}`} />
-          ))}
-        </div>
-        <div className="scale-ends">
-          <span>{q.low}</span>
-          <span>{q.high}</span>
-        </div>
+        {q.either ? (
+          <div className="guess-row">
+            {[q.min, q.max].map((side) => (
+              <div key={side} className={`hud-btn guess-btn ${value === side ? "is-focused" : ""}`} role="button">
+                {impressionsValue(q, side)}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="impressions-value">
+              <span className="scale-value">{impressionsValue(q, value)}</span>
+              <span className="impressions-unit">{impressionsUnit(q)}</span>
+            </div>
+            <div className="scale-track">
+              {Array.from({ length: ticks }, (_, n) => (
+                <span key={n} className={`scale-tick ${n === at ? "is-focused" : n < at ? "is-under" : ""}`} />
+              ))}
+            </div>
+            <div className="scale-ends">
+              <span>{q.low}</span>
+              <span>{q.high}</span>
+            </div>
+          </>
+        )}
       </div>
       <div className="guess-hint impressions-hint">
         {view.youLocked ? "Locked in. Waiting for your partner" : view.theyLocked ? "Your partner is in. Tap to lock in" : "Scroll to choose, tap to lock in"}
@@ -131,13 +142,15 @@ function Guess({ view, send, serverNow }: Props & { view: Of<"guess"> }) {
 
 function Talk({ view, send, serverNow }: Props & { view: Of<"talk"> }) {
   const q = view.question;
-  const [focus, setFocus] = useState(() => (view.yourRating ? RATINGS.indexOf(view.yourRating) : 1));
+  const ratings = impressionsRatings(q);
+  const label = (rating: (typeof ratings)[number]) => (q.either ? (rating === "spot" ? "Yes" : "No") : IMPRESSIONS_RATING_LABEL[rating]);
+  const [focus, setFocus] = useState(() => (view.yourRating ? Math.max(0, ratings.indexOf(view.yourRating)) : q.either ? 0 : 1));
 
   useInput(
     (action) => {
-      if (action === "select") return send({ type: "rate", rating: RATINGS[focus] });
+      if (action === "select") return send({ type: "rate", rating: ratings[focus] });
       const d = direction(action);
-      if (d) setFocus((f) => Math.min(RATINGS.length - 1, Math.max(0, f + d)));
+      if (d) setFocus((f) => Math.min(ratings.length - 1, Math.max(0, f + d)));
     },
     { pointer: true },
   );
@@ -147,32 +160,24 @@ function Talk({ view, send, serverNow }: Props & { view: Of<"talk"> }) {
       <Wobble />
       <Top round={view.round} rounds={view.rounds} deadline={view.deadline} serverNow={serverNow} />
       <div className="guess-eyebrow impressions-short">{q.short}</div>
-      <div className="impressions-pair">
-        <div className="impressions-side">
-          <div className="impressions-who">You guessed</div>
-          <div className="impressions-num">{impressionsValue(q, view.yourGuess)}</div>
-          <div className={`impressions-said ${view.theirRating ? "is-set" : ""}`}>
-            {view.theirRating ? `They say: ${IMPRESSIONS_RATING_LABEL[view.theirRating].toLowerCase()}` : "for your partner"}
-          </div>
-        </div>
-        <div className="impressions-side is-them">
-          <div className="impressions-who">They guessed</div>
-          <div className="impressions-num">{impressionsValue(q, view.theirGuess)}</div>
-          <div className="impressions-said">for you</div>
-        </div>
+      {/* Only the guess about you: it is the one you can judge. */}
+      <div className="impressions-side is-them">
+        <div className="impressions-who">Your partner guessed</div>
+        <div className="impressions-num">{impressionsValue(q, view.theirGuess)}</div>
+        <div className="impressions-said">{q.either ? "for you" : `${impressionsUnit(q)}, for you`}</div>
       </div>
       <div className={`guess-hint impressions-hint ${view.yourRating ? "is-set" : ""}`}>
-        {view.yourRating ? `You said: ${IMPRESSIONS_RATING_LABEL[view.yourRating].toLowerCase()}` : "How close were they? Tell them."}
+        {view.yourRating ? `You said: ${label(view.yourRating).toLowerCase()}` : q.either ? "Did they get it right? Tell them." : "How close was that? Tell them."}
       </div>
       <div className="guess-row">
-        {RATINGS.map((rating, i) => (
+        {ratings.map((rating, i) => (
           <div
             key={rating}
             className={`hud-btn guess-btn impressions-rate ${focus === i ? "is-focused" : ""} ${view.yourRating === rating ? "is-picked" : ""}`}
             role="button"
             aria-pressed={view.yourRating === rating}
           >
-            {IMPRESSIONS_RATING_LABEL[rating]}
+            {label(rating)}
           </div>
         ))}
       </div>

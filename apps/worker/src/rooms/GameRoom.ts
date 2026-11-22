@@ -38,10 +38,10 @@ export const ROOM_IDLE_MS = 2 * 60 * 60 * 1000;
 const ROOM_KEY = "room";
 
 /** Open a room on a code nobody is using. null when none was free after a few tries. */
-export async function openFreeRoom(env: Env): Promise<string | null> {
+export async function openFreeRoom(env: Env, names: string | null = null): Promise<string | null> {
   for (let attempt = 0; attempt < 8; attempt++) {
     const code = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-    if (await env.GAME_ROOM.get(env.GAME_ROOM.idFromName(`room:${code}`)).open(code, false)) return code;
+    if (await env.GAME_ROOM.get(env.GAME_ROOM.idFromName(`room:${code}`)).open(code, false, names)) return code;
   }
   return null;
 }
@@ -55,6 +55,8 @@ interface Room {
   /** Bumped whenever a game is started, so late async results for an old game are dropped. */
   run: number;
   touchedAt: number;
+  /** The pair's first names ("Maya and Sam") when the room was opened for a match. */
+  names?: string | null;
   /** Per seat: the code of the glasses that seat is shown on. Missing in rooms saved before this existed. */
   lens?: Partial<Record<Seat, string>>;
   /** This room belongs to a pair of glasses that now play this seat of another room. */
@@ -97,10 +99,10 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   /** Open this room. False when the code is in use by a room that is still active. */
-  async open(code: string, reuse: boolean): Promise<boolean> {
+  async open(code: string, reuse: boolean, names: string | null = null): Promise<boolean> {
     const live = this.room && Date.now() - this.room.touchedAt < ROOM_IDLE_MS;
     if (live) return reuse;
-    this.room = { code, index: 0, game: null, run: 0, touchedAt: Date.now() };
+    this.room = { code, index: 0, game: null, run: 0, touchedAt: Date.now(), names };
     this.seen = { a: 0, b: 0 };
     await this.save();
     return true;
@@ -181,7 +183,7 @@ export class GameRoom extends DurableObject<Env> {
     room.game = next;
     await this.save();
     const mod = GAMES[room.index]!;
-    const job = HOOKS[mod.id]?.effect?.(this.env, this.shared(), prev, next);
+    const job = HOOKS[mod.id]?.effect?.(this.env, this.shared(), prev, next, { names: room.names ?? null });
     if (!job) return;
     const run = room.run;
     this.ctx.waitUntil(

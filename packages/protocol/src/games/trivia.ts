@@ -14,7 +14,7 @@
  * questions (the `seed` for init) and, when the state enters "writing", do the LLM call
  * and feed the outcome back as a "server" action of type "written".
  */
-import { TRIVIA_STARTERS, type TriviaCard } from "./trivia-deck";
+import { TRIVIA_MAX_BY, TRIVIA_STARTERS, type TriviaCard } from "./trivia-deck";
 import type { Actor, GameCtx, GameModule, Seat } from "./types";
 
 export * from "./trivia-deck";
@@ -33,7 +33,7 @@ export const TRIVIA_MAX_TRIES = 2;
 
 /** What prepare hands to init: the questions for this game, in the order they are asked. */
 export interface TriviaSeed {
-  questions: (TriviaCard & { left: boolean })[];
+  questions: (TriviaCard & { left: boolean; by?: string })[];
 }
 
 export interface TriviaQuestion {
@@ -43,6 +43,8 @@ export interface TriviaQuestion {
   answer: number;
   /** Left by an earlier pair (true) or from the starter deck (false). */
   left: boolean;
+  /** First names of the pair who left it ("Maya and Sam"), when they are known. */
+  by: string | null;
 }
 
 export type TriviaOutcome = "saved" | "rejected" | "failed" | "skipped";
@@ -73,6 +75,8 @@ interface Progress {
   total: number;
   /** "pair": left by an earlier pair. "deck": a starter question. */
   from: "pair" | "deck";
+  /** First names of the pair who left it, or null (a starter, or a pair who played without names). */
+  by: string | null;
   q: string;
   choices: string[];
 }
@@ -138,15 +142,24 @@ export function triviaCardOk(card: unknown): card is TriviaCard {
   return new Set(all.map((s) => s.trim().toLowerCase())).size === 4;
 }
 
-function toQuestion(card: TriviaCard, left: boolean, rand: () => number): TriviaQuestion {
+function toQuestion(card: TriviaCard, left: boolean, rand: () => number, by: unknown = null): TriviaQuestion {
   const choices = shuffled([card.a, ...card.decoys], rand);
-  return { q: card.q, choices, answer: choices.indexOf(card.a), left };
+  return { q: card.q, choices, answer: choices.indexOf(card.a), left, by: (left && triviaClean(by, TRIVIA_MAX_BY)) || null };
+}
+
+/** The line under the question count: who this question is from. */
+export function triviaFromLine(view: { from: "pair" | "deck"; by: string | null }): string {
+  if (view.from === "deck") return "From the starter deck";
+  return view.by ? `Left for you by ${view.by}` : "Left by a pair before you";
 }
 
 function pickQuestions(seed: unknown, rand: () => number): TriviaQuestion[] {
   const given = (seed as Partial<TriviaSeed> | null)?.questions;
   const cards = (Array.isArray(given) ? given : []).filter(triviaCardOk).slice(0, TRIVIA_ROUNDS);
-  const out = cards.map((c) => toQuestion(c, (c as { left?: unknown }).left === true, rand));
+  const out = cards.map((c) => {
+    const given = c as { left?: unknown; by?: unknown };
+    return toQuestion(c, given.left === true, rand, given.by);
+  });
   // No seed, or a short one: top up from the starter deck.
   const used = new Set(out.map((c) => c.q.toLowerCase()));
   for (const card of shuffled(TRIVIA_STARTERS, rand)) {
@@ -286,6 +299,7 @@ export const triviaGame: GameModule<TriviaState, TriviaView> = {
           index: state.index,
           total,
           from: question.left ? "pair" : "deck",
+          by: question.by ?? null,
           q: question.q,
           choices: question.choices,
         };

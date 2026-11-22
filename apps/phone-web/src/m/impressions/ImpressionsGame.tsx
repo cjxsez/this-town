@@ -2,10 +2,10 @@ import { useState } from "react";
 import {
   IMPRESSIONS_RATING_LABEL,
   IMPRESSIONS_VERDICT_LABEL,
+  impressionsRatings,
   impressionsUnit,
   impressionsValue,
   type GameProps,
-  type ImpressionsRating,
   type ImpressionsTally,
   type ImpressionsView,
 } from "@questline/protocol/games";
@@ -16,13 +16,11 @@ import "./impressions.css";
 
 /**
  * "First impressions" on the phone (protocol games/impressions.ts): guess your partner on
- * a slider, lock it in, then compare and say how close they were.
+ * a slider, lock it in, then see what they guessed about you and say how close it was.
  */
 
 type Props = GameProps<ImpressionsView>;
 type Of<P extends ImpressionsView["phase"]> = Extract<ImpressionsView, { phase: P }>;
-
-const RATINGS: ImpressionsRating[] = ["spot", "close", "off"];
 
 export function ImpressionsGame(props: Props) {
   const { view } = props;
@@ -86,33 +84,63 @@ function Guess({ view, send, serverNow }: Props & { view: Of<"guess"> }) {
         <Title size="md">{q.prompt}</Title>
       </Card>
       <Card className={`impressions-slider ${view.youLocked ? "is-locked" : ""}`} style={{ rotate: "0.4deg" }}>
-        <div className="impressions-value">
-          <span className="impressions-num">{impressionsValue(q, value)}</span>
-          <span className="impressions-unit">{impressionsUnit(q)}</span>
-        </div>
-        <input
-          className="impressions-range"
-          type="range"
-          aria-label="Your guess"
-          min={q.min}
-          max={q.max}
-          step={q.step}
-          value={value}
-          disabled={view.youLocked}
-          style={{ "--fill": `${fill}%` } as React.CSSProperties}
-          onChange={(e) => {
-            const next = Number(e.target.value);
-            if (next === pick) return;
-            setPick(next);
-            send({ type: "slide", value: next });
-          }}
-        />
-        <div className="impressions-ends">
-          <span>{q.low}</span>
-          <span>{q.high}</span>
-        </div>
+        {q.either ? (
+          <ButtonRow>
+            {[q.min, q.max].map((side) => (
+              <Button
+                key={side}
+                variant={value === side ? "primary" : "secondary"}
+                aria-pressed={value === side}
+                disabled={view.youLocked}
+                onClick={() => {
+                  if (side === pick) return;
+                  setPick(side);
+                  send({ type: "slide", value: side });
+                }}
+              >
+                {impressionsValue(q, side)}
+              </Button>
+            ))}
+          </ButtonRow>
+        ) : (
+          <>
+            <div className="impressions-value">
+              <span className="impressions-num">{impressionsValue(q, value)}</span>
+              <span className="impressions-unit">{impressionsUnit(q)}</span>
+            </div>
+            <input
+              className="impressions-range"
+              type="range"
+              aria-label="Your guess"
+              min={q.min}
+              max={q.max}
+              step={q.step}
+              value={value}
+              disabled={view.youLocked}
+              style={{ "--fill": `${fill}%` } as React.CSSProperties}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                if (next === pick) return;
+                setPick(next);
+                send({ type: "slide", value: next });
+              }}
+            />
+            <div className="impressions-ends">
+              <span>{q.low}</span>
+              <span>{q.high}</span>
+            </div>
+          </>
+        )}
       </Card>
-      <Hint>{view.youLocked ? "Locked in. No peeking." : view.theyLocked ? "Your partner has locked in." : "Guess quietly. You'll compare in a moment."}</Hint>
+      <Hint>
+        {view.youLocked
+          ? "Locked in. No peeking."
+          : view.theyLocked
+            ? "Your partner has locked in."
+            : q.either
+              ? "Pick one quietly. You'll compare in a moment."
+              : "Guess quietly. You'll compare in a moment."}
+      </Hint>
     </Screen>
   );
 }
@@ -125,18 +153,17 @@ function Talk({ view, send, serverNow }: Props & { view: Of<"talk"> }) {
       blobs="c"
       footer={
         <>
-          <div className="impressions-ask">How close was their guess about you?</div>
+          <div className="impressions-ask">{q.either ? "Did they get it right?" : "How close was their guess?"}</div>
           <ButtonRow>
-            {RATINGS.map((rating) => (
+            {impressionsRatings(q).map((rating) => (
               <Button
                 key={rating}
                 variant={view.yourRating === rating ? "primary" : "secondary"}
-               
                 aria-pressed={view.yourRating === rating}
                 className="impressions-rate"
                 onClick={() => send({ type: "rate", rating })}
               >
-                {IMPRESSIONS_RATING_LABEL[rating]}
+                {q.either ? (rating === "spot" ? "Yes" : "No") : IMPRESSIONS_RATING_LABEL[rating]}
               </Button>
             ))}
           </ButtonRow>
@@ -145,29 +172,18 @@ function Talk({ view, send, serverNow }: Props & { view: Of<"talk"> }) {
     >
       <Top round={view.round} rounds={view.rounds} deadline={view.deadline} serverNow={serverNow} />
       <Title size="md">{q.short}</Title>
-      <div className="impressions-pair">
-        <Card tight className="impressions-side">
-          <div className="impressions-who">You guessed</div>
-          <div className="impressions-num">{impressionsValue(q, view.yourGuess)}</div>
-          <div className="impressions-for">for your partner</div>
-        </Card>
-        <Card tight className="impressions-side is-them">
-          <div className="impressions-who">They guessed</div>
-          <div className="impressions-num">{impressionsValue(q, view.theirGuess)}</div>
-          <div className="impressions-for">for you</div>
-        </Card>
-      </div>
-      {!q.unit && (
+      {/* Only the guess about you: it is the one you can judge. Your own guess is on the end screen. */}
+      <Card tight className="impressions-side is-them">
+        <div className="impressions-who">Your partner guessed</div>
+        <div className="impressions-num">{impressionsValue(q, view.theirGuess)}</div>
+        <div className="impressions-for">{q.either ? "for you" : `${impressionsUnit(q)}, for you`}</div>
+      </Card>
+      {!q.unit && !q.either && (
         <Hint>
           {q.min} is {q.low.toLowerCase()}, {q.max} is {q.high.toLowerCase()}.
         </Hint>
       )}
-      <Body>How close were they? Tell them.</Body>
-      {view.theirRating && (
-        <Card ink tight style={{ rotate: "-0.5deg" }}>
-          <div className="impressions-heard">Your partner says your guess was {IMPRESSIONS_RATING_LABEL[view.theirRating].toLowerCase()}.</div>
-        </Card>
-      )}
+      <Body>Tell them the real answer.</Body>
     </Screen>
   );
 }

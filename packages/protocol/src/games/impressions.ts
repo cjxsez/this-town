@@ -30,7 +30,6 @@ const TALK_MS = 20_000;
 const RATED_MS = 4_000;
 
 export type ImpressionsRating = "spot" | "close" | "off";
-const RATINGS: readonly ImpressionsRating[] = ["spot", "close", "off"];
 
 export type ImpressionsAction =
   | { type: "ready" }
@@ -212,7 +211,7 @@ export const impressionsGame: GameModule<ImpressionsState, ImpressionsView> = {
     if (state.phase === "talk") {
       const rating = act.rating as ImpressionsRating;
       const round = state.rounds[state.round];
-      if (act.type !== "rate" || !RATINGS.includes(rating) || !round || round.rating[from] === rating) return state;
+      if (act.type !== "rate" || !impressionsRatings(state.questions[state.round]!).includes(rating) || !round || round.rating[from] === rating) return state;
       const ratings = { ...round.rating, [from]: rating };
       const rounds = [...state.rounds.slice(0, state.round), { ...round, rating: ratings }];
       const bothRated = ratings.a !== null && ratings.b !== null;
@@ -289,6 +288,11 @@ export const IMPRESSIONS_RATING_LABEL: Record<ImpressionsRating, string> = {
   close: "Close",
   off: "Way off",
 };
+
+/** The verdicts a player can give on a guess. An either/or guess is right or wrong, never close. */
+export function impressionsRatings(q: ImpressionsQuestion): ImpressionsRating[] {
+  return q.either ? ["spot", "off"] : ["spot", "close", "off"];
+}
 
 export const IMPRESSIONS_VERDICT_LABEL: Record<ImpressionsVerdict, string> = {
   well: "You read each other well",

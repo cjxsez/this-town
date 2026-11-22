@@ -1,7 +1,10 @@
 /**
  * games/impressions-deck.ts: the question deck for "First impressions". Every question is
- * about the other player and is answered on a slider. `boston` marks the Boston / T ones;
- * each game draws at least two of those.
+ * about the other player and is answered on a slider, or by picking one of two (`either`).
+ * `boston` marks the Boston / T ones; each game draws at least two of those.
+ *
+ * A slider question asks "how much" or "how many". A yes/no or either/or question does not
+ * belong on a slider.
  *
  * Keep them friendly: nothing about age, weight, money, looks, politics, religion or dating.
  * Keep each slider to about eleven positions, since the glasses move one position per swipe.
@@ -24,6 +27,8 @@ export interface ImpressionsQuestion {
   /** The top value means "this or more" and is shown with a plus. */
   plus: boolean;
   boston: boolean;
+  /** One or the other, not a scale: min is `low`, max is `high`, and there is nothing between. */
+  either?: boolean;
 }
 
 function feel(id: string, prompt: string, short: string, low: string, high: string, boston = false): ImpressionsQuestion {
@@ -45,40 +50,39 @@ function count(
   return { id, prompt, short, min: 0, max, step, low, high, unit, plus, boston };
 }
 
+function either(id: string, prompt: string, short: string, low: string, high: string): ImpressionsQuestion {
+  return { id, prompt, short, min: 0, max: 1, step: 1, low, high, unit: "", plus: false, boston: false, either: true };
+}
+
 export const IMPRESSIONS_DECK: ImpressionsQuestion[] = [
   // Boston and the T
-  count("boston-years", "How many years has your partner lived in Boston?", "Years in Boston", 20, 2, "years", "Just arrived", "Lifer", true),
-  count("t-rides", "How many T rides does your partner take in a week?", "T rides a week", 20, 2, "rides", "None", "Lives on it", true),
+  count("t-days", "How many days a week does your partner ride the T?", "Days on the T a week", 7, 1, "days", "None", "Every day", true, false),
   count("dunkin", "How many Dunkin' orders does your partner make in a week?", "Dunkin' a week", 10, 1, "orders", "None", "Runs on it", true),
-  count("stops-named", "How many Red Line stops could your partner name from memory?", "Red Line stops named", 20, 2, "stops", "None", "All of them", true),
-  feel("missed-stop", "How often does your partner fall asleep and miss their stop?", "Sleeps past their stop", "Never", "All the time", true),
-  feel("train-door", "Would your partner run for a closing train door?", "Runs for the train door", "Never", "Every time", true),
   feel("red-sox", "How big a Red Sox fan is your partner?", "Red Sox fan", "Not at all", "Die-hard", true),
-  feel("end-stops", "Could your partner name the Red Line's end stops?", "Knows the Red Line ends", "No clue", "In their sleep", true),
   feel("winter", "How much does your partner like a Boston winter?", "Likes Boston winter", "Hates it", "Loves it", true),
-  feel("wicked", "How often does your partner say \"wicked\"?", "Says \"wicked\"", "Never", "Wicked often", true),
   feel("green-line", "How calm is your partner when the Green Line crawls?", "Calm on a slow train", "Fuming", "Total zen", true),
   // Anywhere
   feel("horror", "How much does your partner like horror movies?", "Likes horror movies", "Never", "Loves them"),
   feel("morning", "How much of a morning person is your partner?", "Morning person", "Night owl", "Up at dawn"),
   feel("spicy", "How spicy does your partner like their food?", "Likes spicy food", "Mild", "On fire"),
-  feel("karaoke", "Would your partner get up and sing karaoke?", "Sings karaoke", "Never", "First on stage"),
   feel("planner", "How much does your partner plan a trip ahead?", "Plans trips ahead", "Wings it", "Spreadsheet"),
   feel("texts", "How fast does your partner text back?", "Texts back fast", "Days later", "Instantly"),
   feel("pineapple", "How does your partner feel about pineapple on pizza?", "Pineapple on pizza", "No way", "Yes please"),
-  feel("cats-dogs", "Is your partner a cat person or a dog person?", "Cats or dogs", "All cats", "All dogs"),
+  either("cats-dogs", "Is your partner a cat person or a dog person?", "Cats or dogs", "Cats", "Dogs"),
   count("coffee", "How many cups of coffee does your partner drink a day?", "Coffees a day", 6, 1, "cups", "None", "Non-stop"),
   count("cooking", "How many nights a week does your partner cook dinner?", "Nights cooking", 7, 1, "nights", "None", "Every night", false, false),
   count("plants", "How many houseplants does your partner keep alive?", "Houseplants", 10, 1, "plants", "None", "A jungle"),
 ];
 
-/** The number as shown to players, without the unit: "12", or "20+" at the top of an open scale. */
+/** The guess as shown to players, without the unit: "12", "20+" at the top of an open scale, or "Cats". */
 export function impressionsValue(q: ImpressionsQuestion, value: number): string {
+  if (q.either) return value >= q.max ? q.high : q.low;
   return q.plus && value >= q.max ? `${value}+` : String(value);
 }
 
-/** What goes after the number: the unit, or "out of 10" on a feelings scale. */
+/** What goes after the number: the unit, or "out of 10" on a feelings scale. Nothing for an either/or. */
 export function impressionsUnit(q: ImpressionsQuestion): string {
+  if (q.either) return "";
   return q.unit || `out of ${q.max}`;
 }
 
