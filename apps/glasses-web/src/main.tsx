@@ -4,13 +4,11 @@
  *
  * In dev, adds `dev-frame` to <html> so the 600x600 lens area is outlined in a normal
  * desktop browser window.
- *
- * TODO:
- * - Global error boundary that shows a plain "Something broke, pinch to reload" screen.
  */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { Games } from "./Games";
 import "./styles.css";
 
@@ -25,6 +23,6 @@ const screen = new URLSearchParams(location.search).has("ride") ? <App /> : <Gam
 
 createRoot(root).render(
   <StrictMode>
-    {screen}
+    <ErrorBoundary>{screen}</ErrorBoundary>
   </StrictMode>,
 );
