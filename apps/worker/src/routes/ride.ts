@@ -17,9 +17,8 @@
  * Which room: the active check-in row in D1 (checkins.checked_out_at IS NULL) gives trip_id.
  *
  * Protocol types: GhostReq, MoodReq, OkRes, RideStateRes, RideSnapshot.
- *
- * TODO:
- * - Poll cadence guidance for glasses-web (2 s while matched, 5 s otherwise).
+ * Glasses poll cadence (when WebSockets fail): 2 s matched / in-mission, 5 s otherwise
+ * (`ridePollIntervalMs` in apps/glasses-web/src/lib/socket.ts).
  */
 import { Hono } from "hono";
 import { GhostReq, MoodReq, type OkRes, type RideStateRes } from "@questline/protocol";

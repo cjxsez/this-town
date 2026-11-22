@@ -15,6 +15,7 @@
  *   noRide (4009)      fall back to polling GET /api/ride/state
  *
  * Polling mode: send() maps rider.arrived / rider.notNow to their REST twins.
+ * Poll cadence: 2 s while matched or in a mission, 5 s otherwise (ridePollIntervalMs).
  * While polling, retry the WebSocket every WS_RETRY_WHILE_POLLING_MS.
  * Pause when document.hidden; resume on visible.
  */
@@ -39,11 +40,20 @@ export interface RiderSocket {
 }
 
 const PING_MS = 25_000;
-const POLL_MS = 3_000;
+/** While a match or mission is on the snapshot. */
+export const POLL_MATCHED_MS = 2_000;
+/** Idle / riding with no partner. */
+export const POLL_IDLE_MS = 5_000;
 const BACKOFF_MIN_MS = 1_000;
 const BACKOFF_MAX_MS = 15_000;
 const WS_FAILS_BEFORE_POLL = 3;
 const WS_RETRY_WHILE_POLLING_MS = 3 * 60_000;
+
+/** How often to hit GET /api/ride/state while WebSockets are unavailable. */
+export function ridePollIntervalMs(snapshot: Pick<RideSnapshot, "match" | "mission"> | null): number {
+  if (snapshot?.match || snapshot?.mission) return POLL_MATCHED_MS;
+  return POLL_IDLE_MS;
+}
 
 function wsUrl(token: string): string {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
@@ -66,7 +76,7 @@ export function connectRiderSocket(opts: RiderSocketOptions): RiderSocket {
   function clearTimers() {
     window.clearInterval(pingTimer);
     window.clearTimeout(retryTimer);
-    window.clearInterval(pollTimer);
+    window.clearTimeout(pollTimer);
     window.clearInterval(wsRetryWhilePollTimer);
   }
 
@@ -154,6 +164,7 @@ export function connectRiderSocket(opts: RiderSocketOptions): RiderSocket {
     if (closed || paused) return;
     mode = "poll";
     opts.onStatus("polling");
+    let lastSnapshot: RideSnapshot | null = null;
     const poll = async () => {
       if (closed || paused || mode !== "poll") return;
       try {
@@ -173,14 +184,19 @@ export function connectRiderSocket(opts: RiderSocketOptions): RiderSocket {
         }
         if (!res.ok) return;
         const snapshot = (await res.json()) as RideSnapshot;
+        lastSnapshot = snapshot;
         opts.onEvent({ type: "ride.snapshot", snapshot });
       } catch {
         // network blip: try again next tick
+      } finally {
+        if (!closed && !paused && mode === "poll") {
+          window.clearTimeout(pollTimer);
+          pollTimer = window.setTimeout(() => void poll(), ridePollIntervalMs(lastSnapshot));
+        }
       }
     };
+    window.clearTimeout(pollTimer);
     void poll();
-    window.clearInterval(pollTimer);
-    pollTimer = window.setInterval(poll, POLL_MS);
     // While polling, retry the WebSocket every ~3 minutes.
     window.clearInterval(wsRetryWhilePollTimer);
     wsRetryWhilePollTimer = window.setInterval(() => {

@@ -115,6 +115,18 @@ To link in dev, run phone-web too (`pnpm dev:phone`), onboard, and enter the cod
 
 `pnpm --filter @questline/glasses-web preview` serves the production build on :5174 with the same proxy.
 
+## How to run the fallback
+
+When the real glasses misbehave in a demo, open the ride HUD on the laptop instead of the games root (see `docs/demo-script.md`).
+
+1. Worker on `:8787` (`pnpm dev:worker`) and this app on `:5174` (`pnpm dev:glasses`).
+2. Open a **600×600** browser window to `http://localhost:5174/g/?ride` (not `/g/` — that is the two-player games). The lens area is outlined in dev.
+3. The page shows a 4-digit link code. On the phone (or via `POST /api/glasses/link` in tooling), enter that code for the rider who should wear the glasses.
+4. After link, the HUD goes Idle (next stop / connecting). Check the rider in with Ride Mode on; when they match, the same window shows the match card (partner, color, where to go). With `GAMES_ONLY` the worker does not start a kiosk mission — stay on the match card / game on the phone; with missions off that flag, a mission screen can follow.
+5. If WebSockets fail in that browser, the page falls back to polling `GET /api/ride/state` (same token; 2 s while matched, 5 s otherwise). Keep the window open for the ride; closing it is like closing the Web App on the glasses.
+
+Arrow keys / Enter / Escape simulate the temple strip for "I'm here" and "Not now" on the match card.
+
 ## Load it on the glasses
 
 Requirements: glasses software v125+, Meta AI app v272+, and a **public HTTPS URL** (HTTP and localhost don't work).
