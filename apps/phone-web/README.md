@@ -99,6 +99,12 @@ Every screen follows the start screen:
 | Link glasses | `POST /api/glasses/link` |
 | Passport, People | `GET /api/passport`, `GET /api/matches/recent` |
 | Report / block | `POST /api/report` with the match id |
+| Unblock | `POST /api/unblock` with the match id |
+| Sign out (Me) | `POST /api/ride/end` if riding, then the token is dropped on this device |
 | Delete my data | `DELETE /api/me` |
 
-No worker route yet: unblock (only changes this device).
+Network behaviour (`src/lib/api.ts`): every request gives up after 8 s with a plain
+"no signal" error, reads (GET) are retried once after a timeout, lost network or 5xx, and
+writes are never retried, so a tap can't count twice. Any 401 to a signed-in request means
+the worker no longer knows the token (database reset, data deleted on another device): the
+app drops the token and profile and lands on the start page.
