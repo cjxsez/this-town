@@ -247,7 +247,7 @@ async function main() {
       await until(`impressions round ${round + 1} guess`, (v) => v.game.phase === "guess" || v.done);
       await both({ type: "lock", value: 0 });
       await until(`impressions round ${round + 1} talk`, (v) => v.game.phase === "talk");
-      await both({ type: "rate", rating: "close" });
+      await both({ type: "rate", rating: "spot" }); // valid on every question, pick-of-two included
       await until(`impressions round ${round + 1} ends`, (v) => v.game.phase !== "talk" || v.game.round !== round);
     }
     await until("impressions finishes", (v) => v.done);
