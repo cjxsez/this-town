@@ -24,6 +24,8 @@ export interface GlassesState {
   match: MatchFound | null;
   /** When mission.end reason=stamped arrived; Idle if stamp.awarded never follows. */
   stampedAt: number | null;
+  /** Stamp ids already shown (live stamp.awarded or snapshot recentStamp). */
+  shownStampId: string | null;
   sendError: string | null;
 }
 
@@ -49,6 +51,7 @@ export function initGlassesState(token: string | null = null): GlassesState {
     nextStopAt: null,
     match: null,
     stampedAt: null,
+    shownStampId: null,
     sendError: null,
   };
 }
@@ -58,12 +61,19 @@ export function onGlassesEvent(state: GlassesState, event: ServerToRider, at: nu
   switch (event.type) {
     case "ride.snapshot": {
       // Sent after rider.hello and returned by the polling fallback: redraw from scratch.
-      const { state: ride, match, mission } = event.snapshot;
+      const { state: ride, match, mission, recentStamp } = event.snapshot;
       const nextStopAt = ride.nextStopEtaSec === null ? null : at + ride.nextStopEtaSec * 1000;
       let screen: GlassesScreen = GLASSES_IDLE;
+      let shownStampId = state.shownStampId;
       if (mission) screen = { name: "mission", mission, partner: match?.partner ?? null, tapped: 0 };
       else if (match) screen = { name: "match", match: { type: "match.found", ...match }, arrived: false };
-      if (state.screen.name === "stamp") screen = state.screen; // let the celebration finish
+      // Missed stamp.awarded while hidden: catch up from recentStamp once per stamp id.
+      if (recentStamp && recentStamp.id !== state.shownStampId) {
+        screen = { name: "stamp", stamp: recentStamp };
+        shownStampId = recentStamp.id;
+      } else if (state.screen.name === "stamp") {
+        screen = state.screen; // let the celebration finish
+      }
       return {
         ...state,
         ride,
@@ -71,6 +81,7 @@ export function onGlassesEvent(state: GlassesState, event: ServerToRider, at: nu
         match: match ? { type: "match.found", ...match } : null,
         screen,
         stampedAt: null,
+        shownStampId,
       };
     }
     case "stamp.progress":
@@ -112,7 +123,12 @@ export function onGlassesEvent(state: GlassesState, event: ServerToRider, at: nu
       }
       return state.screen.name === "mission" ? { ...state, screen: GLASSES_IDLE, stampedAt: null } : state;
     case "stamp.awarded":
-      return { ...state, stampedAt: null, screen: { name: "stamp", stamp: event.stamp } };
+      return {
+        ...state,
+        stampedAt: null,
+        shownStampId: event.stamp.id,
+        screen: { name: "stamp", stamp: event.stamp },
+      };
   }
 }
 

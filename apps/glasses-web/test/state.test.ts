@@ -120,4 +120,39 @@ test("stamp.awarded wins over stamped timeout path", () => {
   s = onGlassesEvent(s, { type: "stamp.awarded", stamp: stamp() }, AT);
   assert.equal(s.screen.name, "stamp");
   assert.equal(s.stampedAt, null);
+  assert.equal(s.shownStampId, "stp1");
+});
+
+test("ride.snapshot recentStamp shows the stamp screen once per stamp id", () => {
+  const s0 = initGlassesState("tok");
+  const withStamp = onGlassesEvent(s0, {
+    type: "ride.snapshot",
+    snapshot: {
+      state: ride({ status: "riding" }),
+      match: null,
+      mission: null,
+      serverNow: AT,
+      recentStamp: stamp(),
+    },
+  }, AT);
+  assert.equal(withStamp.screen.name, "stamp");
+  if (withStamp.screen.name !== "stamp") throw new Error("expected stamp");
+  assert.equal(withStamp.screen.stamp.id, "stp1");
+  assert.equal(withStamp.shownStampId, "stp1");
+
+  // Same id again after dismiss: do not re-show.
+  const dismissed = reduceGlasses(withStamp, { type: "stampDismissed" });
+  assert.equal(dismissed.screen.name, "idle");
+  const again = onGlassesEvent(dismissed, {
+    type: "ride.snapshot",
+    snapshot: {
+      state: ride({ status: "riding" }),
+      match: null,
+      mission: null,
+      serverNow: AT + 1000,
+      recentStamp: stamp(),
+    },
+  }, AT + 1000);
+  assert.equal(again.screen.name, "idle");
+  assert.equal(again.shownStampId, "stp1");
 });
