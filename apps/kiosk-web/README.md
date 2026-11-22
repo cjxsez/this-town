@@ -21,7 +21,7 @@ Socket: `/ws/kiosk/:car?key=&role=screen`. On open it sends `kiosk.hello { car, 
 | `WS_CLOSE.badAuth` / `forbidden` | `Disconnected` (bad key / unknown car), no retry |
 | `WS_CLOSE.tripChanged` | reconnect immediately |
 | `kiosk.idle` | stats push only: updates riders in car / on train / next stop (does not reset a pair) |
-| `pair.incoming` | `PairIncoming`: color fill, both initials, "Maya & Andres", how many are here. A new matchId replaces the previous pair (worker: one pair per kiosk, no split screen) |
+| `pair.incoming` | `PairIncoming`: color fill, both initials, "Maya & Andres", how many are here. Body copy follows `GET /api/health` `gamesOnly`: mission mode says the tag starts your mission; games-only says find each other here and play on phones or glasses. A new matchId replaces the previous pair (worker: one pair per kiosk, no split screen) |
 | `mission.show` | `Mission`: title, prompt, countdown with a draining bar, "Both tap the tag" |
 | `stamp.progress` | fills the two tap dots on `Mission` |
 | `celebrate` | `Celebrate`: color burst (gold for `rare`), back to `Idle` after 6 s |

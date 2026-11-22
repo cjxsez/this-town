@@ -21,7 +21,7 @@ Glasses are not part of sign-up (D24). Riders with Meta Ray-Ban Display link the
 |---|---|---|
 | C1 | `/ride` | Ride Mode off. "Tap the kiosk in your car" |
 | | `/k/:car` | Tag tap. "Where are you getting off?" (last stop pre-picked), then Next |
-| | `/k/:car` | "Turn on Ride Mode?" Car, stop and what it means: matched with no accept step, what your match and the kiosk see, Not now and ghost, turns off at your stop. "Turn on Ride Mode" sends `rideMode: true`. "Not today" sends nothing |
+| | `/k/:car` | Destination hint and "Turn on Ride Mode?" rules follow `GET /api/health` `gamesOnly`: mission mode still says missions end before your stop and Ride Mode turns off at the stop; games-only describes the two-player games and that Ride Mode stays on until you turn it off or the trip ends. "Turn on Ride Mode" sends `rideMode: true`. "Not today" sends nothing |
 | | `/k/:car` | "Ride Mode is on." Car, stop, next stop, "Got it" |
 
 Other things a tag tap can show: "You're in car N now" (moved cars), "You made it" (meeting kiosk), "Ride Mode is already on", "1 of 2 tapped", "Stamped!", or an error.
@@ -30,7 +30,7 @@ Other things a tag tap can show: "You're in car N now" (moved cars), "You made i
 
 | Id | Screen |
 |---|---|
-| C2 | Riding. Car, stops, riders on the train, ghost toggle, mood, and the waiting song on loop ("♪ Music on/off" mutes it). The song keeps going through the match screen and `/m` until the pair's first game starts. The Ride Mode switch asks "Turn off Ride Mode?" ("Keep it on" / "Turn it off") |
+| C2 | Riding. Car, stops, riders on the train, ghost toggle, mood, and the waiting song on loop ("♪ Music on/off" mutes it). The song keeps going through the match screen and `/m` until the pair's first game starts. Stay-on hint is mode-aware (`gamesOnly`: stays on until you turn it off or the trip ends; otherwise turns off at your stop). The Ride Mode switch asks "Turn off Ride Mode?" ("Keep it on" / "Turn it off") |
 | C3 | Riding, offline banner |
 | E1 | Matched. Name, pair color, why you two, where to go (kiosk N cars forward or back). "I'm at the kiosk", and "Not now" with a confirm |
 | E2 | Matched, they come to you |

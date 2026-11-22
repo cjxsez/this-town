@@ -89,3 +89,13 @@ nothing changed.
 What worked end to end: demo rider, glasses link, kiosk check-in, the match on all three
 screens, the game moving onto the lens, all three games, and the finish (stamp on the
 phone, "Stamped!" on the kiosk, kiosk freed).
+
+## 2026-11-22 — copy is mode-aware; behavior still open
+
+Phone (`/k` destination + Ride Mode rules, Riding) and kiosk pair screen now read
+`GET /api/health` once and switch copy when `gamesOnly` is true (mission wording unchanged
+when it is false or health fails; phone mock stays on mission copy). Glasses MatchCard
+also shows "You're here. Waiting for …" after I'm here.
+
+**Room behavior is unchanged** — stops still do not check riders out under GAMES_ONLY.
+Kenny still picks from the options above; this only fixed the dishonest consent/UI lines.
