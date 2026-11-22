@@ -37,6 +37,10 @@ apps/kiosk-pi/
     led_test.py             LED smoke test
   tests/
     test_ndef.py            NDEF builder tests
+    test_agent_leds.py      event → animation mapping with FakeLeds
+    test_nfc_writers.py     block layout / retries with a fake SMBus
+    test_browser.py         crash-flag Preferences clear
+    test_agent_socket.py    hello → nfc.written → 4002 reconnect → 1001 shutdown
 ```
 
 ## Local dev (laptop)
