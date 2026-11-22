@@ -2,6 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { T_STATIONS } from "@questline/t-map";
+import {
+  MBTA_BACKOFF_MAX_MS,
+  MBTA_BACKOFF_MIN_MS,
+  mbtaPollDelayAfterError,
+  nextMbtaBackoffMs,
+  parseRetryAfterMs,
+} from "../src/mbta/client";
 import { parseScheduleStops, parseTimeline } from "../src/mbta/predictions";
 import { parseVehicles, routeToLine } from "../src/mbta/vehicles";
 import type { StopInfo } from "../src/rooms/state";
@@ -96,4 +103,29 @@ test("schedules seed the trip's full stop list in order, mapped to catalog ids",
   assert.equal(stops[0]!.name, "Forest Hills");
   assert.ok(stops.every((s, i) => i === 0 || s.sequence > stops[i - 1]!.sequence));
   assert.equal(new Set(stops.map((s) => s.stopId)).size, stops.length, "no stop twice");
+});
+
+// ---- resilience: Retry-After and poll backoff ----
+
+test("parseRetryAfterMs reads delay-seconds and HTTP-date, ignores junk", () => {
+  assert.equal(parseRetryAfterMs("30"), 30_000);
+  assert.equal(parseRetryAfterMs(null), null);
+  assert.equal(parseRetryAfterMs("nope"), null);
+  const now = Date.parse("2099-01-01T12:00:00Z");
+  assert.equal(parseRetryAfterMs("Thu, 01 Jan 2099 12:00:45 GMT", now), 45_000);
+  assert.equal(parseRetryAfterMs("0"), 0);
+});
+
+test("nextMbtaBackoffMs starts at 20s and doubles up to 2 minutes", () => {
+  assert.equal(nextMbtaBackoffMs(null), MBTA_BACKOFF_MIN_MS);
+  assert.equal(nextMbtaBackoffMs(MBTA_BACKOFF_MIN_MS), 40_000);
+  assert.equal(nextMbtaBackoffMs(40_000), 80_000);
+  assert.equal(nextMbtaBackoffMs(80_000), MBTA_BACKOFF_MAX_MS);
+  assert.equal(nextMbtaBackoffMs(MBTA_BACKOFF_MAX_MS), MBTA_BACKOFF_MAX_MS);
+});
+
+test("mbtaPollDelayAfterError prefers Retry-After, else the backoff ladder", () => {
+  assert.equal(mbtaPollDelayAfterError({ retryAfterMs: 12_000 }, null), 12_000);
+  assert.equal(mbtaPollDelayAfterError({ retryAfterMs: null }, null), MBTA_BACKOFF_MIN_MS);
+  assert.equal(mbtaPollDelayAfterError({}, 40_000), 80_000);
 });

@@ -114,6 +114,7 @@ import {
 } from "../lib/time";
 import { writeWhy } from "../llm/why";
 import { advanceDemoClock, demoTimeline, newDemoClock } from "../mbta/demo";
+import { MbtaError, mbtaPollDelayAfterError } from "../mbta/client";
 import { fetchTripTimeline } from "../mbta/predictions";
 import { assignColor, colorsInUse } from "../matching/colors";
 import { carDelta, greedyPairs } from "../matching/pair";
@@ -158,6 +159,10 @@ export class TrainRoom extends DurableObject<Env> {
   private matchingAgain = false;
   /** Consecutive empty live MBTA prediction polls; 2 ends the trip. */
   private emptyPolls = 0;
+  /** Earliest time to hit MBTA again after a 429 / 5xx / network error (epoch ms). */
+  private nextMbtaPollAt = 0;
+  /** Last exponential backoff applied after a failed poll (null after success). */
+  private mbtaBackoffMs: number | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -629,6 +634,11 @@ export class TrainRoom extends DurableObject<Env> {
       s.lastPolledAt = now;
       return;
     }
+    // After 429 / 5xx / network errors, skip the fetch until the backoff elapses.
+    // Mission and matching alarms still fire; we just keep the previous timeline.
+    if (now < this.nextMbtaPollAt) {
+      return;
+    }
     try {
       const tl = await fetchTripTimeline(this.env, s.trip.tripId, s.stops, now);
       if (tl === null) {
@@ -641,9 +651,14 @@ export class TrainRoom extends DurableObject<Env> {
         this.emptyPolls = 0;
         Object.assign(s, tl);
       }
+      this.mbtaBackoffMs = null;
+      this.nextMbtaPollAt = 0;
     } catch (err) {
       // Keep the last known timeline; do not count API errors as empty polls.
-      console.warn("mbta timeline poll failed", err);
+      const hint = err instanceof MbtaError ? err : { retryAfterMs: null };
+      this.mbtaBackoffMs = mbtaPollDelayAfterError(hint, this.mbtaBackoffMs);
+      this.nextMbtaPollAt = now + this.mbtaBackoffMs;
+      console.warn("mbta timeline poll failed; next try in", this.mbtaBackoffMs, "ms", err);
     }
     s.lastPolledAt = now;
   }
@@ -666,6 +681,8 @@ export class TrainRoom extends DurableObject<Env> {
     }
     this.state = emptyRoomState();
     this.emptyPolls = 0;
+    this.mbtaBackoffMs = null;
+    this.nextMbtaPollAt = 0;
     await this.persist();
     await this.ctx.storage.deleteAlarm();
   }
@@ -1002,6 +1019,8 @@ export class TrainRoom extends DurableObject<Env> {
     s.missions = {};
     s.declinedPairs = [];
     this.emptyPolls = 0;
+    this.mbtaBackoffMs = null;
+    this.nextMbtaPollAt = 0;
     await this.refreshTimeline(now);
     await this.persist();
   }
