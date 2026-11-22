@@ -10,10 +10,11 @@
  * A match with a game (match.game, GAMES_ONLY) shows the match card until the partner opens
  * the game, then the game itself: <Games follow> moves the rider's seat onto this lens.
  */
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { setServerNow } from "./lib/clock";
 import { clearToken, loadToken } from "./lib/link";
 import { connectRiderSocket, type RiderSocket } from "./lib/socket";
+import { loadWorkerMode } from "./lib/workerMode";
 import { Games } from "./Games";
 import { useWakeLock } from "./lib/wakeLock";
 import { Idle } from "./screens/Idle";
@@ -26,8 +27,13 @@ import { initGlassesState, reduceGlasses } from "./state";
 
 export function App() {
   const [state, dispatch] = useReducer(reduceGlasses, undefined, () => initGlassesState(loadToken()));
+  const [gamesOnly, setGamesOnly] = useState(false);
   const socketRef = useRef<RiderSocket | null>(null);
   useWakeLock(Boolean(state.token));
+
+  useEffect(() => {
+    void loadWorkerMode().then((m) => setGamesOnly(m.gamesOnly));
+  }, []);
 
   useEffect(() => {
     if (!state.token) return;
@@ -96,7 +102,7 @@ export function App() {
     case "idle":
       return (
         <>
-          <Idle ride={state.ride} nextStopAt={state.nextStopAt} status={state.status} />
+          <Idle ride={state.ride} nextStopAt={state.nextStopAt} status={state.status} gamesOnly={gamesOnly} />
           {banner}
         </>
       );
@@ -128,7 +134,7 @@ export function App() {
     case "stamp":
       return (
         <>
-          <Stamp stamp={screen.stamp} onDone={onStampDone} />
+          <Stamp stamp={screen.stamp} onDone={onStampDone} gamesOnly={gamesOnly} />
           {banner}
         </>
       );

@@ -3,10 +3,12 @@
  *
  * Driven by ride.state (RideState): nextStop, nextStopEtaSec (shown as a countdown),
  * ridersOnTrain, status, ghost. If Ride Mode is off, tells the rider to tap the kiosk tag.
+ * Looking-for copy follows GET /api/health gamesOnly (lib/rideCopy.ts).
  * Kept mostly empty: this screen is up for most of the ride.
  */
 import type { RideState } from "@questline/protocol";
 import { Countdown } from "../components/Countdown";
+import { idleLooking } from "../lib/rideCopy";
 import type { SocketStatus } from "../lib/socket";
 
 interface IdleProps {
@@ -14,9 +16,11 @@ interface IdleProps {
   /** Absolute epoch ms for the next stop, derived from nextStopEtaSec at receipt time. */
   nextStopAt: number | null;
   status: SocketStatus;
+  /** From GET /api/health; false keeps "Looking for your match…". */
+  gamesOnly?: boolean;
 }
 
-export function Idle({ ride, nextStopAt, status }: IdleProps) {
+export function Idle({ ride, nextStopAt, status, gamesOnly = false }: IdleProps) {
   if (!ride) {
     return (
       <main className="hud hud-center" aria-live="polite">
@@ -40,7 +44,7 @@ export function Idle({ ride, nextStopAt, status }: IdleProps) {
       <div className="hud-title">{ride.nextStop ?? "…"}</div>
       {nextStopAt !== null && <Countdown endsAt={nextStopAt} className="countdown-md" />}
       <div className="hud-body">{ride.ridersOnTrain} riders on this train</div>
-      <div className="hud-dim">{ride.ghost ? "Ghost mode on" : "Looking for your match…"}</div>
+      <div className="hud-dim">{ride.ghost ? "Ghost mode on" : idleLooking(gamesOnly)}</div>
       {status === "polling" && <div className="hud-dim">Live updates limited</div>}
     </main>
   );
