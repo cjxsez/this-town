@@ -96,6 +96,11 @@ export class BackendRide implements RideChannel {
     clearToken();
   }
 
+  /** Ride Mode is on (the worker has us checked in). */
+  get riding(): boolean {
+    return this.wire !== null;
+  }
+
   // ---- worker -> phone ----
 
   /** Pull the whole ride from the worker: on load, on coming back to the tab, after a socket drop. */

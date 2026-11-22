@@ -30,6 +30,11 @@ export function createBackendApi(): Omit<QuestlineApi, "ride"> & { ride: Backend
       if (getToken()) await rest.deleteMe();
       ride.signOut();
     },
+    signOut: async () => {
+      // Turn Ride Mode off first so nobody stays matched with a rider who left; best effort.
+      if (getToken() && ride.riding) await rest.endRide().catch(() => {});
+      ride.signOut();
+    },
     linkGlasses: async (code) => {
       await rest.linkGlasses(code);
     },

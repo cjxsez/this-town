@@ -51,6 +51,8 @@ export interface QuestlineApi {
   /** Create the rider (first call) or save edits. */
   saveProfile(p: Profile): Promise<void>;
   deleteMyData(): Promise<void>;
+  /** Forget the rider on this device: end any ride, drop the token. The account stays. */
+  signOut(): Promise<void>;
   /** The 4-digit code shown on the glasses. Rejects when the code is wrong or expired. */
   linkGlasses(code: string): Promise<void>;
   /** Stamps from the server, newest first. null when there's no server (mock). */
