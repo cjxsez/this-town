@@ -9,9 +9,8 @@
  *
  * Protocol types: none directly (CarId is used for the demo car map).
  *
- * TODO:
- * - Keep `Env` in sync with wrangler.toml whenever a binding or var is added.
- * - Consider `wrangler types` to generate this instead once the config settles.
+ * Keep `Env` and `readConfig` in sync with wrangler.toml; `test/envDrift.test.ts` fails CI when a
+ * var or binding is added without updating this file.
  */
 import type { CarId } from "@questline/protocol";
 import type { GameRoom } from "./rooms/GameRoom";
@@ -60,6 +59,7 @@ export interface Config {
   demoMode: boolean;
   gamesOnly: boolean;
   demoCarTrips: Record<CarId, string>;
+  emailFrom: string;
 }
 
 function intVar(raw: string | undefined, fallback: number): number {
@@ -91,5 +91,6 @@ export function readConfig(env: Env): Config {
     demoMode: env.DEMO_MODE === "true",
     gamesOnly: env.GAMES_ONLY === "true",
     demoCarTrips: parseCarTrips(env.DEMO_CAR_TRIPS),
+    emailFrom: env.EMAIL_FROM,
   };
 }
