@@ -67,6 +67,7 @@ Every screen follows the start screen:
 | `/join/name`, `/join/interests`, `/join/about`, `/join/battery`, `/join/ride-mode` | Onboarding B2 to B6. The last step creates the rider; glasses are linked from Me > Glasses |
 | `/k/:car?n=<nonce>` | Kiosk tag landing: pick your stop, confirm Ride Mode, or a car move / stamp tap. Signed out (worker mode): parks the tap and goes to `/signin` first |
 | `/ride` | Ride Mode. One URL; the screen follows the ride phase |
+| `/passport/map` | H7 the T map: `@questline/t-map` drawn full screen, drag, pinch or scroll to zoom, tap a station |
 | `/passport`, `/passport/:id`, `/people`, `/people/:id`, `/people/:id/report`, `/me`, `/me/glasses` | Collection and settings |
 | `/print/tag/:car` | Printable "Tap here" sign for a kiosk, with a QR fallback to `/k/:car` |
 | `/screens`, `/lens` | Dev: every screen with fixture data, every glasses card |

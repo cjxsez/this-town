@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { Card, Screen, TileTitle } from "../../ui";
 import { useApp } from "../../state/store";
 import { shortDate } from "../../state/format";
@@ -40,9 +41,13 @@ export default function Passport() {
         </div>
       </div>
 
-      <Card className="cl-map">
+      <Link to="/passport/map" className="q-card cl-map" aria-label={`Open the T map. ${byStation.size} of 124 stations stamped.`}>
         <TMap stamps={stamps} />
-      </Card>
+        <span className="cl-map__foot" aria-hidden>
+          <span>{byStation.size} of 124 stations</span>
+          <span className="cl-map__open">OPEN MAP</span>
+        </span>
+      </Link>
 
       <div className="cl-filter" role="radiogroup" aria-label="Line">
         {[...LINE_ORDER, "all" as const].map((f) => {
@@ -85,6 +90,7 @@ function LineCard({ line, byStation, footnote }: { line: LineColor; byStation: M
         <section key={g.group} aria-label={`${LINES[line].label} Line, ${g.group.toLowerCase()}`}>
           <div className="q-eyebrow">{g.group}</div>
           <div className="cl-group">
+            <div className="cl-group__track">
             <div className="cl-group__rail" style={{ background: LINES[line].hex }} />
             <div className="cl-group__row">
               {g.stationIds.map((id) => {
@@ -108,11 +114,7 @@ function LineCard({ line, byStation, footnote }: { line: LineColor; byStation: M
                   </div>
                 );
               })}
-              {g.more && (
-                <span className="cl-more" aria-label="and more stations">
-                  …
-                </span>
-              )}
+            </div>
             </div>
           </div>
         </section>

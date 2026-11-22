@@ -46,4 +46,4 @@ Other things a tag tap can show: "You're in car N now" (moved cars), "You made i
 
 ## After
 
-Passport (`/passport`), People (`/people`, with report and block), Me (`/me`), Glasses (`/me/glasses`). "Delete my data" on Me turns Ride Mode off and removes the rider on the worker.
+Passport (`/passport`, with an overview of the whole T map and one swipeable rail of tickets per stretch of line), the T map (`/passport/map`, H7: every station named, stamped ones in yellow, drag, pinch and tap a station), People (`/people`, with report and block), Me (`/me`), Glasses (`/me/glasses`). "Delete my data" on Me turns Ride Mode off and removes the rider on the worker.

@@ -1,5 +1,6 @@
 // Static catalog. The matcher compares ids, so chip labels must match these
 // exactly; that is why onboarding has no free-text interest field.
+import { T_STATIONS, stationsOn, type Branch as TBranch, type LineId as TLineId } from "@questline/t-map";
 import type { GreenBranch, LineColor, Mission, Station } from "./types";
 
 export const LINES: Record<LineColor, { label: string; hex: string; dark: string }> = {
@@ -9,40 +10,57 @@ export const LINES: Record<LineColor, { label: string; hex: string; dark: string
   blue: { label: "Blue", hex: "#3B74C4", dark: "#26343B" },
 };
 
-// ---- stations (the 14 in the demo catalog, plus passport placeholders) ----
+// ---- stations: every subway and light-rail stop, from @questline/t-map ----
+// The ids of the first, 15-station catalog are kept, so stored stamps still resolve.
+// The Mattapan Line counts with the Red Line here: the MBTA colours it red, and the
+// passport files it on the Red Line's card.
 
-export const STATIONS: Station[] = [
-  { id: "kenmore", name: "Kenmore", short: "KEN-MORE", lines: ["green"], branches: ["B", "C", "D"] },
-  { id: "bu-east", name: "BU East", short: "BU EAST", lines: ["green"], branches: ["B"] },
-  { id: "bu-central", name: "BU Central", short: "BU CTR", lines: ["green"], branches: ["B"] },
-  { id: "amory", name: "Amory St", short: "AMORY", lines: ["green"], branches: ["B"] },
-  { id: "babcock", name: "Babcock St", short: "BABC-OCK", lines: ["green"], branches: ["B"] },
-  { id: "blandford", name: "Blandford St", short: "BLAND-FORD", lines: ["green"], branches: ["B"] },
-  { id: "hynes", name: "Hynes", short: "HYN-ES", lines: ["green"], branches: ["B", "C", "D"] },
-  { id: "copley", name: "Copley", short: "COP-LEY", lines: ["green"], branches: ["B", "C", "D", "E"] },
-  { id: "arlington", name: "Arlington", short: "ARL.", lines: ["green"], branches: ["B", "C", "D", "E"] },
-  { id: "boylston", name: "Boylston", short: "BOYL-STON", lines: ["green"], branches: ["B", "C", "D", "E"] },
-  { id: "park-st", name: "Park St", short: "PARK ST", lines: ["green", "red"], branches: ["B", "C", "D", "E"] },
-  { id: "gov-ctr", name: "Government Ctr", short: "GOV CTR", lines: ["green", "blue"], branches: ["B", "C", "D", "E"] },
-  { id: "downtown-crossing", name: "Downtown Crossing", short: "DTX", lines: ["red", "orange"] },
-  { id: "harvard", name: "Harvard", short: "HAR-VARD", lines: ["red"] },
-  { id: "aquarium", name: "Aquarium", short: "AQUA-RIUM", lines: ["blue"] },
-];
+const asLine = (l: TLineId): LineColor => (l === "mattapan" ? "red" : l);
 
-export const stationById = (id: string) => STATIONS.find((s) => s.id === id);
+export const STATIONS: Station[] = T_STATIONS.map((s) => ({
+  id: s.id,
+  name: s.name,
+  short: s.short,
+  lines: [...new Set(s.lines.map(asLine))],
+  ...(s.branches ? { branches: [...s.branches] } : {}),
+}));
 
-/** Passport layout: stations in line order, grouped the way the line map draws them. */
-export const PASSPORT_LAYOUT: Record<LineColor, { group: string; stationIds: string[]; more: boolean }[]> = {
+const byId = new Map(STATIONS.map((s) => [s.id, s]));
+export const stationById = (id: string) => byId.get(id);
+
+const ids = (line: TLineId, branch?: TBranch) => stationsOn(line, branch).map((s) => s.id);
+const only = (list: string[], not: string[]) => list.filter((id) => !not.includes(id));
+const CENTRAL = ["gov-ctr", "park-st", "boylston", "arlington", "copley", "hynes", "kenmore"];
+const NORTH = ["haymarket", "north-station", "science-park", "lechmere", "union-sq", "east-somerville", "gilman-sq", "magoun-sq", "ball-sq", "medford-tufts"];
+const RED_TRUNK = ["alewife", "davis", "porter", "harvard", "central", "kendall-mit", "charles-mgh", "park-st", "downtown-crossing", "south-station", "broadway", "andrew", "jfk-umass"];
+
+/** Passport layout: every station, in line order, grouped the way the map draws the line. */
+export const PASSPORT_LAYOUT: Record<LineColor, { group: string; stationIds: string[] }[]> = {
   green: [
-    { group: "B BRANCH", stationIds: ["kenmore", "bu-east", "bu-central", "amory", "babcock"], more: true },
-    { group: "TRUNK", stationIds: ["hynes", "copley", "arlington", "boylston", "park-st", "gov-ctr"], more: true },
+    { group: "CENTRAL SUBWAY", stationIds: CENTRAL },
+    { group: "B · BOSTON COLLEGE", stationIds: only(ids("green", "B"), CENTRAL) },
+    { group: "C · CLEVELAND CIRCLE", stationIds: only(ids("green", "C"), CENTRAL) },
+    { group: "D · RIVERSIDE", stationIds: only(ids("green", "D"), [...CENTRAL, ...NORTH]) },
+    { group: "E · HEATH ST", stationIds: only(ids("green", "E"), [...CENTRAL, ...NORTH]) },
+    { group: "NORTH · UNION SQ AND MEDFORD", stationIds: NORTH },
   ],
-  red: [{ group: "TRUNK", stationIds: ["park-st", "downtown-crossing", "harvard"], more: true }],
-  orange: [{ group: "TRUNK", stationIds: ["downtown-crossing"], more: true }],
-  blue: [{ group: "TRUNK", stationIds: ["gov-ctr", "aquarium"], more: true }],
+  red: [
+    { group: "ALEWIFE TO JFK/UMASS", stationIds: RED_TRUNK },
+    { group: "ASHMONT", stationIds: only(ids("red"), RED_TRUNK).filter((id) => ["savin-hill", "fields-corner", "shawmut", "ashmont"].includes(id)) },
+    { group: "BRAINTREE", stationIds: only(ids("red"), RED_TRUNK).filter((id) => !["savin-hill", "fields-corner", "shawmut", "ashmont"].includes(id)) },
+    { group: "MATTAPAN LINE", stationIds: only(ids("mattapan"), ["ashmont"]) },
+  ],
+  orange: [{ group: "OAK GROVE TO FOREST HILLS", stationIds: ids("orange") }],
+  blue: [{ group: "WONDERLAND TO BOWDOIN", stationIds: ids("blue") }],
 };
 
-export const LINE_STATION_COUNT: Record<LineColor, number> = { green: 66, red: 22, orange: 20, blue: 12 };
+/** Distinct stations on each line's passport card. */
+export const LINE_STATION_COUNT: Record<LineColor, number> = Object.fromEntries(
+  (Object.keys(PASSPORT_LAYOUT) as LineColor[]).map((l) => [l, new Set(PASSPORT_LAYOUT[l].flatMap((g) => g.stationIds)).size]),
+) as Record<LineColor, number>;
+
+/** Stops on each Green Line branch, end to end. */
+export const BRANCH_STOP_COUNT: Record<GreenBranch, number> = { B: ids("green", "B").length, C: ids("green", "C").length, D: ids("green", "D").length, E: ids("green", "E").length };
 
 export const GREEN_BRANCHES: GreenBranch[] = ["B", "C", "D", "E"];
 

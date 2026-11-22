@@ -32,6 +32,7 @@ export const SCREENS: { id: string; label: string; to?: string }[] = [
   { id: "H1", label: "Quest recap" },
   { id: "H2", label: "Passport", to: "/passport" },
   { id: "H3", label: "Stamp detail", to: "/passport/s-bu-east" },
+  { id: "H7", label: "T map", to: "/passport/map" },
   { id: "H4", label: "People", to: "/people" },
   { id: "H5", label: "Person", to: "/people/p-dev" },
   { id: "I1", label: "Me / Safety", to: "/me" },

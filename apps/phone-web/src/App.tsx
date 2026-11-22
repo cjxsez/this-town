@@ -21,6 +21,7 @@ import Tap, { takePendingTap } from "./screens/ride/Tap";
 import MissionTypes from "./screens/ride/MissionTypes";
 import Passport from "./screens/collection/Passport";
 import StampDetail from "./screens/collection/StampDetail";
+import MapScreen from "./screens/collection/MapScreen";
 import People from "./screens/collection/People";
 import Person from "./screens/collection/Person";
 import Me from "./screens/me/Me";
@@ -120,6 +121,7 @@ function Shell() {
         <Route path="/k/:car" element={<Tap />} />
         <Route path="/missions" element={<MissionTypes />} />
         <Route path="/passport" element={guard(<Passport />)} />
+        <Route path="/passport/map" element={guard(<MapScreen />)} />
         <Route path="/passport/:stampId" element={guard(<StampDetail />)} />
         <Route path="/people" element={guard(<People />)} />
         <Route path="/people/:personId" element={guard(<Person />)} />

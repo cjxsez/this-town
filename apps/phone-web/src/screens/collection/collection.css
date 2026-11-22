@@ -15,8 +15,12 @@
 .cl-sub { font: 700 20px/1.08 var(--font-hand); }
 
 /* ---------- H2 passport ---------- */
-.q-card.cl-map { padding: 8px 12px 4px; gap: 0; }
-.cl-map svg { display: block; width: 100%; height: auto; overflow: visible; filter: var(--wob); }
+/* The overview map: the real diagram, crisp, on its own paper (no wobble). */
+.q-card.cl-map { padding: 6px 6px 8px; gap: 6px; text-decoration: none; color: var(--ink); }
+.cl-map__svg { border-radius: calc(var(--r2) - 4px); overflow: hidden; }
+.cl-map__svg svg { display: block; width: 100%; height: auto; }
+.cl-map__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 6px; font: 700 18px/1.1 var(--font-hand); }
+.cl-map__open { font: 400 13px var(--font-display); letter-spacing: .03em; padding: 6px 10px; border: var(--ol) solid var(--ink); border-radius: var(--r4); background: var(--yellow); box-shadow: 2px 3px 0 var(--shadow); }
 
 .cl-filter { display: flex; gap: 6px; }
 .cl-filter__opt {
@@ -41,17 +45,22 @@
 
 .q-card.cl-line { padding: 12px 12px 8px; gap: 6px; }
 .cl-line__title { font: 700 20px/1.08 var(--font-hand); }
-.cl-group { position: relative; }
+/* Each group is a rail you swipe along, as long as the line it stands for. */
+.cl-group {
+  position: relative; overflow-x: auto; overscroll-behavior-x: contain;
+  margin: 0 -12px; padding: 0 12px; scrollbar-width: none; scroll-snap-type: x proximity;
+}
+.cl-group::-webkit-scrollbar { display: none; }
+.cl-group__track { position: relative; width: max-content; min-width: 100%; }
 .cl-group__rail {
   position: absolute; left: 0; right: 0; top: 5px; height: 8px;
   border: var(--ol) solid var(--ink); border-radius: 4px;
 }
 .cl-group__row { position: relative; display: flex; gap: 5px; padding: 3px 2px 4px; align-items: flex-start; }
-.cl-stop { flex: 0 1 52px; min-width: 44px; display: flex; flex-direction: column; align-items: center; }
+.cl-stop { flex: 0 0 52px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; }
 .cl-stop__dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); }
 .cl-stop__dot[data-on="true"] { background: var(--yellow); }
 .cl-stop__stem { width: 2px; height: 10px; margin-top: -1px; background: var(--ink); }
-.cl-more { flex: none; align-self: center; margin: 10px 0 0 6px; font: 400 22px var(--font-display); }
 .cl-foot { font-size: 16px; line-height: 1.2; text-wrap: pretty; color: var(--ink-soft); margin: 0; }
 
 /* Ticket: cream stub with perforated top/bottom edges and a barcode. */
@@ -151,3 +160,37 @@
 .cl-touch__label { font: 700 25px/1.08 var(--font-hand); }
 
 @media (max-width: 400px) { .cl-line__title { font-size: 18px; } }
+
+/* ---------- H7 the T map ---------- */
+.cl-maphead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cl-viewer {
+  position: relative; flex: 1 1 auto; min-height: 320px;
+  margin: 0 calc(-1 * var(--gutter)); border-top: var(--ol) solid var(--ink);
+  background: #FFFCF7;
+}
+.cl-viewer__map { position: absolute; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; outline: none; }
+.cl-viewer__map:active { cursor: grabbing; }
+.cl-viewer__map:focus-visible { box-shadow: inset 0 0 0 3px var(--ink); }
+.cl-viewer__map svg { display: block; }
+.cl-viewer__zoom {
+  position: absolute; right: var(--gutter); bottom: calc(var(--safe-bottom) + 16px);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.cl-viewer__zoom button {
+  width: 48px; height: 48px; display: grid; place-items: center;
+  background: var(--paper); color: var(--ink);
+  border: var(--ol) solid var(--ink); border-radius: var(--r3); box-shadow: 2px 3px 0 var(--shadow);
+  font: 400 26px/1 var(--font-display); cursor: pointer;
+}
+.cl-viewer__zoom .cl-viewer__fit { font-size: 13px; letter-spacing: .03em; }
+.cl-pick {
+  position: absolute; left: var(--gutter); right: calc(var(--gutter) + 60px); bottom: calc(var(--safe-bottom) + 16px);
+  display: flex; flex-direction: column; gap: 6px; padding: 12px 14px;
+  background: var(--paper); color: var(--ink);
+  border: var(--ol) solid var(--ink); border-radius: var(--r2); box-shadow: 3px 5px 0 var(--shadow);
+}
+.cl-pick__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.cl-pick__close { flex: none; width: 36px; height: 36px; margin: -6px -6px 0 0; border: 0; background: none; font: 400 26px/1 var(--font-display); color: var(--ink); cursor: pointer; }
+.cl-pick__lines { display: flex; flex-wrap: wrap; gap: 6px; }
+.cl-pick__note { margin: 0; font: 700 17px/1.15 var(--font-hand); color: var(--ink-soft); }
+.cl-pick__stamp { font: 700 18px/1.15 var(--font-hand); color: var(--ink); }
