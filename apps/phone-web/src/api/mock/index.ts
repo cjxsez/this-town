@@ -15,6 +15,9 @@ export function createMockApi(): QuestlineApi & { ride: RideSim } {
         if (code !== MOCK_CODE) throw new Error(`That code isn't right. In the simulator it's ${MOCK_CODE}.`);
         return { status: "new-account", email };
       },
+      attachEmail: async (_email, code) => {
+        if (code !== MOCK_CODE) throw new Error(`That code isn't right. In the simulator it's ${MOCK_CODE}.`);
+      },
     },
     saveProfile: ok,
     deleteMyData: ok,

@@ -14,6 +14,7 @@
  * - POST /api/auth/email/verify  AuthVerifyReq -> AuthVerifyRes         (no auth)
  * - POST /api/users          CreateUserReq (= Profile + signupTicket?) -> CreateUserRes   (no auth)
  * - GET  /api/me             -> MeRes
+ * - POST /api/me/email       AttachEmailReq -> MeRes      (a guest adds an email)
  * - POST /api/glasses/link   GlassesLinkReq -> GlassesLinkRes
  * - POST /api/taps           TapReq -> TapRes
  * - POST /api/ride/end       -> (no body defined in protocol)
@@ -170,6 +171,9 @@ export const api = {
     request("POST", "/api/users", { body: { ...profile, signupTicket }, schema: CreateUserRes, auth: false }),
 
   getMe: () => request("GET", "/api/me", { schema: MeRes }),
+
+  /** A guest adds a verified email. 409 code "email-taken" or "has-email". */
+  attachEmail: (email: string, code: string) => request("POST", "/api/me/email", { body: { email, code }, schema: MeRes }),
 
   updateMe: (patch: UpdateProfileReq) => request("PATCH", "/api/me", { body: patch, schema: MeRes }),
 

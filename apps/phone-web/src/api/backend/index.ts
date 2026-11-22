@@ -24,6 +24,9 @@ export function createBackendApi(): Omit<QuestlineApi, "ride"> & { ride: Backend
         setSignupTicket(res.signupTicket);
         return { status: "new-account", email: res.email };
       },
+      attachEmail: async (email, code) => {
+        await rest.attachEmail(email, code);
+      },
     },
     saveProfile: (p) => ride.saveProfile(p).catch((e) => console.warn("[questline] could not save the profile", e)),
     deleteMyData: async () => {

@@ -44,6 +44,8 @@ export type SignInResult =
 export interface AuthApi {
   sendCode(email: string): Promise<void>;
   verifyCode(email: string, code: string): Promise<SignInResult>;
+  /** A signed-in guest adds an email (code from sendCode) and keeps everything. */
+  attachEmail(email: string, code: string): Promise<void>;
 }
 
 export interface QuestlineApi {
