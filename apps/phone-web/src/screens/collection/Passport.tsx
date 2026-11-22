@@ -5,6 +5,8 @@ import { useApp } from "../../state/store";
 import { shortDate } from "../../state/format";
 import { LINES, LINE_STATION_COUNT, PASSPORT_LAYOUT, stationById } from "../../../shared/catalog";
 import type { LineColor, Stamp } from "../../../shared/types";
+import { passportRareFootnote } from "../../lib/rideModeCopy";
+import { useGamesOnly } from "../../lib/useWorkerMode";
 import { EarnedTicket, EmptyTicket } from "./parts";
 import { TMap } from "./TMap";
 
@@ -25,6 +27,7 @@ function stampsByStation(stamps: Stamp[]): Map<string, Stamp> {
 
 export default function Passport() {
   const { state } = useApp();
+  const gamesOnly = useGamesOnly();
   const [filter, setFilter] = useState<Filter>("green");
   const stamps = state.stamps;
   const byStation = stampsByStation(stamps);
@@ -71,13 +74,29 @@ export default function Passport() {
       </div>
 
       {lines.map((line, i) => (
-        <LineCard key={line} line={line} byStation={byStation} footnote={i === lines.length - 1} />
+        <LineCard
+          key={line}
+          line={line}
+          byStation={byStation}
+          footnote={i === lines.length - 1}
+          rareFootnote={passportRareFootnote(gamesOnly)}
+        />
       ))}
     </Screen>
   );
 }
 
-function LineCard({ line, byStation, footnote }: { line: LineColor; byStation: Map<string, Stamp>; footnote: boolean }) {
+function LineCard({
+  line,
+  byStation,
+  footnote,
+  rareFootnote,
+}: {
+  line: LineColor;
+  byStation: Map<string, Stamp>;
+  footnote: boolean;
+  rareFootnote: string;
+}) {
   const onLine = [...byStation.values()].filter((s) => stationById(s.stationId)?.lines.includes(line));
   const rare = onLine.filter((s) => s.rare).length;
 
@@ -119,7 +138,7 @@ function LineCard({ line, byStation, footnote }: { line: LineColor; byStation: M
           </div>
         </section>
       ))}
-      {footnote && <p className="cl-foot">★ rare = earned during a delay or a late-bonus mission</p>}
+      {footnote && <p className="cl-foot">{rareFootnote}</p>}
     </Card>
   );
 }
