@@ -14,9 +14,14 @@
  * The code is kept in sessionStorage so a reload stays in the same room.
  *   /g/?room=1234   open (or reuse) a fixed code, handy for a demo table
  *   /g/?join=1234   take the phone's seat from a lens or a desktop window, for testing
+ *
+ * The ride HUD (/g/?ride) also renders this, with `follow` set to the seat the rider got in
+ * match.found: the lens opens its own room and moves that seat onto itself, the same call
+ * "Play on glasses" makes from the phone, so a rider with no input on the glasses still ends
+ * up playing on them (D28). Until the game is on, it shows `waiting` (the match card).
  */
-import { useEffect, useRef, useState } from "react";
-import { ROOM_CODE, roomApi, type Seat } from "@questline/protocol/games";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ROOM_CODE, roomApi, type Seat, type SeatRef } from "@questline/protocol/games";
 import { SCREENS } from "./play";
 import { useRoom } from "./lib/room";
 import { Pair } from "./screens/Pair";
@@ -45,7 +50,9 @@ const params = new URLSearchParams(location.search);
 const fixed = [params.get("join"), params.get("room")].find((c) => c && ROOM_CODE.test(c)) ?? null;
 const seat: Seat = params.get("join") && fixed ? "b" : "a";
 
-export function Games() {
+const LENS_RETRY_MS = 3000;
+
+export function Games({ follow, waiting }: { follow?: SeatRef; waiting?: ReactNode } = {}) {
   const [code, setCode] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -82,6 +89,33 @@ export function Games() {
     return () => window.clearTimeout(timer);
   }, [code, attempt]);
 
+  // Ride HUD: move the rider's seat in the pair's room onto this lens, once per seat.
+  const claimed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!follow || !code) return;
+    const key = `${follow.code}:${follow.seat}:${code}`;
+    if (claimed.current === key) return;
+    let timer = 0;
+    let alive = true;
+    const claim = () => {
+      roomApi.lens(follow.code, follow.seat, code).then(
+        (view) => {
+          if (!alive) return;
+          if (view) claimed.current = key;
+          else timer = window.setTimeout(claim, LENS_RETRY_MS);
+        },
+        () => {
+          if (alive) timer = window.setTimeout(claim, LENS_RETRY_MS);
+        },
+      );
+    };
+    claim();
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
+  }, [follow?.code, follow?.seat, code]);
+
   // The room is gone (the worker forgot it): open a fresh one.
   useEffect(() => {
     if (!gone) return;
@@ -93,14 +127,14 @@ export function Games() {
     setCode(null);
   }, [gone]);
 
-  if (!code || !home.room) return <Pair code={null} state={failed ? "error" : "opening"} />;
-  if (moved && !away.room) return <Pair code={null} state="opening" />;
+  if (!code || !home.room) return waiting ?? <Pair code={null} state={failed ? "error" : "opening"} />;
+  if (moved && !away.room) return waiting ?? <Pair code={null} state="opening" />;
   // The phone took the game back (or gave it to other glasses): wait with our own code again.
   const following = moved !== null && away.room?.lens === code;
   const { room, send, serverNow } = following ? away : home;
   if (!room) return null;
-  if (!room.gameId || (moved && !following)) return <Pair code={room.code} state="waiting" />;
-  if (!room.partnerHere) return <Pair code={room.code} state="away" />;
+  if (!room.gameId || (moved && !following)) return waiting ?? <Pair code={room.code} state="waiting" />;
+  if (!room.partnerHere) return waiting ?? <Pair code={room.code} state="away" />;
 
   const Screen = SCREENS[room.gameId];
   return (

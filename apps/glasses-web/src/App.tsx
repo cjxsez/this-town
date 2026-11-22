@@ -6,11 +6,15 @@
  *
  * Socket: /ws/rider?token= (lib/socket.ts), sends rider.hello {client:"glasses"} on open.
  * Reload mid-match restores from ride.snapshot.match / mission (protocol RideSnapshot).
+ *
+ * A match with a game (match.game, GAMES_ONLY) shows the match card until the partner opens
+ * the game, then the game itself: <Games follow> moves the rider's seat onto this lens.
  */
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { setServerNow } from "./lib/clock";
 import { clearToken, loadToken } from "./lib/link";
 import { connectRiderSocket, type RiderSocket } from "./lib/socket";
+import { Games } from "./Games";
 import { useWakeLock } from "./lib/wakeLock";
 import { Idle } from "./screens/Idle";
 import { LinkCode } from "./screens/LinkCode";
@@ -96,19 +100,24 @@ export function App() {
           {banner}
         </>
       );
-    case "match":
+    case "match": {
+      const card = (
+        <MatchCard
+          match={screen.match}
+          currentCar={state.ride?.car}
+          arrived={screen.arrived}
+          onArrived={onArrived}
+          onNotNow={onNotNow}
+        />
+      );
+      const game = screen.match.game;
       return (
         <>
-          <MatchCard
-            match={screen.match}
-            currentCar={state.ride?.car}
-            arrived={screen.arrived}
-            onArrived={onArrived}
-            onNotNow={onNotNow}
-          />
+          {game ? <Games key={`${game.code}:${game.seat}`} follow={game} waiting={card} /> : card}
           {banner}
         </>
       );
+    }
     case "mission":
       return (
         <>

@@ -38,7 +38,7 @@ Served by the worker at `https://<domain>/g/` (Vite `base: "/g/"`).
 
 ## Games (the `/g/` root)
 
-`/g/` plays three games between the glasses and a phone, for two people sitting together. The lens shows a 4-digit code; the other player opens `/m` on a phone and types it. From then on both devices show the same game, each from its own seat, and the worker keeps them in step (`GameRoom`, see the worker README). The ride HUD described above is at `/g/?ride`, so use that URL when linking glasses for a ride.
+`/g/` plays three games between the glasses and a phone, for two people sitting together. The lens shows a 4-digit code; the other player opens `/m` on a phone and types it. From then on both devices show the same game, each from its own seat, and the worker keeps them in step (`GameRoom`, see the worker README). The ride HUD described above is at `/g/?ride`, so use that URL when linking glasses for a ride. On a match that comes with a game, the ride HUD moves the rider's seat onto the lens by itself and switches from the match card to the game once the partner opens it (D28), so no input is needed.
 
 | Game | What happens |
 |---|---|
