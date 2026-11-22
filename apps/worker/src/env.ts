@@ -27,6 +27,8 @@ export interface Env {
   EMAIL?: SendEmail;
   /** R2 bucket `questline-media`: media kept out of git, such as the waiting song (routes/media.ts). */
   MEDIA?: R2Bucket;
+  /** Deployed Worker version id + timestamp (`[version_metadata]` in wrangler.toml). */
+  CF_VERSION_METADATA: WorkerVersionMetadata;
 
   // ---- [vars] (always strings) ----
   PUBLIC_ORIGIN: string;

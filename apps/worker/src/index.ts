@@ -57,10 +57,30 @@ const app = new Hono<AppEnv>();
 // ---------- REST ----------
 
 // Also says which flow this worker runs, so pnpm smoke checks the one that is deployed.
+// versionId / deployedAt come from CF_VERSION_METADATA so a post-deploy check can confirm
+// which Worker version is live (short UTC clock time from the version timestamp).
 app.get("/api/health", (c) => {
   const cfg = readConfig(c.env);
-  return c.json({ ok: true, gamesOnly: cfg.gamesOnly, demoMode: cfg.demoMode });
+  const meta = c.env.CF_VERSION_METADATA;
+  const deployedAt = shortDeployedAt(meta?.timestamp);
+  return c.json({
+    ok: true,
+    gamesOnly: cfg.gamesOnly,
+    demoMode: cfg.demoMode,
+    ...(meta?.id ? { versionId: meta.id } : {}),
+    ...(deployedAt ? { deployedAt } : {}),
+  });
 });
+
+/** "14:32 UTC" from an ISO timestamp; empty when missing or unparseable (local wrangler). */
+function shortDeployedAt(iso: string | undefined): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return undefined;
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm} UTC`;
+}
 app.route("/api", authRoutes);
 app.route("/api", usersRoutes);
 app.route("/api", glassesRoutes);
