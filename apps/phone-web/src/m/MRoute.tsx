@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import { ROOM_CODE, roomApi, type RoomView, type Seat } from "@questline/protocol/games";
 import type { ReactNode } from "react";
 import { Body, Button, Display, Eyebrow, Hint, Screen, TextField, TextLink, Title } from "../ui";
 import { SCREENS } from "./games";
 import { useRoom } from "./room";
+import { useApp } from "../state/store";
 import "./m.css";
 
 /**
@@ -21,6 +23,9 @@ import "./m.css";
  * show a code at /g/, the player types it here, and the glasses carry on as this seat. The
  * phone then waits, takes over again for anything that needs typing, and can bring the
  * game back. The game itself stays in the room on the worker, so nothing is lost or reset.
+ *
+ * A matched pair that finishes the last game gets a stamp from the worker (D28). When it
+ * lands while this page is open, the phone goes to /ride, which shows the stamp.
  *
  * The seat is kept in sessionStorage so a reload stays in the game. It talks to the worker
  * directly (roomApi), not through the app's api layer, so it also works in simulator mode
@@ -88,6 +93,14 @@ export default function MRoute() {
   const [picking, setPicking] = useState(false);
   const [lensCode, setLensCode] = useState("");
   const { room, gone, send, lens, serverNow } = useRoom(joined?.code ?? null, joined?.seat ?? "b");
+  const navigate = useNavigate();
+  const phase = useApp().state.ride.phase;
+  const lastPhase = useRef(phase);
+  useEffect(() => {
+    const before = lastPhase.current;
+    lastPhase.current = phase;
+    if (phase === "stamp" && before !== "stamp") navigate("/ride");
+  }, [phase, navigate]);
 
   const enter = (next: Joined) => {
     store(next);
