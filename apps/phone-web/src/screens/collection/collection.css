@@ -22,9 +22,14 @@
 .cl-map__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 6px; font: 700 18px/1.1 var(--font-hand); }
 .cl-map__open { font: 400 13px var(--font-display); letter-spacing: .03em; padding: 6px 10px; border: var(--ol) solid var(--ink); border-radius: var(--r4); background: var(--yellow); box-shadow: 2px 3px 0 var(--shadow); }
 
-.cl-filter { display: flex; gap: 6px; }
+/* Chips size to their label (Orange is the longest), and the row scrolls rather than clipping on a very narrow phone. */
+.cl-filter {
+  flex: none; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  padding: 0 3px 4px 0; margin-bottom: -4px;
+}
+.cl-filter::-webkit-scrollbar { display: none; }
 .cl-filter__opt {
-  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 2px;
+  flex: 1 0 auto; min-height: 44px; padding: 0 8px;
   display: flex; align-items: center; justify-content: center; gap: 5px;
   background: var(--paper); color: var(--ink);
   border: var(--ol) solid var(--ink);
@@ -38,10 +43,10 @@
 .cl-filter__dot { flex: none; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink); }
 @media (max-width: 400px) {
   .cl-filter { gap: 4px; }
-  .cl-filter__opt { font-size: 16px; gap: 3px; }
+  .cl-filter__opt { font-size: 16px; gap: 3px; padding: 0 5px; }
   .cl-filter__dot { width: 7px; height: 7px; }
 }
-@media (max-width: 370px) { .cl-filter__opt { font-size: 15px; } }
+@media (max-width: 370px) { .cl-filter__opt { font-size: 15px; padding: 0 4px; } }
 
 .q-card.cl-line { padding: 12px 12px 8px; gap: 6px; }
 .cl-line__title { font: 700 20px/1.08 var(--font-hand); }
