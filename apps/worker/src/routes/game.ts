@@ -40,7 +40,7 @@ gameRoutes.post("/game/rooms", async (c) => {
 
 gameRoutes.post("/game/rooms/:code/join", async (c) => {
   const code = c.req.param("code");
-  if (!ROOM_CODE.test(code) || !(await room(c.env, code).exists())) return c.json({ error: "no such room" }, 404);
+  if (!ROOM_CODE.test(code) || !(await room(c.env, code).joinable())) return c.json({ error: "no such room" }, 404);
   return c.json({ ok: true });
 });
 
@@ -57,4 +57,29 @@ gameRoutes.post("/game/rooms/:code/act", async (c) => {
   const seat = seatOf(body?.seat);
   if (!ROOM_CODE.test(code) || !seat) return c.json({ error: "bad code or seat" }, 400);
   return json(await room(c.env, code).act(seat, body?.action));
+});
+
+/**
+ * Move a seat's screen from its phone onto a pair of glasses (`to` is the code the glasses
+ * show at /g/), or back (`to: null`). Only where the game is drawn changes; the game stays
+ * in this room.
+ */
+gameRoutes.post("/game/rooms/:code/lens", async (c) => {
+  const code = c.req.param("code");
+  const body = (await c.req.json().catch(() => null)) as { seat?: unknown; to?: unknown } | null;
+  const seat = seatOf(body?.seat);
+  const to = body?.to ?? null;
+  if (!ROOM_CODE.test(code) || !seat) return c.json({ error: "bad code or seat" }, 400);
+  if (to !== null && (typeof to !== "string" || !ROOM_CODE.test(to) || to === code)) return c.json({ error: "no such glasses" }, 404);
+  const mine = room(c.env, code);
+  if (!(await mine.exists())) return c.json({ error: "no such room" }, 404);
+  if (to) {
+    const { ok, prev } = await room(c.env, to).moveTo({ code, seat });
+    if (!ok) return c.json({ error: "no such glasses" }, 404);
+    // Those glasses were showing another seat: give it back to its phone.
+    if (prev && (prev.code !== code || prev.seat !== seat)) await room(c.env, prev.code).setLens(prev.seat, null);
+  }
+  const before = await mine.setLens(seat, to);
+  if (before && before !== to) await room(c.env, before).release({ code, seat });
+  return json(await mine.view(seat));
 });

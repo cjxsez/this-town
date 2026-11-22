@@ -41,6 +41,12 @@ export interface GameModule<S, V> {
   isDone(state: S): boolean;
 }
 
+/** One seat in one room. */
+export interface SeatRef {
+  code: string;
+  seat: Seat;
+}
+
 /** What a client gets back from every room call. */
 export interface RoomView {
   code: string;
@@ -56,6 +62,16 @@ export interface RoomView {
   run: number;
   /** Server time when this view was made, to line the client clock up with deadlines. */
   now: number;
+  /**
+   * Set when this seat's player moved the game from their phone onto a pair of glasses: the
+   * code those glasses were showing. The phone then only keeps the player company.
+   */
+  lens: string | null;
+  /**
+   * Set on the room a pair of glasses opened for itself, once a phone has moved a seat onto
+   * them: the seat the glasses now play. They follow it instead of waiting in this room.
+   */
+  moved: SeatRef | null;
 }
 
 /** Actions the room handles itself. Everything else goes to the current game. */

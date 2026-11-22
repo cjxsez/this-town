@@ -7,6 +7,9 @@
  *   POST /api/game/rooms/:code/join                      -> { ok }     404 if no such room
  *   GET  /api/game/rooms/:code?seat=a                    -> RoomView
  *   POST /api/game/rooms/:code/act    { seat, action }   -> RoomView
+ *   POST /api/game/rooms/:code/lens   { seat, to }       -> RoomView  move this seat onto the
+ *        glasses showing code `to`, or back to the phone with to: null. 404 if no glasses
+ *        are waiting with that code.
  */
 import type { RoomView, Seat } from "./types";
 
@@ -48,5 +51,9 @@ export const roomApi = {
   },
   act(code: string, seat: Seat, action: unknown): Promise<RoomView | null> {
     return call<RoomView>(`/${code}/act`, { method: "POST", body: JSON.stringify({ seat, action }) });
+  },
+  /** Show this seat on the glasses whose code is `to`; null brings it back to the phone. null result: no such glasses. */
+  lens(code: string, seat: Seat, to: string | null): Promise<RoomView | null> {
+    return call<RoomView>(`/${code}/lens`, { method: "POST", body: JSON.stringify({ seat, to }) });
   },
 };

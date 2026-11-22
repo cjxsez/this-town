@@ -6,6 +6,9 @@
  * browser may not have WebSockets. The returned `room` keeps its identity while nothing
  * in it changes, so it is safe as an effect dependency.
  *
+ * `lens(to)` moves this seat's screen onto the glasses showing code `to` (null brings it
+ * back); false means no glasses are waiting with that code.
+ *
  * `useSecondsLeft` counts down to a deadline given in server time.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -64,9 +67,20 @@ export function useRoom(code: string | null, seat: Seat) {
     [code, seat, show],
   );
 
+  const lens = useCallback(
+    async (to: string | null): Promise<boolean> => {
+      if (!code) return false;
+      const n = ++sent.current;
+      const view = await roomApi.lens(code, seat, to);
+      if (view) show(n, view);
+      return view !== null;
+    },
+    [code, seat, show],
+  );
+
   const serverNow = useCallback(() => Date.now() + offset.current, []);
 
-  return { room, gone, send, serverNow };
+  return { room, gone, send, lens, serverNow };
 }
 
 /** Whole seconds until `deadline` (server epoch ms), never below 0. null deadline gives null. */

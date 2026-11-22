@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ROOM_CODE, roomApi, type Seat } from "@questline/protocol/games";
+import { ROOM_CODE, roomApi, type RoomView, type Seat } from "@questline/protocol/games";
+import type { ReactNode } from "react";
 import { Body, Button, Display, Eyebrow, Hint, Screen, TextField, TextLink, Title } from "../ui";
 import { SCREENS } from "./games";
 import { useRoom } from "./room";
@@ -13,6 +14,11 @@ import "./m.css";
  *   /m              type the code
  *   /m?code=1234    join that room straight away
  *   /m?host         open a room from this phone and show its code, for two phones
+ *
+ * "Play on glasses" moves this player's screen onto a pair of glasses mid-game: the glasses
+ * show a code at /g/, the player types it here, and the glasses carry on as this seat. The
+ * phone then waits, takes over again for anything that needs typing, and can bring the
+ * game back. The game itself stays in the room on the worker, so nothing is lost or reset.
  *
  * The seat is kept in sessionStorage so a reload stays in the game. It talks to the worker
  * directly (roomApi), not through the app's api layer, so it also works in simulator mode
@@ -47,13 +53,39 @@ function store(joined: Joined | null) {
   }
 }
 
+/** Screens the glasses cannot do alone, so the phone shows them even while the game is on the glasses. */
+function needsTyping(room: RoomView): boolean {
+  return room.gameId === "trivia" && (room.game as { phase?: string } | null)?.phase === "leave";
+}
+
+function codeDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 4);
+}
+
+function Stage({ code, link, onLink, children }: { code: string; link: string; onLink: () => void; children: ReactNode }) {
+  return (
+    <div className="m-stage">
+      <div className="m-bar">
+        <span>Game {code}</span>
+        <TextLink small onClick={onLink}>
+          {link}
+        </TextLink>
+      </div>
+      <div className="m-stage__game">{children}</div>
+    </div>
+  );
+}
+
 export default function MRoute() {
   const [joined, setJoined] = useState<Joined | null>(stored);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const auto = useRef(false);
-  const { room, gone, send, serverNow } = useRoom(joined?.code ?? null, joined?.seat ?? "b");
+  /** The "Play on glasses" screen is open. */
+  const [picking, setPicking] = useState(false);
+  const [lensCode, setLensCode] = useState("");
+  const { room, gone, send, lens, serverNow } = useRoom(joined?.code ?? null, joined?.seat ?? "b");
 
   const enter = (next: Joined) => {
     store(next);
@@ -65,6 +97,28 @@ export default function MRoute() {
     setJoined(null);
     setCode("");
     setError(message);
+    setPicking(false);
+  };
+
+  const pick = (open: boolean) => {
+    setPicking(open);
+    setLensCode("");
+    setError(null);
+  };
+
+  /** Move this seat onto the glasses showing `to`, or back to this phone with null. */
+  const moveTo = async (to: string | null) => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (await lens(to)) pick(false);
+      else setError("No glasses are showing that code. Check it and try again.");
+    } catch {
+      setError("Can't reach Questline. Try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const join = async (value: string) => {
@@ -125,8 +179,7 @@ export default function MRoute() {
           label="Game code"
           value={code}
           onChange={(v) => {
-            const digits = v.replace(/\D/g, "").slice(0, 4);
-            setCode(digits);
+            setCode(codeDigits(v));
             setError(null);
           }}
           placeholder="0000"
@@ -143,10 +196,81 @@ export default function MRoute() {
     );
   }
 
+  if (picking && !room?.lens) {
+    return (
+      <Screen
+        label="M-lens-code"
+        footer={
+          <>
+            <Button disabled={!ROOM_CODE.test(lensCode) || busy} onClick={() => void moveTo(lensCode)}>
+              {busy ? "Moving…" : "Move to glasses"}
+            </Button>
+            <TextLink small onClick={() => pick(false)}>
+              Stay on this phone
+            </TextLink>
+          </>
+        }
+      >
+        <Eyebrow>Game {joined.code}</Eyebrow>
+        <Title>Play on glasses</Title>
+        <Body>Open {location.host}/g on your glasses. They show a 4-digit code. Type it here and your game moves over.</Body>
+        <TextField
+          label="Code on your glasses"
+          value={lensCode}
+          onChange={(v) => {
+            setLensCode(codeDigits(v));
+            setError(null);
+          }}
+          placeholder="0000"
+          maxLength={4}
+          inputMode="numeric"
+          autoComplete="off"
+          autoFocus
+        />
+        {error ? <Hint>{error}</Hint> : <Hint>Nothing restarts. Your partner stays where they are.</Hint>}
+      </Screen>
+    );
+  }
+
+  if (room?.lens && !(room.partnerHere && needsTyping(room))) {
+    return (
+      <Screen
+        label="M-lens"
+        blobs="b"
+        footer={
+          <Button variant="secondary" disabled={busy} onClick={() => void moveTo(null)}>
+            Bring it back to my phone
+          </Button>
+        }
+      >
+        <Eyebrow>Game {joined.code}</Eyebrow>
+        <Title size="md">Playing on your glasses</Title>
+        <Body>Your game is on your glasses now. Look up and play.</Body>
+        <Hint>Keep this phone close. When there is something to type, it shows up here.</Hint>
+        {error && <Hint>{error}</Hint>}
+      </Screen>
+    );
+  }
+
   if (!room || !room.gameId || !room.partnerHere) {
     const hosting = joined.seat === "a";
     return (
-      <Screen label="M-wait" blobs="b" footer={<TextLink small onClick={() => leave()}>Leave this game</TextLink>}>
+      <Screen
+        label="M-wait"
+        blobs="b"
+        footer={
+          <>
+            {room && (
+              <Button variant="secondary" onClick={() => pick(true)}>
+                Play on glasses
+              </Button>
+            )}
+            <TextLink small onClick={() => leave()}>
+              Leave this game
+            </TextLink>
+          </>
+        }
+      >
         <Eyebrow>Game {joined.code}</Eyebrow>
         {room?.gameId ? (
           <Title size="md">Your partner dropped out</Title>
@@ -169,14 +293,20 @@ export default function MRoute() {
 
   const Game = SCREENS[room.gameId];
   return (
-    <Game
-      key={room.run}
-      view={room.game}
-      seat={room.seat}
-      send={send}
-      serverNow={serverNow}
-      onNext={() => send({ type: "room.next" })}
-      onAgain={() => send({ type: "room.again" })}
-    />
+    <Stage
+      code={joined.code}
+      link={room.lens ? "Bring it back to my phone" : "Play on glasses"}
+      onLink={() => (room.lens ? void moveTo(null) : pick(true))}
+    >
+      <Game
+        key={room.run}
+        view={room.game}
+        seat={room.seat}
+        send={send}
+        serverNow={serverNow}
+        onNext={() => send({ type: "room.next" })}
+        onAgain={() => send({ type: "room.again" })}
+      />
+    </Stage>
   );
 }

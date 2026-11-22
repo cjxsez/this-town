@@ -53,7 +53,7 @@ src/routes/taps.ts            POST /api/taps: check-in, move car, stamp confirm,
 src/routes/ride.ts            POST /api/ride/end, PUT /api/ride/ghost, GET /api/ride/state (glasses polling)
 src/routes/passport.ts        GET /api/passport
 src/routes/report.ts          POST /api/report (+ block)
-src/routes/game.ts            POST /api/game/rooms, POST /api/game/rooms/:code/join, GET /api/game/rooms/:code?seat=, POST /api/game/rooms/:code/act
+src/routes/game.ts            POST /api/game/rooms, POST /api/game/rooms/:code/join, POST /api/game/rooms/:code/lens, GET /api/game/rooms/:code?seat=, POST /api/game/rooms/:code/act
 src/rooms/GameRoom.ts         the game room Durable Object: seats, presence, playlist, runs the game modules
 src/games/hooks.ts            async work a game needs (LLM, shared store), fed back as "server" actions
 src/games/trivia.ts           Left for you: picks the questions for a room, saves the one a pair leaves

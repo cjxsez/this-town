@@ -7,6 +7,10 @@
  * whichever one the room is on. "Next game" and "Again" on a game's last screen move both
  * players.
  *
+ * A player who started on a phone can move here instead: they type this lens's code into
+ * "Play on glasses" at /m, the lens's own room then says `moved`, and the lens plays that
+ * seat of the phone's room until the phone takes it back.
+ *
  * The code is kept in sessionStorage so a reload stays in the same room.
  *   /g/?room=1234   open (or reuse) a fixed code, handy for a demo table
  *   /g/?join=1234   take the phone's seat from a lens or a desktop window, for testing
@@ -46,7 +50,11 @@ export function Games() {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const opening = useRef(false);
-  const { room, gone, send, serverNow } = useRoom(code, seat);
+  const home = useRoom(code, seat);
+  // A phone handed its seat to this lens: play in that room, as that seat.
+  const moved = home.room?.moved ?? null;
+  const away = useRoom(moved?.code ?? null, moved?.seat ?? "a");
+  const gone = home.gone || (moved !== null && away.gone);
 
   useEffect(() => {
     if (code || opening.current) return;
@@ -85,14 +93,19 @@ export function Games() {
     setCode(null);
   }, [gone]);
 
-  if (!code || !room) return <Pair code={null} state={failed ? "error" : "opening"} />;
-  if (!room.gameId) return <Pair code={code} state="waiting" />;
-  if (!room.partnerHere) return <Pair code={code} state="away" />;
+  if (!code || !home.room) return <Pair code={null} state={failed ? "error" : "opening"} />;
+  if (moved && !away.room) return <Pair code={null} state="opening" />;
+  // The phone took the game back (or gave it to other glasses): wait with our own code again.
+  const following = moved !== null && away.room?.lens === code;
+  const { room, send, serverNow } = following ? away : home;
+  if (!room) return null;
+  if (!room.gameId || (moved && !following)) return <Pair code={room.code} state="waiting" />;
+  if (!room.partnerHere) return <Pair code={room.code} state="away" />;
 
   const Screen = SCREENS[room.gameId];
   return (
     <Screen
-      key={room.run}
+      key={`${room.code}:${room.run}`}
       view={room.game}
       seat={room.seat}
       send={send}
