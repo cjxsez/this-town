@@ -215,7 +215,8 @@ const portrait = (color: PairColorName): Shot => ({
   id: `portrait-${color}`,
   width: 72,
   height: 72,
-  scale: 3,
+  // 360px: sharp at the person page's 112px on a 3x phone
+  scale: 5,
   background: "clear",
   camera: { azimuthDeg: 14, elevationDeg: 6, fovDeg: 20, fill: 1 },
   build(ctx) {

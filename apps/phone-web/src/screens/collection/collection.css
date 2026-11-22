@@ -154,10 +154,6 @@
 
 /* ---------- H5 person ---------- */
 .cl-hero { display: flex; align-items: center; gap: 16px; }
-.cl-hero__art {
-  flex: none; width: 112px; height: 112px; border-radius: 50%; overflow: hidden;
-  border: 3px solid var(--ink); box-shadow: 3px 5px 0 var(--shadow); color: var(--paper);
-}
 .cl-hero__name { font: 400 38px/1.02 var(--font-display); margin: 0; overflow-wrap: anywhere; }
 .cl-hero__meta { font-size: 20px; line-height: 1.2; text-wrap: pretty; margin: 6px 0 0; }
 .cl-q { font: 700 28px/1.08 var(--font-hand); }

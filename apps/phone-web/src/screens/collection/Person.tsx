@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
-import { Body, Button, ButtonRow, Card, Hint, Screen } from "../../ui";
+import { Body, Button, ButtonRow, Card, Hint, PairToken, Screen } from "../../ui";
 import { useApp } from "../../state/store";
 import { shortDate } from "../../state/format";
 import { stationById } from "../../../shared/catalog";
 import { PaperBack } from "./parts";
-
-const LIGHT = new Set(["yellow", "green", "orange"]);
 
 export default function Person() {
   const { personId } = useParams();
@@ -39,13 +36,12 @@ export default function Person() {
       <PaperBack to="/people">PEOPLE</PaperBack>
 
       <div className="cl-hero">
-        <div
-          className="cl-hero__art"
-          style={{ background: PAIR_COLOR_HEX[p.color], color: LIGHT.has(p.color) ? "var(--ink)" : "var(--paper)", display: "grid", placeItems: "center", font: "400 48px var(--font-display)" }}
-          aria-hidden
-        >
-          {p.firstName.slice(0, 1).toUpperCase()}
-        </div>
+        <PairToken
+          color={p.color}
+          name={p.firstName}
+          size={112}
+          style={{ borderWidth: 3, boxShadow: "3px 5px 0 var(--shadow)" }}
+        />
         <div style={{ minWidth: 0 }}>
           <div className="q-eyebrow" style={{ color: "var(--onsea)" }}>
             Pair color · {p.color}
