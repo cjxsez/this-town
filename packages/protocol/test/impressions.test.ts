@@ -5,6 +5,7 @@ import {
   IMPRESSIONS_ROUNDS,
   impressionsGame,
   impressionsSnap,
+  impressionsRatings,
   impressionsStart,
   type ImpressionsState,
 } from "../src/games/impressions";
@@ -137,4 +138,12 @@ test("with no ratings at all the verdict is still a mystery", () => {
     s = impressionsGame.tick(s, ctxAt(now)); // talk times out
   }
   assert.equal((impressionsGame.view(s, "b") as { verdict: string }).verdict, "mystery");
+});
+
+test("a pick-of-two question only takes spot on or way off", () => {
+  const either = IMPRESSIONS_DECK.find((q) => q.either);
+  assert.ok(either, "the deck has a pick-of-two question");
+  assert.deepEqual(impressionsRatings(either), ["spot", "off"]);
+  const scale = IMPRESSIONS_DECK.find((q) => !q.either)!;
+  assert.deepEqual(impressionsRatings(scale), ["spot", "close", "off"]);
 });
