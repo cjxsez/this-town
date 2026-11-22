@@ -121,7 +121,7 @@ test("a 401 without a token (sign-in screens) doesn't sign anyone out", async ()
 
 test("adding an email posts the code with the guest's token and returns their profile", async () => {
   setToken("guest-tok");
-  const me = { userId: "usr_1", profile: { firstName: "Gus", interests: ["chess"], askMeAbout: "", socialBattery: "chat", status: "student", languages: [], is18Plus: true }, glassesLinked: false, email: "gus@example.test" };
+  const me = { userId: "usr_1", profile: { firstName: "Gus", interests: ["chess", "anime", "trivia"], askMeAbout: "", socialBattery: "chat", status: "student", languages: [], is18Plus: true }, glassesLinked: false, email: "gus@example.test" };
   fakeFetch(() => json(200, me));
   const res = await api.attachEmail("gus@example.test", "123456");
   assert.equal(res.email, "gus@example.test");
