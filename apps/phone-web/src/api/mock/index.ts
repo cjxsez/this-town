@@ -6,6 +6,7 @@ const MOCK_CODE = "123456";
 
 /** In-browser stand-in for the backend. Collections live in the app store. */
 export function createMockApi(): QuestlineApi & { ride: RideSim } {
+  const ride = new RideSim();
   return {
     // The simulator has no accounts: every email is new, and the code is always 123456.
     auth: {
@@ -17,7 +18,7 @@ export function createMockApi(): QuestlineApi & { ride: RideSim } {
     },
     saveProfile: ok,
     deleteMyData: ok,
-    signOut: ok,
+    signOut: async () => ride.checkOut(),
     // Any 4 digits link in mock mode, so the onboarding step can be clicked through.
     linkGlasses: async (code) => {
       if (!/^\d{4}$/.test(code)) throw new Error("Enter the 4 digits on your glasses.");
@@ -27,6 +28,6 @@ export function createMockApi(): QuestlineApi & { ride: RideSim } {
     report: ok,
     block: ok,
     unblock: ok,
-    ride: new RideSim(),
+    ride,
   };
 }

@@ -253,6 +253,11 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
         await api.deleteMyData();
         dispatch({ type: "reset" });
       },
+      /** Sign out on this device. An email account signs back in with a code; a guest starts fresh. */
+      signOut: async () => {
+        await api.signOut();
+        dispatch({ type: "reset" });
+      },
     };
   }, [dispatch]);
 }

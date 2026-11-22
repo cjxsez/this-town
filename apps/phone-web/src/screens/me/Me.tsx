@@ -60,7 +60,7 @@ export default function Me() {
   const navigate = useNavigate();
   const { settings, profile } = state;
   const [panel, setPanel] = useState<Panel>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirm, setConfirm] = useState<"delete" | "signout" | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const blocked = state.people.filter((p) => p.blocked);
@@ -71,6 +71,15 @@ export default function Me() {
     setDeleting(true);
     try {
       await actions.deleteMyData();
+    } finally {
+      navigate("/", { replace: true });
+    }
+  };
+
+  const signOut = async () => {
+    setDeleting(true);
+    try {
+      await actions.signOut();
     } finally {
       navigate("/", { replace: true });
     }
@@ -140,13 +149,37 @@ export default function Me() {
         No camera, no microphone, no GPS. We only know which kiosk you tapped, and only while Ride Mode is on. First names only.
       </div>
 
-      {!confirmDelete ? (
+      {confirm === null && (
         <ButtonRow>
-          <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+          <Button variant="secondary" onClick={() => setConfirm("signout")}>
+            Sign out
+          </Button>
+          <Button variant="danger" onClick={() => setConfirm("delete")}>
             Delete my data
           </Button>
         </ButtonRow>
-      ) : (
+      )}
+      {confirm === "signout" && (
+        <Card>
+          <div role="alert" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="q-title--sm">Sign out?</div>
+            <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }}>
+              {profile?.email
+                ? `Ride Mode turns off on this phone. Sign back in with ${profile.email} anytime and your stamps and people are still there.`
+                : "You're playing as a guest, so there's no way back in: your stamps and people stay behind. Ride Mode turns off."}
+            </div>
+          </div>
+          <ButtonRow>
+            <Button variant="secondary" onClick={() => setConfirm(null)} disabled={deleting}>
+              Stay
+            </Button>
+            <Button onClick={signOut} disabled={deleting}>
+              {deleting ? "Signing out…" : "Sign out"}
+            </Button>
+          </ButtonRow>
+        </Card>
+      )}
+      {confirm === "delete" && (
         <Card>
           <div role="alert" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <div className="q-title--sm">Delete everything?</div>
@@ -155,7 +188,7 @@ export default function Me() {
             </div>
           </div>
           <ButtonRow>
-            <Button variant="secondary" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+            <Button variant="secondary" onClick={() => setConfirm(null)} disabled={deleting}>
               Keep it
             </Button>
             <Button variant="danger" onClick={del} disabled={deleting}>
