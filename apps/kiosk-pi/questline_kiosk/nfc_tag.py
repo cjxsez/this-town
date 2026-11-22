@@ -315,35 +315,108 @@ class DynamicSt25dv(NfcTag):
     """ST25DV04K/16K/64K over I2C. User memory at 0x53, system config at 0x57.
 
     User memory uses 16-bit addresses. The CC file lives at address 0 and the
-    NDEF TLV starts right after it (address 4 with a 4-byte CC, 8 with an
-    8-byte CC for parts over 2040 bytes).
-
-    TODO:
-    - from smbus2 import SMBus, i2c_msg
-    - on first use, check the CC (E1/E2 40 ...) and write one if blank
-      (scripts/write_static_tag.py --format); confirm CC bytes against the datasheet
-    - write_url: data = build_tag_payload(url); write in <= 16 byte chunks as
-      i2c_msg.write(0x53, [addr >> 8, addr & 0xFF, *chunk]); poll for ACK
-      (EEPROM write ~5 ms per 4-byte row) between chunks
-    - RF arbitration: if RF is busy the write NAKs; retry up to write_retries
-    - Adafruit 4701 breakout has an onboard antenna and STEMMA QT (3.3 V)
+    NDEF TLV starts right after it (address 4 with a 4-byte CC). Writes are
+    done in 4-byte EEPROM rows (ST25DV04K page size) with a short settle wait.
     """
 
     DEFAULT_ADDRESS: Final = 0x53
+    PAGE_SIZE: Final = 4
+    NDEF_OFFSET: Final = 4  # after a 4-byte Capability Container
+    EEPROM_WAIT_S: Final = 0.005
+    # Magic + NDEF mapping + size (64 * 8 = 512 bytes / 8) + read/write access.
+    CC_4BYTE: Final = bytes([0xE1, 0x40, 0x40, 0x00])
+    USER_BYTES_04K: Final = 512
 
     mode: NfcMode = "dynamic"
 
-    def __init__(self, bus: int = 1, address: int = DEFAULT_ADDRESS, retries: int = 3) -> None:
+    def __init__(
+        self,
+        bus: int = 1,
+        address: int = DEFAULT_ADDRESS,
+        retries: int = 3,
+        *,
+        smbus: Any | None = None,
+    ) -> None:
         self.bus = bus
         self.address = address
         self.retries = retries
-        raise NotImplementedError("DynamicSt25dv: see TODO in docstring")
+        if smbus is not None:
+            self._bus = smbus
+            self._owns_bus = False
+        else:
+            from smbus2 import SMBus
+
+            self._bus = SMBus(bus)
+            self._owns_bus = True
 
     def write_url(self, url: str) -> None:
-        raise NotImplementedError
+        payload = build_tag_payload(url, self.PAGE_SIZE)
+        if self.NDEF_OFFSET + len(payload) > self.USER_BYTES_04K:
+            raise NfcTagError(f"URL payload too large for ST25DV04K ({len(payload)} bytes)")
+
+        last_err: Exception | None = None
+        attempts = max(1, self.retries + 1)
+        for attempt in range(attempts):
+            try:
+                self._ensure_cc()
+                self._write_at(self.NDEF_OFFSET, payload)
+                read_back = self.read_url()
+                if read_back != url:
+                    raise NfcTagError(f"read-back mismatch: wrote {url!r}, got {read_back!r}")
+                return
+            except (NfcTagError, OSError) as e:
+                last_err = e
+                log.warning("ST25DV write attempt %s/%s failed: %s", attempt + 1, attempts, e)
+                time.sleep(0.05)
+        raise NfcTagError(str(last_err) if last_err else "ST25DV write failed")
+
+    def _ensure_cc(self) -> None:
+        cc = self._read_at(0, 4)
+        if cc[0] in (0xE1, 0xE2):
+            return
+        self._write_at(0, self.CC_4BYTE)
+
+    def _write_at(self, addr: int, data: bytes) -> None:
+        from smbus2 import i2c_msg
+
+        for i in range(0, len(data), self.PAGE_SIZE):
+            chunk = data[i : i + self.PAGE_SIZE]
+            if len(chunk) < self.PAGE_SIZE:
+                chunk = chunk + bytes(self.PAGE_SIZE - len(chunk))
+            offset = addr + i
+            msg = i2c_msg.write(
+                self.address,
+                bytes([(offset >> 8) & 0xFF, offset & 0xFF]) + chunk,
+            )
+            self._bus.i2c_rdwr(msg)
+            time.sleep(self.EEPROM_WAIT_S)
+
+    def _read_at(self, addr: int, length: int) -> bytes:
+        from smbus2 import i2c_msg
+
+        out = bytearray()
+        for i in range(0, length, self.PAGE_SIZE):
+            offset = addr + i
+            n = min(self.PAGE_SIZE, length - i)
+            write = i2c_msg.write(self.address, [(offset >> 8) & 0xFF, offset & 0xFF])
+            read = i2c_msg.read(self.address, n)
+            self._bus.i2c_rdwr(write, read)
+            out.extend(bytes(read))
+        return bytes(out)
 
     def read_url(self) -> str | None:
-        raise NotImplementedError
+        try:
+            raw = self._read_at(self.NDEF_OFFSET, 128)
+        except OSError:
+            return None
+        return parse_tag_url(raw)
+
+    def close(self) -> None:
+        if getattr(self, "_owns_bus", False):
+            try:
+                self._bus.close()
+            except Exception:
+                pass
 
 
 class StaticTag(NfcTag):
