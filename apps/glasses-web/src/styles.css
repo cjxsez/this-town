@@ -8,9 +8,8 @@
  * - Large, high-contrast type: the rider glances at this while walking through a train.
  * - Focus is drawn by .is-focused (state-managed) and :focus-visible as a fallback.
  *
- * TODO:
- * - Tune sizes on device; 28-32px body is a starting guess.
- * - Check whether the system font on the glasses has tabular numerals.
+ * Type sizes are a starting guess for the waveguide; retune on device if needed.
+ * Countdown / code use tabular-nums; the system font on glasses may or may not honor that.
  */
 
 :root {
@@ -157,6 +156,13 @@ body {
   gap: 20px;
 }
 
+.match-why {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 .swatch {
   display: inline-flex;
   align-items: center;
@@ -188,6 +194,10 @@ body {
   font-weight: 800;
   color: var(--accent);
   animation: pop 600ms ease-out;
+}
+
+.stamp-pop--rare {
+  color: var(--warn);
 }
 
 @keyframes pop {

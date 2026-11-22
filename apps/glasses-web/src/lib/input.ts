@@ -28,7 +28,7 @@
  *              select: activate focused button. Default focus is "I'm here", so a plain
  *                      select pinch sends rider.arrived
  *              back:   "Not now" -> rider.notNow (10 min cooldown, partner is rematched)
- *   Mission    (nothing yet, see TODO)
+ *   Mission    (display only; taps prove arrival)
  *   Stamp      select/back: dismiss early (auto-dismisses anyway)
  *   Offline    select: retry now
  *   Games      (src/play/*) left/up: previous choice or slider step down, right/down:

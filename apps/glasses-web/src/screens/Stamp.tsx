@@ -2,11 +2,7 @@
  * Stamp.tsx (glasses-web): brief celebration when a stamp is awarded.
  *
  * Driven by stamp.awarded (Stamp: station, line, partnerFirstName, rare). Auto-dismisses
- * after DISMISS_MS back to Idle; select or back dismisses early.
- *
- * TODO:
- * - Small stamp graphic (bright strokes on black, no filled white areas).
- * - Rare variant.
+ * after DISMISS_MS back to Idle; select or back dismisses early. Rare uses the warn accent.
  */
 import { useEffect, useRef } from "react";
 import type { Stamp as StampModel } from "@questline/protocol";
@@ -35,8 +31,10 @@ export function Stamp({ stamp, onDone }: StampProps) {
   });
 
   return (
-    <main className="hud hud-center">
-      <div className="stamp-pop">{stamp.rare ? "Rare stamp!" : "Stamped!"}</div>
+    <main className="hud hud-center" aria-live="polite">
+      <div className={`stamp-pop${stamp.rare ? " stamp-pop--rare" : ""}`}>
+        {stamp.rare ? "Rare stamp!" : "Stamped!"}
+      </div>
       <div className="hud-title">{stamp.station}</div>
       <div className="hud-body">
         {stamp.line} Line with {stamp.partnerFirstName}

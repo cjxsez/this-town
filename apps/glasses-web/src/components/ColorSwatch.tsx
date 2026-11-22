@@ -4,9 +4,7 @@
  * Uses PAIR_COLOR_HEX from @questline/protocol so the glasses, kiosk LEDs and kiosk screen
  * all show the same color ("look for orange"). Color comes from MatchFoundEvent.partner.color.
  *
- * TODO:
- * - Check each hex on the waveguide: additive display, so saturated colors read well but
- *   yellow on a bright day may wash out. Tune size if needed.
+ * Hexes match the kiosk LEDs; check saturation on the waveguide in daylight if yellow washes out.
  */
 import { PAIR_COLOR_HEX, type PairColor } from "@questline/protocol";
 

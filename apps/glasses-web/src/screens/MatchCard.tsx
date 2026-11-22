@@ -15,10 +15,8 @@
  * Buttons are not real <button>s with DOM focus, so a select pinch never double-fires
  * (native click + our keydown handler).
  *
- * TODO:
- * - carDelta is assumed relative to the rider's current car toward meetAtCar; confirm.
- * - Animate in, and maybe a short haptic-free "new match" flash (no notifications exist).
- * - Truncate long why lines to two lines at this font size.
+ * carDelta is relative to the rider's current car toward meetAtCar (worker matching).
+ * Long why lines clamp to two lines (.match-why).
  */
 import { useState } from "react";
 import { ColorSwatch } from "../components/ColorSwatch";
@@ -75,7 +73,7 @@ export function MatchCard({ match, arrived, onArrived, onNotNow }: MatchCardProp
         <div className="hud-title">{match.partner.firstName}</div>
       </div>
       <div className="hud-body hud-strong">{whereToGo(match)}</div>
-      <div className="hud-body">{match.why}</div>
+      <div className="hud-body match-why">{match.why}</div>
       <div className="hud-hint">Tap the kiosk tag when you get there</div>
       <div className="hud-row">
         <div className={`hud-btn ${focus === "here" ? "is-focused" : ""}`} role="button" aria-pressed={arrived}>
