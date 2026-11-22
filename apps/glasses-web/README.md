@@ -42,9 +42,9 @@ Served by the worker at `https://<domain>/g/` (Vite `base: "/g/"`).
 
 | Game | What happens |
 |---|---|
-| Tall tale | Each player is secretly dealt "Tell the truth" or "Make it up", tells their worst T story in turn, then both call the other's story True or Made up. A point for a right call, a point for fooling your partner |
-| First impressions | Five slider questions about your partner, some about Boston and the T. One question is a pick of two (cats or dogs), not a slider. Both guess at the same time (12 s), then each player sees only what their partner guessed about them, the pair talks (20 s), and each rates that guess Spot on / Close / Way off (Yes / No for the pick of two) |
-| Left for you | Three trivia questions left by earlier pairs, answered as a team with one shared highlight. Then the pair leaves a question about the T or Boston (typed on the phone); the model writes the three wrong answers and the next pair gets it, with the first names of the pair who left it ("Left for you by Maya and Sam") when they came from a match; every other question says "Left for you by Andres and Kenny" for the demo |
+| Tall tale | Each player is secretly dealt "Tell the truth" or "Make it up", tells their worst T story in turn (18 s each), then both call the other's story True or Made up. A point for a right call, a point for fooling your partner |
+| First impressions | Two questions about your partner, at least one about Boston or the T, on a slider. One question is a pick of two (cats or dogs), not a slider. Both guess at the same time (8 s), then each player sees only what their partner guessed about them, the pair talks (12 s), and each rates that guess Spot on / Close / Way off (Yes / No for the pick of two) |
+| Left for you | Two trivia questions (12 s each) left by earlier pairs, answered as a team with one shared highlight. Then the pair leaves a question about the T or Boston (typed on the phone, 30 s); the model writes the three wrong answers and the next pair gets it, with the first names of the pair who left it ("Left for you by Maya and Sam") when they came from a match; every other question says "Left for you by Andres and Kenny" for the demo |
 
 - The game rules live in `packages/protocol/src/games/` as pure modules. The screens here only draw the view for their seat and send actions. Anything a player must not see (the other card, an unlocked guess) is not in their view at all.
 - Clients poll `GET /api/game/rooms/:code` every 700 ms. Timers are deadlines in server time, so both clocks agree.

@@ -22,10 +22,11 @@ import { otherSeat, type Actor, type GameCtx, type GameModule, type Seat } from 
 
 export * from "./impressions-deck";
 
-export const IMPRESSIONS_ROUNDS = 5;
-const MIN_BOSTON = 2;
-const GUESS_MS = 12_000;
-const TALK_MS = 20_000;
+// Demo pacing: 2 rounds of 8 s + 12 s, 40 s in all (see tale.ts).
+export const IMPRESSIONS_ROUNDS = 2;
+const MIN_BOSTON = 1;
+const GUESS_MS = 8_000;
+const TALK_MS = 12_000;
 /** Once both players have rated, the compare screen stays this long. */
 const RATED_MS = 4_000;
 

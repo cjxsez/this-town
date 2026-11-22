@@ -15,9 +15,10 @@
 import { TALE_FAKE_SPARKS, TALE_TRUE_SPARKS } from "./tale-deck";
 import { otherSeat, type Actor, type GameCtx, type GameModule, type Seat } from "./types";
 
-export const TALE_THINK_MS = 25_000;
-export const TALE_TELL_MS = 60_000;
-export const TALE_VERDICT_MS = 20_000;
+// Demo pacing: the three games' timed phases add up to 2.5 minutes (tale 50 s, impressions 40 s, trivia 60 s).
+export const TALE_THINK_MS = 7_000;
+export const TALE_TELL_MS = 18_000;
+export const TALE_VERDICT_MS = 7_000;
 /**
  * A press this soon after a screen appears is taken as a leftover tap from the screen before
  * (a double tap on "I'm ready" would otherwise land on "Done"). The views carry `opensAt` so

@@ -52,8 +52,7 @@ test("pickTrivia fills the rest with starter questions when few were left", asyn
   assert.equal(seed.questions.length, TRIVIA_ROUNDS);
   assert.equal(seed.questions[0]!.q, "Only left?");
   assert.equal(seed.questions[0]!.left, true);
-  assert.equal(seed.questions[1]!.left, false);
-  assert.equal(seed.questions[2]!.left, false);
+  assert.ok(seed.questions.slice(1).every((q) => q.left === false));
   const starterQs = new Set(TRIVIA_STARTERS.map((c) => c.q));
   assert.ok(starterQs.has(seed.questions[1]!.q));
 });

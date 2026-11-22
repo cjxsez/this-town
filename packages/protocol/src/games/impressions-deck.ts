@@ -1,7 +1,7 @@
 /**
  * games/impressions-deck.ts: the question deck for "First impressions". Every question is
  * about the other player and is answered on a slider, or by picking one of two (`either`).
- * `boston` marks the Boston / T ones; each game draws at least two of those.
+ * `boston` marks the Boston / T ones; each game draws at least one of those.
  *
  * A slider question asks "how much" or "how many". A yes/no or either/or question does not
  * belong on a slider.
@@ -56,22 +56,14 @@ function either(id: string, prompt: string, short: string, low: string, high: st
 
 export const IMPRESSIONS_DECK: ImpressionsQuestion[] = [
   // Boston and the T
-  count("t-days", "How many days a week does your partner ride the T?", "Days on the T a week", 7, 1, "days", "None", "Every day", true, false),
   count("dunkin", "How many Dunkin' orders does your partner make in a week?", "Dunkin' a week", 10, 1, "orders", "None", "Runs on it", true),
   feel("red-sox", "How big a Red Sox fan is your partner?", "Red Sox fan", "Not at all", "Die-hard", true),
-  feel("winter", "How much does your partner like a Boston winter?", "Likes Boston winter", "Hates it", "Loves it", true),
   feel("green-line", "How calm is your partner when the Green Line crawls?", "Calm on a slow train", "Fuming", "Total zen", true),
   // Anywhere
-  feel("horror", "How much does your partner like horror movies?", "Likes horror movies", "Never", "Loves them"),
-  feel("morning", "How much of a morning person is your partner?", "Morning person", "Night owl", "Up at dawn"),
   feel("spicy", "How spicy does your partner like their food?", "Likes spicy food", "Mild", "On fire"),
-  feel("planner", "How much does your partner plan a trip ahead?", "Plans trips ahead", "Wings it", "Spreadsheet"),
   feel("texts", "How fast does your partner text back?", "Texts back fast", "Days later", "Instantly"),
   feel("pineapple", "How does your partner feel about pineapple on pizza?", "Pineapple on pizza", "No way", "Yes please"),
   either("cats-dogs", "Is your partner a cat person or a dog person?", "Cats or dogs", "Cats", "Dogs"),
-  count("coffee", "How many cups of coffee does your partner drink a day?", "Coffees a day", 6, 1, "cups", "None", "Non-stop"),
-  count("cooking", "How many nights a week does your partner cook dinner?", "Nights cooking", 7, 1, "nights", "None", "Every night", false, false),
-  count("plants", "How many houseplants does your partner keep alive?", "Houseplants", 10, 1, "plants", "None", "A jungle"),
 ];
 
 /** The guess as shown to players, without the unit: "12", "20+" at the top of an open scale, or "Cats". */

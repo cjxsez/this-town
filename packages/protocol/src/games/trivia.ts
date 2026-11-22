@@ -19,10 +19,11 @@ import type { Actor, GameCtx, GameModule, Seat } from "./types";
 
 export * from "./trivia-deck";
 
-export const TRIVIA_ROUNDS = 3;
-export const TRIVIA_QUESTION_MS = 25_000;
-export const TRIVIA_REVEAL_MS = 6_000;
-export const TRIVIA_LEAVE_MS = 90_000;
+// Demo pacing: 2 questions of 12 s + 3 s, then 30 s to leave one, 60 s in all (see tale.ts).
+export const TRIVIA_ROUNDS = 2;
+export const TRIVIA_QUESTION_MS = 12_000;
+export const TRIVIA_REVEAL_MS = 3_000;
+export const TRIVIA_LEAVE_MS = 30_000;
 /** If the worker never answers, give up on saving after this long. */
 export const TRIVIA_WRITING_MS = 15_000;
 export const TRIVIA_MAX_QUESTION = 120;
