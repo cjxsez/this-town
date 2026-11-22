@@ -11,6 +11,7 @@ import {
 } from "../src/mbta/client";
 import { parseScheduleStops, parseTimeline } from "../src/mbta/predictions";
 import { parseVehicles, routeToLine } from "../src/mbta/vehicles";
+import { DEMO_STOPS, DEMO_STOPS_B, demoTimeline, demoTripInfo, newDemoClock } from "../src/mbta/demo";
 import type { StopInfo } from "../src/rooms/state";
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../src/mbta/__fixtures__/${name}`, import.meta.url), "utf8"));
@@ -128,4 +129,27 @@ test("mbtaPollDelayAfterError prefers Retry-After, else the backoff ladder", () 
   assert.equal(mbtaPollDelayAfterError({ retryAfterMs: 12_000 }, null), 12_000);
   assert.equal(mbtaPollDelayAfterError({ retryAfterMs: null }, null), MBTA_BACKOFF_MIN_MS);
   assert.equal(mbtaPollDelayAfterError({}, 40_000), 80_000);
+});
+
+// ---- scripted demo trips (DEMO_LINE) ----
+
+test("both demo trips only use stops from the station catalog", () => {
+  const ids = new Set(T_STATIONS.map((s) => s.id));
+  for (const s of [...DEMO_STOPS, ...DEMO_STOPS_B]) assert.ok(ids.has(s.stopId), `${s.stopId} is not in the catalog`);
+});
+
+test("DEMO_LINE Green-B runs Blandford St to Boston College; the default is the Green-D stage trip", () => {
+  const clock = newDemoClock(0);
+  const b = demoTimeline(clock, 0, "Green-B");
+  assert.equal(b.stops[0]!.name, "Blandford St");
+  assert.equal(b.stops.at(-1)!.name, "Boston College");
+  assert.equal(b.stops[b.nextStopIdx!]!.name, "BU East");
+  assert.equal(demoTimeline(clock, 0).stops[0]!.name, "Kenmore");
+  assert.equal(demoTripInfo("t", "Green-B").line, "Green-B");
+  assert.equal(demoTripInfo("t").line, "Green-D");
+});
+
+test("the Green-B demo trip lasts long enough to play all three games", () => {
+  const totalSec = DEMO_STOPS_B.reduce((t, s) => t + s.segmentSec, 0);
+  assert.ok(totalSec >= 20 * 60, `only ${totalSec} s`);
 });

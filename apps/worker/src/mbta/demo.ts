@@ -11,6 +11,13 @@
  *   /api/demo/advance skips to the next stop. When the trip reaches its last stop and
  *   nobody is left on it, the next check-in restarts the clock from Kenmore.
  *
+ * Two scripted trips, picked with DEMO_LINE in wrangler.toml (read at check-in, so switch
+ * it and POST /api/demo/reset): "Green-D" (default, the stage demo above) and "Green-B",
+ * outbound along Comm Ave from Blandford St to Boston College. The B trip is above ground the
+ * whole way, so phones and the kiosk hotspot keep signal, and its stop names match what a
+ * rider filming on the B sees out the window. Its segments are close to the real schedule
+ * (~2 min); if the real train gets ahead, POST /api/demo/advance catches the clock up.
+ *
  * TrainRoom uses this instead of mbta/predictions.ts when state.trip.demo is true.
  *
  * Protocol types: CarId, Line.
@@ -42,12 +49,49 @@ export const DEMO_STOPS: readonly { stopId: string; name: string; segmentSec: nu
   { stopId: "gov-ctr", name: "Government Ctr", segmentSec: 180 },
 ];
 
-export function demoTripInfo(tripId: string): TripInfo {
+type DemoStop = { stopId: string; name: string; segmentSec: number };
+
+/**
+ * Green Line B outbound, Blandford St to Boston College, all above ground. The first
+ * segment is a little longer so there is time to tap in and get matched before BU East.
+ */
+export const DEMO_STOPS_B: readonly DemoStop[] = [
+  { stopId: "blandford", name: "Blandford St", segmentSec: 0 },
+  { stopId: "bu-east", name: "BU East", segmentSec: 180 },
+  { stopId: "bu-central", name: "BU Central", segmentSec: 120 },
+  { stopId: "amory", name: "Amory St", segmentSec: 120 },
+  { stopId: "babcock", name: "Babcock St", segmentSec: 120 },
+  { stopId: "packards-corner", name: "Packard's Corner", segmentSec: 120 },
+  { stopId: "harvard-ave", name: "Harvard Ave", segmentSec: 120 },
+  { stopId: "griggs-st", name: "Griggs St", segmentSec: 120 },
+  { stopId: "allston-st", name: "Allston St", segmentSec: 120 },
+  { stopId: "warren-st", name: "Warren St", segmentSec: 120 },
+  { stopId: "washington-st", name: "Washington St", segmentSec: 120 },
+  { stopId: "sutherland-rd", name: "Sutherland Rd", segmentSec: 120 },
+  { stopId: "chiswick-rd", name: "Chiswick Rd", segmentSec: 120 },
+  { stopId: "chestnut-hill-ave", name: "Chestnut Hill Ave", segmentSec: 120 },
+  { stopId: "south-st", name: "South St", segmentSec: 120 },
+  { stopId: "boston-college", name: "Boston College", segmentSec: 120 },
+];
+
+export type DemoLine = "Green-D" | "Green-B";
+
+const DEMO_ROUTES: Record<DemoLine, { stops: readonly DemoStop[]; directionId: 0 | 1 }> = {
+  "Green-D": { stops: DEMO_STOPS, directionId: 1 },
+  "Green-B": { stops: DEMO_STOPS_B, directionId: 0 },
+};
+
+/** The scripted stops for a demo trip's line. Anything else gets the stage demo (Green-D). */
+export function demoStopsFor(line: Line | undefined): readonly DemoStop[] {
+  return line === "Green-B" ? DEMO_STOPS_B : DEMO_STOPS;
+}
+
+export function demoTripInfo(tripId: string, line: DemoLine = DEMO_LINE as DemoLine): TripInfo {
   return {
     tripId,
-    line: DEMO_LINE,
-    routeId: "Green-D",
-    directionId: 1,
+    line,
+    routeId: line,
+    directionId: DEMO_ROUTES[line].directionId,
     carOrder: [...DEMO_CAR_ORDER],
     demo: true,
   };
@@ -58,28 +102,29 @@ export function newDemoClock(now: number): DemoClock {
 }
 
 /** Seconds after departure at which the train reaches stop i, ignoring delay. */
-function offsetsSec(): number[] {
+function offsetsSec(stops: readonly DemoStop[]): number[] {
   const out: number[] = [];
   let t = 0;
-  for (const s of DEMO_STOPS) {
+  for (const s of stops) {
     t += s.segmentSec;
     out.push(t);
   }
   return out;
 }
 
-export function demoTimeline(clock: DemoClock, now: number): TripTimeline {
-  const offsets = offsetsSec();
+export function demoTimeline(clock: DemoClock, now: number, line?: Line): TripTimeline {
+  const route = demoStopsFor(line);
+  const offsets = offsetsSec(route);
   // The train "stands still" for the scripted delay, so subtract it from elapsed time.
   const elapsedSec = (now - clock.startedAt + clock.skipMs) / SECOND - clock.delaySec;
   let currentStopIdx = 0;
   offsets.forEach((o, i) => {
     if (o <= elapsedSec) currentStopIdx = i;
   });
-  const nextStopIdx = currentStopIdx + 1 < DEMO_STOPS.length ? currentStopIdx + 1 : null;
+  const nextStopIdx = currentStopIdx + 1 < route.length ? currentStopIdx + 1 : null;
   const etaFor = (i: number): number =>
     clock.startedAt - clock.skipMs + ((offsets[i] ?? 0) + clock.delaySec) * SECOND;
-  const stops: StopInfo[] = DEMO_STOPS.map((s, i) => ({
+  const stops: StopInfo[] = route.map((s, i) => ({
     stopId: s.stopId,
     name: s.name,
     sequence: i + 1,
@@ -95,8 +140,8 @@ export function demoTimeline(clock: DemoClock, now: number): TripTimeline {
 }
 
 /** Clock change for POST /api/demo/advance: jump to 5 s before the next stop. */
-export function advanceDemoClock(clock: DemoClock, now: number): DemoClock {
-  const tl = demoTimeline(clock, now);
+export function advanceDemoClock(clock: DemoClock, now: number, line?: Line): DemoClock {
+  const tl = demoTimeline(clock, now, line);
   if (tl.nextStopEtaMs === null) return clock;
   // Land just past the next stop so the room sees the arrival on this tick.
   const jump = Math.max(0, tl.nextStopEtaMs - now + SECOND);

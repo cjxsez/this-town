@@ -80,3 +80,8 @@ DEMO_MODE = "true"
 # missions back.
 GAMES_ONLY = "true"
 DEMO_CAR_TRIPS = '{"1412":"demo-trip-1","1413":"demo-trip-1"}'
+# Which scripted trip the demo cars run (src/mbta/demo.ts): "Green-D" is the stage demo,
+# Kenmore to Government Ctr. "Green-B" is Blandford St to Boston College along Comm Ave,
+# above ground, for filming on a real train (docs/filming.md). After changing it, deploy and
+# POST /api/demo/reset so the next tap starts the new trip.
+DEMO_LINE = "Green-D"

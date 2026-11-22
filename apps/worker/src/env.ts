@@ -15,6 +15,7 @@
 import type { CarId } from "@questline/protocol";
 import type { GameRoom } from "./rooms/GameRoom";
 import type { TrainRoom } from "./rooms/TrainRoom";
+import type { DemoLine } from "./mbta/demo";
 
 export interface Env {
   // ---- bindings ----
@@ -35,6 +36,8 @@ export interface Env {
   GAMES_ONLY: string;
   /** JSON object: car label -> trip id, e.g. {"1412":"demo-trip-1"} */
   DEMO_CAR_TRIPS: string;
+  /** Which scripted trip the demo cars run: "Green-D" (stage demo, default) or "Green-B" (Comm Ave, for filming on the train). */
+  DEMO_LINE?: string;
   /** From address for sign-in emails; its domain must be onboarded to Email Sending. */
   EMAIL_FROM: string;
 
@@ -60,6 +63,7 @@ export interface Config {
   gamesOnly: boolean;
   demoCarTrips: Record<CarId, string>;
   emailFrom: string;
+  demoLine: DemoLine;
 }
 
 function intVar(raw: string | undefined, fallback: number): number {
@@ -92,5 +96,6 @@ export function readConfig(env: Env): Config {
     gamesOnly: env.GAMES_ONLY === "true",
     demoCarTrips: parseCarTrips(env.DEMO_CAR_TRIPS),
     emailFrom: env.EMAIL_FROM,
+    demoLine: env.DEMO_LINE === "Green-B" ? "Green-B" : "Green-D",
   };
 }

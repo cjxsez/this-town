@@ -534,7 +534,7 @@ export class TrainRoom extends DurableObject<Env> {
 
   async demoAdvance(): Promise<void> {
     if (!this.state.demo) return;
-    this.state.demo = advanceDemoClock(this.state.demo, Date.now());
+    this.state.demo = advanceDemoClock(this.state.demo, Date.now(), this.state.trip?.line);
     await this.tick(Date.now());
     await this.scheduleAlarm(Date.now());
   }
@@ -623,7 +623,7 @@ export class TrainRoom extends DurableObject<Env> {
   private async refreshTimeline(now: number): Promise<void> {
     const s = this.state;
     if (s.trip?.demo && s.demo) {
-      Object.assign(s, demoTimeline(s.demo, now));
+      Object.assign(s, demoTimeline(s.demo, now, s.trip.line));
       s.lastPolledAt = now;
       return;
     }

@@ -108,7 +108,7 @@ export async function resolveCarTrip(env: Env, car: CarId): Promise<TripInfo | n
   const cfg = readConfig(env);
   if (cfg.demoMode) {
     const tripId = cfg.demoCarTrips[car];
-    if (tripId) return demoTripInfo(tripId);
+    if (tripId) return demoTripInfo(tripId, cfg.demoLine);
   }
   return resolveLiveCarTrip(env, car);
 }
