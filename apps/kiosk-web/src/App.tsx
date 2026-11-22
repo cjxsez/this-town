@@ -27,6 +27,7 @@ import { setServerNow } from "./lib/clock";
 import { parseCar, readConfig, type ConfigResult } from "./lib/config";
 import { PREVIEW_SCREENS, readPreview, SAMPLE, type PreviewMode, type PreviewScreen } from "./lib/preview";
 import { connectKioskSocket } from "./lib/socket";
+import { loadWorkerMode } from "./lib/workerMode";
 import { Celebrate } from "./screens/Celebrate";
 import { Disconnected } from "./screens/Disconnected";
 import { Idle } from "./screens/Idle";
@@ -58,6 +59,11 @@ function Shell({ bg, children }: { bg: string; children: ReactNode }) {
 
 function KioskScreen({ car, kioskKey }: { car: string; kioskKey: string }) {
   const [state, dispatch] = useReducer(reduceKiosk, initialKioskState);
+  const [gamesOnly, setGamesOnly] = useState(false);
+
+  useEffect(() => {
+    void loadWorkerMode().then((m) => setGamesOnly(m.gamesOnly));
+  }, []);
 
   useEffect(() => {
     const socket = connectKioskSocket({
@@ -103,7 +109,7 @@ function KioskScreen({ car, kioskKey }: { car: string; kioskKey: string }) {
       if (!pair) return idle;
       return (
         <Shell bg={PAIR_COLOR_HEX[pair.color]}>
-          <PairIncoming color={pair.color} firstNames={pair.firstNames} arrived={pair.arrived} />
+          <PairIncoming color={pair.color} firstNames={pair.firstNames} arrived={pair.arrived} gamesOnly={gamesOnly} />
         </Shell>
       );
     }

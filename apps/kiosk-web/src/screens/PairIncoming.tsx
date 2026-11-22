@@ -7,17 +7,23 @@
  *
  * Public screen: first names and color only. pair.incoming carries nothing else, and this
  * component must never be handed interests or the why line.
+ *
+ * Body copy depends on worker gamesOnly (lib/pairCopy.ts): mission mode mentions the tag
+ * starting a mission; games-only says they play on phones or glasses.
  */
 import { PAIR_COLOR_HEX, type PairColor } from "@questline/protocol";
+import { pairIncomingBody } from "../lib/pairCopy";
 import { PairToken, Screen } from "../components/Ui";
 
 interface PairIncomingProps {
   color: PairColor;
   firstNames: [string, string];
   arrived: number;
+  /** From GET /api/health; false keeps mission-mode wording. */
+  gamesOnly?: boolean;
 }
 
-export function PairIncoming({ color, firstNames, arrived }: PairIncomingProps) {
+export function PairIncoming({ color, firstNames, arrived, gamesOnly = false }: PairIncomingProps) {
   const [a, b] = firstNames;
   return (
     <Screen label="Pair incoming" blobs="b" className="k-pair" style={{ background: PAIR_COLOR_HEX[color] }}>
@@ -32,7 +38,7 @@ export function PairIncoming({ color, firstNames, arrived }: PairIncomingProps) 
           {a} &amp; {b}
         </h1>
         <p className="k-body" style={{ fontSize: 30 }}>
-          {arrived > 0 ? "One more tap on the tag starts your mission." : "Tap the tag when you're both here."}
+          {pairIncomingBody(arrived, gamesOnly)}
         </p>
       </section>
     </Screen>
