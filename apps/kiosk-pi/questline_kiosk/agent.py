@@ -204,7 +204,12 @@ class KioskAgent:
         """Stop reconnecting, close the socket, turn LEDs off."""
         self._stopping.set()
         await self.player.stop()
-        # TODO: close self._ws with code 1001 (going away)
+        ws = self._ws
+        if ws is not None:
+            try:
+                await ws.close(WS_CLOSE_GOING_AWAY, "shutdown")
+            except Exception:
+                log.debug("socket close during shutdown failed", exc_info=True)
         self.leds.close()
         self.tag.close()
 
