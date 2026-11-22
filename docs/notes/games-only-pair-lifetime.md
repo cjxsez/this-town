@@ -1,6 +1,7 @@
 # Games-only pair lifetime (investigation)
 
 **Status:** investigation only — no worker, phone, or room behavior change in this note.  
+**Update (D28):** a games-only pair now also ends when it finishes Left for you, the last game of the playlist: both riders are stamped, the kiosk celebrates and is freed, and both rest 90 s before matching again. The other paths below (Not now, report, ghost, end ride, end of line) are unchanged, so a pair that never finishes the playlist can still hold the kiosk.  
 **Context:** `GAMES_ONLY = "true"` (D26). Smoke already checks that passing a rider's stop does not end their game.
 
 ## What ends a pair today

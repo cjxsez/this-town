@@ -70,7 +70,7 @@ MBTA V3 `vehicles` includes `carriages[]` (per-car `label`, order in the train) 
 
 Live stop lists come from `/predictions` (and a one-time `/schedules` seed) in `mbta/predictions.ts`, with stop ids mapped through the `packages/t-map` station catalog so they match the phone. The alarm polls while anyone is checked in; two empty polls end the trip and close kiosk sockets with `WS_CLOSE.tripChanged` so they reconnect into the new room. Live `delaySec` drives the late-train bonus the same way the demo clock does.
 
-For the demo, `DEMO_CAR_TRIPS` in `wrangler.toml` hardcodes the mapping and a fake trip with scripted stops (`mbta/demo.ts`); that path is unchanged.
+For the demo, `DEMO_CAR_TRIPS` in `wrangler.toml` hardcodes the mapping and a fake trip with scripted stops (`mbta/demo.ts`). `DEMO_LINE` picks which: `Green-D` (Kenmore to Government Ctr, the stage demo) or `Green-B` (Blandford St to Boston College along Comm Ave, above ground, for filming on a real train; see `docs/filming.md`).
 
 ## TrainRoom Durable Object
 
@@ -109,7 +109,11 @@ Ride Mode on = consent. There is no accept step. The consent is explicit: onboar
 Separate from the ride flow for now. The glasses open a room and show a 4-digit code, a phone joins with it, and a `GameRoom` Durable Object (one per code) owns the game state. Game rules are pure modules in `packages/protocol/src/games` (`init`, `reduce`, `tick`, `view` per seat); both clients poll every 700 ms and only draw their seat's view, so the two screens cannot drift apart. Three games play in order: Tall tale, First impressions, Left for you. Left for you keeps a short list of questions that pairs leave for the next pair, in Durable Object storage (question, answers, a timestamp and, for a matched pair, their two first names so the next pair sees who left it (D27); nothing else about them, and rooms opened by code store no names).
 With `GAMES_ONLY = "true"` (D26, the demo setting) these games are all a match leads to: no mission starts, and riders' stops don't affect matching or end a pair.
 
+On a game's last screen "Again" replays it and "Next game" moves to the next; after Left for you, "Next game" starts Tall tale again. A room `TrainRoom` opened for a pair remembers it (`pair: { tripId, matchId }`), and the first time Left for you finishes there it calls `TrainRoom.gamesDone(matchId)` (D28): both riders get `stamp.awarded`, the meeting kiosk gets `celebrate`, the pair clears with `mission-done`, and both riders rest out of the pool for `GAMES_DONE_REST_MS` (90 s). The stamp hangs off a `mission_sessions` row with template `games-playlist`.
+
 Matched riders get there without a code (D25): when `TrainRoom` locks a pair it opens a game room and puts `game: { code, seat }` in each rider's `match.found`, and the phone's match and mission screens link to `/m?code=…&seat=…`.
+
+The glasses ride HUD (`/g/?ride`) needs no input to get into the game (D28): when `match.found` carries `game`, it opens its own lens room and makes the same `lens` call "Play on glasses" makes, so the rider's seat plays on the lens. It shows the match card until the partner opens the game on their phone.
 
 A player who joined on a phone can move to glasses mid-game (D24): "Play on glasses" at `/m` takes the code the glasses show at `/g/` and calls `POST /api/game/rooms/:code/lens`. The seat's room records which glasses show it (`RoomView.lens`), and the room the glasses opened for themselves points at that seat (`RoomView.moved`), so the glasses poll the phone's room as that seat. The game state never moves. The phone shows a waiting screen with "Bring it back to my phone", and the game's own screen when something has to be typed.
 
