@@ -84,11 +84,14 @@ async def idle(strip: LedStrip, rgb: RGB, period_s: float = 6.0, low: float = 0.
 
 
 async def pulse(strip: LedStrip, rgb: RGB, period_s: float = 2.5, low: float = 0.2, high: float = 1.0) -> None:
-    """Slow pulse in the pair color, forever (mission in progress).
-
-    TODO: same sine envelope as idle() with a shorter period and higher floor.
-    """
-    raise NotImplementedError
+    """Slow pulse in the pair color, forever (mission in progress)."""
+    t = 0.0
+    while True:
+        level = _breath_level(t, period_s, low, high)
+        strip.fill(scale(rgb, level))
+        strip.show()
+        await asyncio.sleep(FRAME_S)
+        t += FRAME_S
 
 
 async def burst(strip: LedStrip, rgb: RGB, duration_s: float = 2.0) -> None:
