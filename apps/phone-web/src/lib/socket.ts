@@ -15,12 +15,18 @@
  * Events sent (RiderToServer): rider.hello, ping, rider.notNow (Not now on the meet screen),
  * rider.arrived ("I'm at the kiosk").
  *
- * TODO:
- * - Agree on a close code for "bad token" with the worker and stop reconnecting on it.
- * - Confirm how the worker routes /ws/rider to a TrainRoom before the rider is checked in
- *   (see README "Protocol gaps"); until then, api/backend/ride.ts only opens the socket once checked in.
+ * - Not reconnecting after the room says the ride is over (WS_CLOSE.checkedOut, noRide) or
+ *   refuses us (forbidden). The caller re-syncs over REST on "closed" and learns why.
+ *
+ * The worker answers a bad token or no check-in at the handshake (HTTP 401 / 409), which a
+ * browser only sees as code 1006. Those keep the normal backoff; the REST re-sync that
+ * follows each close gets the 401 and signs the rider out (lib/auth tokenRejected).
+ * api/backend/ride.ts only opens the socket once checked in, so 409 is rare.
  */
-import { ServerToRider, type RiderToServer } from "@questline/protocol";
+
+/** Close codes after which reconnecting can't help: the ride ended or the room refused us. */
+const FINAL_CLOSE = new Set<number>([WS_CLOSE.checkedOut, WS_CLOSE.noRide, WS_CLOSE.forbidden]);
+import { ServerToRider, WS_CLOSE, type RiderToServer } from "@questline/protocol";
 
 export type SocketStatus = "idle" | "connecting" | "open" | "closed";
 
@@ -105,10 +111,11 @@ export function connectRiderSocket(token: string, handlers: RiderSocketHandlers)
       }
     };
 
-    socket.onclose = () => {
+    socket.onclose = (ev) => {
       if (ws !== socket) return; // a newer socket replaced this one
       clearTimers();
       ws = null;
+      if (FINAL_CLOSE.has(ev.code)) stopped = true;
       handlers.onStatus?.("closed");
       scheduleReconnect();
     };
