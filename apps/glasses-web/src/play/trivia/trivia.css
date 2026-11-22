@@ -1,0 +1,160 @@
+/* trivia.css (glasses-web): "Left for you". Adds to guess.css; everything is under .trivia. */
+
+.hud.guess.trivia {
+  gap: 14px;
+  padding: 40px 44px;
+}
+
+.trivia-wide {
+  align-self: stretch;
+}
+
+.trivia-from {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--foam);
+}
+
+.trivia-verdict {
+  font: 400 30px/1 var(--font-display);
+  text-transform: uppercase;
+  color: var(--orange);
+  rotate: 1deg;
+  text-align: right;
+}
+
+.trivia-verdict.is-right {
+  color: var(--leaf);
+}
+
+.trivia-q {
+  font: 700 34px/1.08 var(--font-hand);
+  text-wrap: balance;
+}
+
+.trivia-q.is-mid {
+  font-size: 30px;
+}
+
+.trivia-q.is-long {
+  font-size: 26px;
+}
+
+.trivia-q.is-result {
+  font-size: 28px;
+  color: var(--foam);
+}
+
+.trivia-q.is-result.is-long {
+  font-size: 23px;
+}
+
+.trivia-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.trivia-choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 58px;
+  padding: 4px 16px;
+  border: 2px solid var(--line);
+  border-radius: var(--r1);
+  filter: var(--wob);
+  font: 700 28px/1.05 var(--font-hand);
+  color: var(--paper);
+}
+
+.trivia-choice:nth-child(2n) {
+  border-radius: var(--r4);
+}
+
+.trivia-letter {
+  flex: none;
+  width: 24px;
+  font: 400 22px/1 var(--font-display);
+  color: var(--sea);
+}
+
+.trivia-choice-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The shared highlight: the one bright fill, like the focused button. */
+.trivia-choice.is-focused {
+  border-color: var(--yellow);
+  background: var(--yellow);
+  box-shadow: inset 0 -5px 0 var(--yellow-dk), 4px 5px 0 var(--sea);
+  color: var(--ink);
+}
+
+.trivia-choice.is-focused .trivia-letter {
+  color: var(--ink);
+}
+
+.trivia-choice.is-right {
+  border-color: var(--leaf);
+  border-width: 3px;
+  color: var(--leaf);
+}
+
+.trivia-choice.is-right .trivia-letter {
+  color: var(--leaf);
+}
+
+.trivia-choice.is-wrong {
+  border-color: var(--orange);
+  border-style: dashed;
+  color: var(--orange);
+  text-decoration: line-through;
+}
+
+.trivia-choices.is-small {
+  gap: 6px;
+}
+
+.trivia-choices.is-small .trivia-choice {
+  min-height: 38px;
+  padding: 2px 12px;
+  font-size: 23px;
+  color: var(--stone);
+}
+
+.trivia-choices.is-small .trivia-choice.is-right {
+  color: var(--leaf);
+}
+
+.trivia-choices.is-small .trivia-letter {
+  font-size: 17px;
+}
+
+.trivia-headline {
+  font-size: 32px;
+  line-height: 1.05;
+}
+
+.guess-card.trivia-card {
+  font-size: 32px;
+}
+
+.guess-card.trivia-card.is-mid {
+  font-size: 28px;
+}
+
+.guess-card.trivia-card.is-long {
+  font-size: 24px;
+}
+
+.trivia-pulse {
+  animation: trivia-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes trivia-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
