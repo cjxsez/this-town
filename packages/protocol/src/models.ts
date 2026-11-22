@@ -126,5 +126,10 @@ export const RideSnapshot = z.object({
   match: MatchInfo.nullable(),
   mission: Mission.nullable(),
   serverNow: z.number().int(), // epoch ms; clients use it to correct countdowns for clock skew
+  /**
+   * Stamp awarded to this rider in the last ~15 s (else omitted). Lets glasses that missed
+   * stamp.awarded while the page was hidden still show the stamp screen after reconnect.
+   */
+  recentStamp: Stamp.optional(),
 });
 export type RideSnapshot = z.infer<typeof RideSnapshot>;
