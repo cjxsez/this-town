@@ -12,9 +12,8 @@
  *
  * Protocol types: CarId, NfcWriteEvent (url), TapReq (car, nonce).
  *
- * TODO:
- * - Decide what the Pi writes between missions: the plain `/k/<car>` URL (check-in only)
- *   is the assumption here. TrainRoom sends that on pair.cleared / mission end.
+ * Between missions the Pi writes the plain `/k/<car>` URL (check-in only). TrainRoom
+ * sends that on pair.cleared / mission end via resetTag().
  */
 import type { CarId } from "@questline/protocol";
 import { base64url, randomBytes } from "./lib/ids";
