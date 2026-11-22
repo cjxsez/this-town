@@ -1,6 +1,7 @@
 # Every push and pull request: typecheck, build the three web apps, run the JS tests
 # (protocol game rules, worker matching/missions/MBTA, t-map, start screen) and the
-# kiosk Pi agent's pytest suite. Nothing here talks to MBTA, Anthropic or Cloudflare.
+# kiosk Pi agent's pytest suite. The smoke job also boots a local worker and runs
+# pnpm smoke in both GAMES_ONLY modes (D26).
 name: CI
 
 on:
@@ -45,3 +46,116 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: shellcheck scripts/setup.sh
       - run: pytest -q
+
+  smoke:
+    name: Worker smoke (games-only and missions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Write throwaway .dev.vars
+        run: |
+          printf '%s\n' \
+            'KIOSK_KEY=ci-smoke-throwaway-key-not-for-prod' \
+            'ANTHROPIC_API_KEY=' \
+            'MBTA_API_KEY=' \
+            > apps/worker/.dev.vars
+      - name: Migrate local D1
+        run: pnpm db:migrate:local
+      - name: Smoke games-only (default)
+        run: |
+          set -euo pipefail
+          LOG=/tmp/worker-games-only.log
+          (
+            cd apps/worker
+            npx wrangler dev --port 8787 --ip 127.0.0.1
+          ) >"$LOG" 2>&1 &
+          WORKER_PID=$!
+          cleanup() {
+            kill "$WORKER_PID" 2>/dev/null || true
+            # Also kill any child wrangler/workerd still holding the port.
+            pkill -f "wrangler dev --port 8787" 2>/dev/null || true
+            wait "$WORKER_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          for i in $(seq 1 90); do
+            if curl -sf http://127.0.0.1:8787/api/health >/dev/null; then
+              echo "worker healthy after ${i}s"
+              break
+            fi
+            if ! kill -0 "$WORKER_PID" 2>/dev/null; then
+              echo "worker exited before healthy"
+              cat "$LOG" || true
+              exit 1
+            fi
+            sleep 1
+            if [ "$i" -eq 90 ]; then
+              echo "timed out waiting for /api/health"
+              cat "$LOG" || true
+              exit 1
+            fi
+          done
+          if ! pnpm smoke; then
+            echo "---- worker log (games-only) ----"
+            cat "$LOG" || true
+            exit 1
+          fi
+          cleanup
+          trap - EXIT
+          # Wait for the port to free before the missions run.
+          for i in $(seq 1 30); do
+            if ! curl -sf http://127.0.0.1:8787/api/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+      - name: Smoke missions (GAMES_ONLY:false)
+        run: |
+          set -euo pipefail
+          LOG=/tmp/worker-missions.log
+          (
+            cd apps/worker
+            npx wrangler dev --port 8787 --ip 127.0.0.1 --var GAMES_ONLY:false
+          ) >"$LOG" 2>&1 &
+          WORKER_PID=$!
+          cleanup() {
+            kill "$WORKER_PID" 2>/dev/null || true
+            pkill -f "wrangler dev --port 8787" 2>/dev/null || true
+            wait "$WORKER_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          for i in $(seq 1 90); do
+            if curl -sf http://127.0.0.1:8787/api/health >/dev/null; then
+              echo "worker healthy after ${i}s"
+              HEALTH=$(curl -sf http://127.0.0.1:8787/api/health)
+              echo "$HEALTH"
+              echo "$HEALTH" | grep -q '"gamesOnly":false' || {
+                echo "expected gamesOnly false"
+                cat "$LOG" || true
+                exit 1
+              }
+              break
+            fi
+            if ! kill -0 "$WORKER_PID" 2>/dev/null; then
+              echo "worker exited before healthy"
+              cat "$LOG" || true
+              exit 1
+            fi
+            sleep 1
+            if [ "$i" -eq 90 ]; then
+              echo "timed out waiting for /api/health"
+              cat "$LOG" || true
+              exit 1
+            fi
+          done
+          if ! pnpm smoke; then
+            echo "---- worker log (missions) ----"
+            cat "$LOG" || true
+            exit 1
+          fi
