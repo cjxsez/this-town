@@ -916,7 +916,7 @@ export class TrainRoom extends DurableObject<Env> {
     });
     await endMissionSession(this.env.DB, sessionId, "stamped", now);
     await recordMet(this.env.DB, pair.a, pair.b, now);
-    await this.insertPairStamps(pair, sessionId, false, now);
+    await this.insertPairStamps(pair, sessionId, false, now, GAMES_TEMPLATE_ID);
     this.sendToKiosks(pair.meetAtCar, { type: "celebrate", matchId, color: pair.color, rare: false });
     for (const uid of [pair.a, pair.b]) {
       const r = s.riders[uid];
@@ -929,14 +929,20 @@ export class TrainRoom extends DurableObject<Env> {
   }
 
   private async awardStamps(pair: RoomPair, m: MissionSessionState, now: number): Promise<Record<string, Stamp>> {
-    const out = await this.insertPairStamps(pair, m.sessionId, m.rare, now);
+    const out = await this.insertPairStamps(pair, m.sessionId, m.rare, now, m.templateId);
     this.sendToKiosks(m.car, { type: "celebrate", matchId: pair.matchId, color: pair.color, rare: m.rare });
     await this.finishMission(m.sessionId, "stamped", now);
     return out;
   }
 
   /** One stamp per rider in the pair, saved to D1 and sent to each rider. */
-  private async insertPairStamps(pair: RoomPair, sessionId: string, rare: boolean, now: number): Promise<Record<string, Stamp>> {
+  private async insertPairStamps(
+    pair: RoomPair,
+    sessionId: string,
+    rare: boolean,
+    now: number,
+    templateId: string,
+  ): Promise<Record<string, Stamp>> {
     const s = this.state;
     const where = this.stampStation();
     const out: Record<string, Stamp> = {};
@@ -950,6 +956,8 @@ export class TrainRoom extends DurableObject<Env> {
         partnerFirstName: s.riders[partner]?.profile.firstName ?? "",
         rare,
         awardedAt: now,
+        matchId: pair.matchId,
+        templateId,
       };
       out[uid] = stamp;
       return {

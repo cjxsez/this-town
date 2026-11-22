@@ -191,8 +191,10 @@ export function stampFromRow(row: {
   partner_first_name: string;
   rare: number;
   awarded_at: number;
+  match_id?: string | null;
+  template_id?: string | null;
 }): Stamp {
-  return {
+  const stamp: Stamp = {
     id: row.id,
     stationId: row.station_id,
     station: row.station,
@@ -201,6 +203,9 @@ export function stampFromRow(row: {
     rare: row.rare === 1,
     awardedAt: row.awarded_at,
   };
+  if (row.match_id) stamp.matchId = row.match_id;
+  if (row.template_id) stamp.templateId = row.template_id;
+  return stamp;
 }
 
 // ---------- users ----------
@@ -682,7 +687,15 @@ export async function insertReport(db: D1Database, r: NewReport): Promise<void> 
 
 export async function passportFor(db: D1Database, userId: string): Promise<PassportResT> {
   const [stamps, met, lines] = await db.batch([
-    db.prepare("SELECT * FROM stamps WHERE user_id = ? ORDER BY awarded_at DESC").bind(userId),
+    db
+      .prepare(
+        `SELECT s.*, ms.template_id AS template_id
+         FROM stamps s
+         LEFT JOIN mission_sessions ms ON ms.id = s.session_id
+         WHERE s.user_id = ?
+         ORDER BY s.awarded_at DESC`,
+      )
+      .bind(userId),
     db.prepare("SELECT COUNT(*) AS n FROM met_pairs WHERE user_a = ?1 OR user_b = ?1").bind(userId),
     db.prepare("SELECT line, COUNT(*) AS n FROM stamps WHERE user_id = ? GROUP BY line").bind(userId),
   ]);
