@@ -5,19 +5,18 @@ export type ButtonVariant = "primary" | "secondary" | "danger" | "leaf" | "dark"
 
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "style"> {
   variant?: ButtonVariant;
-  /** Small rotation in degrees; the design tilts each button a hair. */
-  tilt?: number;
   huge?: boolean;
   to?: string; // render as a router link
   style?: CSSProperties;
   children: ReactNode;
 }
 
-export function Button({ variant = "primary", tilt = 0.5, huge, to, className, style, children, ...rest }: Props) {
+/** Buttons sit level, like the BEGIN button on the start screen. */
+export function Button({ variant = "primary", huge, to, className, style, children, ...rest }: Props) {
   const cls = ["q-btn", variant !== "primary" && `q-btn--${variant}`, huge && "q-btn--huge", className]
     .filter(Boolean)
     .join(" ");
-  const st: CSSProperties = { rotate: `${tilt}deg`, ...style };
+  const st = style;
   if (to) {
     return (
       <Link to={to} className={cls} style={st}>

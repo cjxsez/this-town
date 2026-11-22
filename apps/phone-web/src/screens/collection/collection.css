@@ -1,7 +1,7 @@
 /* Collection loop (H2–H6). Local to src/screens/collection; prefixed cl-. */
 
 /* Paper back button: the kit's BackLink, dressed the way the hi-fi draws it. */
-.cl-back { align-self: flex-start; rotate: -0.4deg; }
+.cl-back { align-self: flex-start; }
 .cl-back .q-back {
   padding: 0 12px;
   background: var(--paper); color: var(--ink);
@@ -87,7 +87,7 @@
 /* ---------- H3 stamp detail ---------- */
 .cl-bigstamp { position: relative; flex: none; height: 178px; }
 .cl-bigstamp__pos { position: absolute; left: 9px; right: 0; top: 8px; height: 160px; max-width: 350px; }
-.cl-bigstamp__tilt { height: 100%; rotate: -3deg; filter: var(--wob); }
+.cl-bigstamp__tilt { height: 100%; filter: var(--wob); }
 .cl-bigstamp__ol {
   height: 100%;
   filter: drop-shadow(2px 0 0 var(--ink)) drop-shadow(-2px 0 0 var(--ink)) drop-shadow(0 2px 0 var(--ink))

@@ -41,6 +41,15 @@ Other scripts (here, or `pnpm --filter @questline/phone-web <script>`):
 
 `/screens` is a gallery of every screen with fixture data (mock mode).
 
+## Look
+
+Every screen follows the start screen:
+
+- **Headings are block letters** (Bungee): `.q-title` and its sizes. Short section names use `<TileTitle>`, one letter per paper tile; the name itself is `<Wordmark>`, tiles with the T of TOWN as a green roundel. Handwriting (Gaegu) is for sentences.
+- **Nothing is tilted.** Buttons, chips, cards and tickets sit level.
+- **Train scenes are live 3D.** The waiting (C2), no-match (C4) and train-arriving (F3) screens show `<PlatformScene3D>`: you on the platform, the trolley coming round the bend and pulling in. On F3 it arrives as the countdown runs out. Without WebGL the old flat scene shows instead.
+- **Artwork is rendered, not hand-drawn in CSS.** The files in `public/art/` come from the start screen's renderer (`pnpm art`, see `packages/start-screen/README.md`). `<ArtSlot id>` shows `public/art/<id>.webp`; `fit="contain"` is for cut-out art, the default `cover` for photos.
+
 This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: it is on TypeScript 7 and Vite 8, and the screens were not written for `noUncheckedIndexedAccess`.
 
 ## Routes

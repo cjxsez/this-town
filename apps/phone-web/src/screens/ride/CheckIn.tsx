@@ -57,7 +57,7 @@ export default function CheckIn() {
   return (
     <Screen label="C1" tabs blobs={false}>
       <PlatformBlobs blobs={[[120, 110, 330, 200], [-80, 60, 240, 130]]} />
-      <Title style={{ fontSize: 34 }}>Where are you riding?</Title>
+      <Title>Where are you riding?</Title>
 
       <Card style={{ gap: 8 }}>
         <Eyebrow>Station</Eyebrow>

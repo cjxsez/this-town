@@ -4,26 +4,23 @@ export const GAME_NAME = "In This Town";
 const WORDS = ["IN", "THIS", "TOWN"];
 
 /**
- * The game's name in Bungee Shade, with the T of TOWN as a green roundel: the T is
- * what Boston calls the MBTA (THIS keeps a plain T, as on the start screen). The 2D twin of the start screen's tiles (our own mark,
- * not the MBTA logo). Screen readers hear "In This Town".
+ * The game's name in letter tiles, the 2D twin of the start screen's title: one
+ * chunky paper tile per letter, and the T of TOWN as a green roundel, because
+ * the T is what Boston calls the MBTA (our own mark, not the MBTA logo; THIS
+ * keeps a plain T). Screen readers hear "In This Town".
  */
-export function Wordmark({ size = 44, style }: { size?: number; style?: CSSProperties }) {
+export function Wordmark({ size = 26, style }: { size?: number; style?: CSSProperties }) {
   return (
-    <span className="q-wordmark" style={{ fontSize: size, ...style }}>
+    <span className="q-tiles q-tiles--center" style={{ display: "block", fontSize: size, ...style }}>
       <span className="q-sr">{GAME_NAME}</span>
-      <span className="q-wordmark__art" aria-hidden>
+      <span className="q-tiles__art" aria-hidden>
         {WORDS.map((word) => (
-          <span key={word} className="q-wordmark__word">
-            {Array.from(word).map((c, i) =>
-              c === "T" && word === "TOWN" ? (
-                <span key={i} className="q-roundel">
-                  <span>T</span>
-                </span>
-              ) : (
-                c
-              ),
-            )}
+          <span key={word} className="q-tiles__word">
+            {Array.from(word).map((c, i) => (
+              <span key={i} className={c === "T" && word === "TOWN" ? "q-tile q-tile--roundel" : "q-tile"}>
+                {c}
+              </span>
+            ))}
           </span>
         ))}
       </span>

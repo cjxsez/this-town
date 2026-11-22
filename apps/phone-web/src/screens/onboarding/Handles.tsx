@@ -31,10 +31,10 @@ export default function Handles() {
       blobs="b"
       footer={
         <ButtonRow>
-          <Button variant="secondary" tilt={-0.4} onClick={skip}>
+          <Button variant="secondary" onClick={skip}>
             Skip
           </Button>
-          <Button tilt={0.8} onClick={save}>
+          <Button onClick={save}>
             Save
           </Button>
         </ButtonRow>

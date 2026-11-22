@@ -48,10 +48,10 @@ export default function GlassesLive() {
       label="J2"
       footer={
         <>
-          <Button variant="secondary" tilt={-0.4} onClick={() => actions.setGlasses({ cameraPaused: !g.cameraPaused })} aria-pressed={g.cameraPaused}>
+          <Button variant="secondary" onClick={() => actions.setGlasses({ cameraPaused: !g.cameraPaused })} aria-pressed={g.cameraPaused}>
             {g.cameraPaused ? "Resume camera" : "Pause camera"}
           </Button>
-          <Button variant="danger" tilt={0.8} onClick={end}>
+          <Button variant="danger" onClick={end}>
             End session
           </Button>
         </>
@@ -75,7 +75,7 @@ export default function GlassesLive() {
           </LensFrame>
         )}
       </div>
-      <Card style={{ gap: 4, rotate: "0.5deg" }}>
+      <Card style={{ gap: 4, }}>
         <div style={{ font: "700 23px/1.08 var(--font-hand)" }}>{reader}</div>
         <div className="q-num" style={{ fontSize: 17, lineHeight: 1.2, color: "var(--ink-soft)" }}>
           Last card sent {clock(Math.floor(sentAgo))} ago · {sentAgo >= DIM_AFTER ? "display may be dimmed" : `display may dim at ${clock(DIM_AFTER)}`}

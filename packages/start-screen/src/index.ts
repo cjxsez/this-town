@@ -13,6 +13,8 @@ import { createOverlay } from "./dom";
 import { loadFonts } from "./scene/glyphs";
 
 export { CONFIG, EASE, NAME, TITLE } from "./config";
+export { mountPlatformScene, LINE_NAMES } from "./platform";
+export type { LineName, PlatformSceneHandle, PlatformSceneOptions } from "./platform";
 export type { Config, CueName, TimeOfDay } from "./config";
 
 export interface StartScreenOptions {

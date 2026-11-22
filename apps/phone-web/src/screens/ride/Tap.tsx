@@ -85,12 +85,12 @@ export default function Tap() {
       <Eyebrow>Car {car}</Eyebrow>
       {view.step === "working" && (
         <div role="status">
-          <Title style={{ fontSize: 44 }}>One sec…</Title>
+          <Title>One sec…</Title>
         </div>
       )}
       {view.step === "destination" && (
         <>
-          <Title style={{ fontSize: 40 }}>Where are you getting off?</Title>
+          <Title>Where are you getting off?</Title>
           <Hint>Quests stop before your stop, so you never miss it.</Hint>
           <Card>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -105,7 +105,7 @@ export default function Tap() {
       )}
       {view.step === "error" && (
         <div role="alert" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Title style={{ fontSize: 44 }}>That tap didn't take.</Title>
+          <Title>That tap didn't take.</Title>
           <Body>{view.message}</Body>
           <Hint>Tap the tag again to get a fresh one.</Hint>
           <Button to="/ride">Back to Ride Mode</Button>

@@ -95,6 +95,7 @@ export class Pipeline {
         uRagFreq: { value: config.sea.ragFrequency },
         uDrift: { value: 0 },
         uDriftSeconds: { value: config.sea.driftSeconds },
+        uClear: { value: 0 },
       },
     });
     this.fxaa = new RawShaderMaterial({
@@ -134,6 +135,17 @@ export class Pipeline {
     sea.blobs.forEach((b, i) => {
       (u.uBlobs!.value as Vector4[])[i]!.set(b.x * width, b.y * height, b.rx * blobUnit, b.ry * blobUnit);
     });
+  }
+
+  /** Move the sun (a direction towards it). The start screen never does; stills light each subject from the viewer's upper left. */
+  setLight(direction: Vector3, materials: Materials): void {
+    this.light.copy(direction).normalize();
+    (materials.world.uniforms.uLightDir!.value as Vector3).copy(this.light);
+  }
+
+  /** Leave the sea out and keep the background transparent (for stills). */
+  setClear(clear: boolean): void {
+    this.composite.uniforms.uClear!.value = clear ? 1 : 0;
   }
 
   /** `seconds` drives the drifting foam; `seed` picks the wobble pattern. */

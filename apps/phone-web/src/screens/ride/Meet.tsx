@@ -19,7 +19,7 @@ export default function Meet() {
       blobs="b"
       footer={
         <>
-          <Button tilt={0.8} onClick={act.met} style={{ minHeight: 60 }}>
+          <Button onClick={act.met} style={{ minHeight: 60 }}>
             We met
           </Button>
           <TextLink onClick={act.cantSpot}>Can't spot them?</TextLink>
@@ -43,7 +43,7 @@ export default function Meet() {
         </div>
       </div>
 
-      <Card style={{ rotate: "0.5deg", gap: 8, borderRadius: "var(--r1)" }}>
+      <Card style={{ gap: 8, borderRadius: "var(--r1)" }}>
         <Eyebrow>Meet at</Eyebrow>
         <div
           style={{
@@ -60,6 +60,7 @@ export default function Meet() {
           ) : (
             <ArtSlot
               id={`meet-spot-${stationId}-${meetSpot.id}`}
+              fit="contain"
               placeholder={`photo: ${meetSpot.name.toLowerCase()}, ${meetSpot.detail}`}
               style={{ width: "100%", height: "100%", border: 0 }}
             />
@@ -71,7 +72,7 @@ export default function Meet() {
       </Card>
 
       {quote && (
-        <Card style={{ rotate: "-0.4deg", gap: 6, borderRadius: "var(--r2)" }}>
+        <Card style={{ gap: 6, borderRadius: "var(--r2)" }}>
           <Eyebrow>{youFirst ? "You go first. Say:" : "They go first. Listen for:"}</Eyebrow>
           <div style={{ font: "700 31px/1.03 var(--font-hand)", textWrap: "balance" }}>"{quote}"</div>
         </Card>

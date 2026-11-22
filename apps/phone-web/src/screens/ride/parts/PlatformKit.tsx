@@ -124,43 +124,28 @@ export function PlatformPuff({ style, delay }: { style: CSSProperties; delay?: n
 
 /** Round tree from the platform scenes. */
 export function PlatformTree({ size, style, float, delay }: { size: number; style: CSSProperties; float?: boolean; delay?: number }) {
-  const inset = Math.round(size / 5);
+  // Drawn by the start screen's renderer (public/art/sprite-tree.webp). `size` is the canopy's width.
   return (
-    <div
-      className={float ? "anim-float" : undefined}
-      style={{
-        position: "absolute",
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: "var(--green)",
-        border: "var(--ol) solid var(--ink)",
-        boxShadow: `inset -${inset}px -${inset - 1}px 0 var(--green-dk)`,
-        animationDelay: delay ? `${delay}ms` : undefined,
-        ...style,
-      }}
+    <img
+      src="/art/sprite-tree.webp"
+      alt=""
+      className={`q-sprite${float ? " anim-float" : ""}`}
+      style={{ width: size * 1.45, height: "auto", marginLeft: -size * 0.22, animationDelay: delay ? `${delay}ms` : undefined, ...style }}
     />
   );
 }
 
 /** Little house with a coloured roof. */
-export function PlatformHouse({ w, h, roof, style }: { w: number; h: number; roof: string; style: CSSProperties }) {
+export function PlatformHouse({ w, roof, style }: { w: number; h?: number; roof: string; style: CSSProperties }) {
+  // Drawn by the start screen's renderer; the roof colour picks the sprite.
+  const sprite = roof.toUpperCase() === "#D9604A" ? "sprite-house-red" : "sprite-house-pink";
   return (
-    <div
-      style={{
-        position: "absolute",
-        width: w,
-        height: h,
-        background: "var(--paper)",
-        border: "var(--ol) solid var(--ink)",
-        boxShadow: `inset -${Math.round(w / 4)}px 0 0 var(--stone)`,
-        filter: "var(--wob)",
-        ...style,
-      }}
-    >
-      <div style={{ position: "absolute", left: -6, right: -6, top: -12, height: 12, background: roof, border: "var(--ol) solid var(--ink)" }} />
-      <div style={{ position: "absolute", left: 7, top: 10, width: 8, height: 11, background: "var(--ink)" }} />
-    </div>
+    <img
+      src={`/art/${sprite}.webp`}
+      alt=""
+      className="q-sprite"
+      style={{ width: w * 1.6, height: "auto", marginLeft: -w * 0.3, ...style }}
+    />
   );
 }
 

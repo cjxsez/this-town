@@ -48,7 +48,7 @@ export default function Recap() {
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <AnimalToken badge={person.badge} size={64} />
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ font: "700 30px/1.08 var(--font-hand)" }}>
+              <h1 className="q-title--md">
                 {person.firstName} · {badgeName(person.badge)}
               </h1>
               {mission && (
@@ -97,7 +97,7 @@ export default function Recap() {
       </div>
 
       {person && p && (
-        <Card style={{ rotate: "-0.4deg" }}>
+        <Card>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <span style={{ font: "700 24px/1.08 var(--font-hand)" }}>
               Stay in touch with {person.firstName}
@@ -123,7 +123,7 @@ export default function Recap() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 4 }}>
-        <Button tilt={0.8} onClick={seePassport}>
+        <Button onClick={seePassport}>
           See passport
         </Button>
         <TextLink onClick={finish}>Done</TextLink>

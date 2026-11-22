@@ -39,4 +39,5 @@ pnpm run deploy
 pnpm seed           # demo profiles
 pnpm ghosts         # fake riders on the demo train
 pnpm smoke          # end-to-end check of the happy path against a running worker
+pnpm art            # re-render the phone app's artwork (apps/phone-web/public/art) with the start screen's renderer
 ```

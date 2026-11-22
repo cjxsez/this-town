@@ -4,6 +4,7 @@ import { useRide } from "../../state/store";
 import { useNow } from "../../state/useNow";
 import { clock, secondsUntil } from "../../state/format";
 import { meetLineLabel, meetStationName } from "./parts/MeetTopBar";
+import { PlatformScene3D } from "./parts/PlatformScene3D";
 import { QuestTrainScene } from "./parts/QuestTrainScene";
 
 // F3: train in 30 s. RideRoute lays this over whatever phase is showing; it
@@ -58,21 +59,28 @@ export default function TrainSoon() {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {met ? (
             <>
-              <Button variant="dark" tilt={-0.7} onClick={bumpFirst}>
+              <Button variant="dark" onClick={bumpFirst}>
                 Quick bump first
               </Button>
-              <Button variant="secondary" tilt={0.5} onClick={act.board}>
+              <Button variant="secondary" onClick={act.board}>
                 I'm boarding
               </Button>
             </>
           ) : (
-            <Button variant="dark" tilt={-0.7} onClick={boardUnmet}>
+            <Button variant="dark" onClick={boardUnmet}>
               I'm boarding
             </Button>
           )}
         </div>
-        <div style={{ flex: 1, minHeight: 260, margin: "0 calc(-1 * var(--gutter))" }}>
-          <QuestTrainScene line={ride.checkIn?.line} />
+        {/* The trolley rolls in as the countdown runs out. */}
+        <div style={{ flex: 1, minHeight: 260, position: "relative", margin: "0 calc(-1 * var(--gutter))", borderTop: "2.5px solid var(--ink)" }}>
+          <PlatformScene3D
+            line={ride.checkIn?.line}
+            mode="arrive"
+            arriveAt={ride.trainAt}
+            fallback={<QuestTrainScene line={ride.checkIn?.line} />}
+            style={{ position: "absolute", inset: 0 }}
+          />
         </div>
       </Screen>
     </div>

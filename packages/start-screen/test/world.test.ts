@@ -65,19 +65,21 @@ test("every piece has an id, and there are many separate pieces to ink", () => {
   const oid = world.island.geometry.getAttribute("oid");
   for (let i = 0; i < oid.count; i++) ids.add(oid.getX(i));
   assert.ok(!ids.has(0));
-  assert.ok(ids.size >= W.trees.count + W.rowhouses.count + W.stations.anglesDeg.length + 5, `${ids.size} ids`);
+  assert.ok(ids.size >= W.trees.count + W.brownstones.count + W.cds.blocks.length + W.stations.anglesDeg.length + 5, `${ids.size} ids`);
   const carIds = world.cars.map((car) => car.geometry.getAttribute("oid").getX(0));
   assert.equal(new Set(carIds).size, T.cars);
   for (const id of carIds) assert.ok(!ids.has(id));
 });
 
-test("trees keep clear of each other, the track, the pond and the platforms", () => {
+test("trees keep clear of each other, the track, the buildings and the platforms", () => {
   assert.equal(world.trees.length, W.trees.count);
   const half = W.track.width / 2;
   for (const [i, a] of world.trees.entries()) {
     const r = Math.hypot(a.x, a.z);
     assert.ok(Math.abs(r - W.track.radius) > half + a.radius * 0.5, `tree ${i} is on the track`);
-    assert.ok(Math.hypot(a.x - W.pond.x, a.z - W.pond.z) > W.pond.radius, `tree ${i} is in the pond`);
+    for (const k of world.keepOut) {
+      assert.ok(Math.hypot(a.x - k.x, a.z - k.z) >= k.r, `tree ${i} is inside ${k.name}`);
+    }
     for (const stop of W.stations.anglesDeg) {
       const near = turnsApart(deg(Math.atan2(a.z, a.x)), stop) < 14;
       assert.ok(!(near && r > W.track.radius), `tree ${i} is on a platform`);
@@ -85,6 +87,47 @@ test("trees keep clear of each other, the track, the pond and the platforms", ()
     for (const b of world.trees.slice(i + 1)) {
       assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= W.trees.spacing - 1e-9);
     }
+  }
+});
+
+test("the trees are a mix: greens and autumn yellow, orange and red", () => {
+  const tones = new Set(world.trees.map((t) => t.tone));
+  assert.ok(tones.size >= 4, [...tones].join(" "));
+  const C = CONFIG.colors;
+  for (const tone of [C.green, C.yellow, C.orange]) assert.ok(tones.has(tone), tone);
+});
+
+test("the CDS building is a stack of offset blocks, each its own inked piece", () => {
+  const { blockIds } = world.cds;
+  assert.equal(blockIds.length, W.cds.blocks.length);
+  assert.equal(new Set(blockIds).size, blockIds.length);
+  // Neighbouring blocks are pushed different ways, like a stack of books.
+  const shifts = W.cds.blocks.filter((b) => b.kind === "fin").map((b) => Math.sign(b.dx));
+  for (let i = 1; i < shifts.length; i++) assert.notEqual(shifts[i], shifts[i - 1]);
+});
+
+test("the CDS building is the tallest thing in town, and stands where the config says", () => {
+  const stack = W.cds.podium.h + W.cds.blocks.reduce((sum, b) => sum + b.h, 0);
+  assert.ok(Math.abs(world.cds.top - (W.grass.top + stack)) < 1e-6);
+  const p = world.island.geometry.getAttribute("position");
+  let top = -Infinity;
+  let at = 0;
+  for (let i = 0; i < p.count; i++) {
+    if (p.getY(i) > top) {
+      top = p.getY(i);
+      at = i;
+    }
+  }
+  assert.ok(top >= world.cds.top && top < world.cds.top + 1.2, `highest point ${top}`);
+  assert.ok(Math.hypot(p.getX(at) - W.cds.x, p.getZ(at) - W.cds.z) < 6);
+});
+
+test("Warren Towers has three towers and Marsh Chapel two, all inside the loop", () => {
+  assert.equal(W.warren.towers, 3);
+  const inner = W.track.radius - W.track.width / 2;
+  for (const k of world.keepOut) assert.ok(Math.hypot(k.x, k.z) + k.r * 0.6 < inner, `${k.name} reaches the track`);
+  for (const name of ["cds", "warren", "marsh", "brownstone"]) {
+    assert.ok(world.keepOut.some((k) => k.name.startsWith(name)), name);
   }
 });
 

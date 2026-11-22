@@ -40,7 +40,7 @@ export default function Offline() {
       </PlatformStage>
 
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <Title style={{ fontSize: 42 }}>Reconnecting…</Title>
+        <Title>Reconnecting…</Title>
         <Body style={{ fontSize: 21 }}>
           You're still checked in. Offers that arrive while you're offline are dropped, not queued, so you never get a stale one.
         </Body>

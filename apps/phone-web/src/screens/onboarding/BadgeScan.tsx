@@ -137,7 +137,7 @@ export default function BadgeScan() {
       footer={
         <>
           <ButtonRow>
-            <Button tilt={-0.5} disabled={!number} onClick={done}>
+            <Button disabled={!number} onClick={done}>
               {passedGate ? "Done · start riding" : "Next · about you"}
             </Button>
           </ButtonRow>

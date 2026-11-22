@@ -196,6 +196,7 @@ uniform float uRag;
 uniform float uRagFreq;
 uniform float uDrift;
 uniform float uDriftSeconds;
+uniform float uClear;      // 1 = no sea: transparent background (stills for the app's art)
 
 vec2 hash22(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
@@ -275,7 +276,10 @@ void main() {
   }
 
   vec3 color = scene.rgb + sea * (1.0 - scene.a);
-  outColor = vec4(mix(color, uInk, ink), 1.0);
+  vec4 solid = vec4(mix(color, uInk, ink), 1.0);
+  // Premultiplied: ink over the scene over nothing.
+  vec4 clear = vec4(scene.rgb * (1.0 - ink) + uInk * ink, scene.a + ink * (1.0 - scene.a));
+  outColor = mix(solid, clear, uClear);
 }
 `;
 
@@ -291,15 +295,19 @@ const float REDUCE_MIN = 1.0 / 128.0;
 const float REDUCE_MUL = 1.0 / 8.0;
 const float SPAN_MAX = 8.0;
 
+// Brightness as if over white, so edges against a transparent background count too.
+float luma(vec4 c) {
+  return dot(c.rgb + (1.0 - c.a), vec3(0.299, 0.587, 0.114));
+}
+
 void main() {
   vec2 uv = gl_FragCoord.xy * uTexel;
-  vec3 luma = vec3(0.299, 0.587, 0.114);
-  vec3 rgbM = texture(tDiffuse, uv).rgb;
-  float lumaNW = dot(texture(tDiffuse, uv + vec2(-1.0, -1.0) * uTexel).rgb, luma);
-  float lumaNE = dot(texture(tDiffuse, uv + vec2(1.0, -1.0) * uTexel).rgb, luma);
-  float lumaSW = dot(texture(tDiffuse, uv + vec2(-1.0, 1.0) * uTexel).rgb, luma);
-  float lumaSE = dot(texture(tDiffuse, uv + vec2(1.0, 1.0) * uTexel).rgb, luma);
-  float lumaM = dot(rgbM, luma);
+  vec4 rgbM = texture(tDiffuse, uv);
+  float lumaNW = luma(texture(tDiffuse, uv + vec2(-1.0, -1.0) * uTexel));
+  float lumaNE = luma(texture(tDiffuse, uv + vec2(1.0, -1.0) * uTexel));
+  float lumaSW = luma(texture(tDiffuse, uv + vec2(-1.0, 1.0) * uTexel));
+  float lumaSE = luma(texture(tDiffuse, uv + vec2(1.0, 1.0) * uTexel));
+  float lumaM = luma(rgbM);
   float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
   float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
 
@@ -307,9 +315,9 @@ void main() {
   float reduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * 0.25 * REDUCE_MUL, REDUCE_MIN);
   dir = clamp(dir / (min(abs(dir.x), abs(dir.y)) + reduce), vec2(-SPAN_MAX), vec2(SPAN_MAX)) * uTexel;
 
-  vec3 rgbA = 0.5 * (texture(tDiffuse, uv + dir * (1.0 / 3.0 - 0.5)).rgb + texture(tDiffuse, uv + dir * (2.0 / 3.0 - 0.5)).rgb);
-  vec3 rgbB = rgbA * 0.5 + 0.25 * (texture(tDiffuse, uv - dir * 0.5).rgb + texture(tDiffuse, uv + dir * 0.5).rgb);
-  float lumaB = dot(rgbB, luma);
-  outColor = vec4((lumaB < lumaMin || lumaB > lumaMax) ? rgbA : rgbB, 1.0);
+  vec4 rgbA = 0.5 * (texture(tDiffuse, uv + dir * (1.0 / 3.0 - 0.5)) + texture(tDiffuse, uv + dir * (2.0 / 3.0 - 0.5)));
+  vec4 rgbB = rgbA * 0.5 + 0.25 * (texture(tDiffuse, uv - dir * 0.5) + texture(tDiffuse, uv + dir * 0.5));
+  float lumaB = luma(rgbB);
+  outColor = (lumaB < lumaMin || lumaB > lumaMax) ? rgbA : rgbB;
 }
 `;

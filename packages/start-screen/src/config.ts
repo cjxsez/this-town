@@ -71,6 +71,14 @@ export const CONFIG = {
     orange: "#e8893a",
     blue: "#3b74c4",
     sand: "#f3d9b1",
+    leafDk: "#5fae6b",
+    /** The CDS building: brown louvers and blue glass. Warren Towers and the chapel: warm stone. */
+    cdsFin: "#a8604a",
+    cdsFinDk: "#7b3f31",
+    glass: "#8fc0dc",
+    glassDk: "#44708d",
+    limestone: "#e6dfc8",
+    limestoneDk: "#c9c2a8",
   },
   /** sea / foam / foam2 per time of day, from the app's HandDrawnFx. */
   seas: {
@@ -230,39 +238,61 @@ export const CONFIG = {
       hillAcross: 5.6,
       hillHeight: 6.6,
     },
-    tower: {
-      x: 1.5,
-      z: -1,
-      width: 3.3,
-      height: 9.5,
-      capHeight: 1,
-      capOverhang: 0.3,
-      roofHeight: 3.4,
-      clockRadius: 1.05,
-      clockY: 7.5,
+    /**
+     * Boston University's Center for Computing & Data Sciences: a stack of blocks
+     * pushed alternately one way and the other, like a pile of books. "fin" blocks
+     * are the brown louvered ones; "glass" blocks are the recessed bands between.
+     * Sizes in world units; dx, dz push a block off the middle of the stack.
+     */
+    cds: {
+      x: -1,
+      z: -1.5,
+      yawDeg: 20,
+      /** The low, wide base. It reaches out to one side of the tower. */
+      podium: { w: 13, d: 8.4, h: 3.4, dx: 2.9 },
+      blocks: [
+        { kind: "glass", w: 6, d: 6, h: 2.2, dx: 0, dz: 0 },
+        { kind: "fin", w: 7.4, d: 6.6, h: 2.3, dx: 1.3, dz: 0.4 },
+        { kind: "fin", w: 8, d: 6.9, h: 2.8, dx: -1.8, dz: -0.4 },
+        { kind: "glass", w: 5.6, d: 5.6, h: 0.9, dx: -0.2, dz: 0 },
+        { kind: "fin", w: 7.4, d: 6.6, h: 2.4, dx: 1.5, dz: 0.5 },
+        { kind: "glass", w: 5.6, d: 5.6, h: 0.8, dx: 0.3, dz: 0 },
+        { kind: "fin", w: 7.2, d: 6.7, h: 2.6, dx: -1.3, dz: -0.4 },
+        { kind: "fin", w: 6.6, d: 6.4, h: 3.1, dx: 0.9, dz: 0.3 },
+      ],
+      /** Louvers: one every `finEvery`, this wide. */
+      finEvery: 0.56,
+      finWidth: 0.17,
+      /** Fins over glass are thinner, so the glass still reads as glass. */
+      glassFinWidth: 0.1,
     },
-    rowhouses: {
-      count: 5,
-      /** They stand in an arc inside the loop, doors facing the track. */
-      arcRadius: 11.5,
-      arcFromDeg: -62,
-      arcToDeg: 4,
+    /** Warren Towers: three slabs on a long base. */
+    warren: { x: -3.5, z: -12.6, yawDeg: 8, towers: 3, baseW: 15, baseD: 5, baseH: 2.3, towerW: 3.5, towerD: 4.4, towerH: 8.6, towerGap: 5.2 },
+    /** Marsh Chapel between its two pointed towers, with a wing either side. */
+    marsh: { x: 2, z: 12.4, yawDeg: 4, naveW: 3, naveD: 5.6, naveH: 3.4, roofH: 1.8, towerW: 2.2, towerH: 6.6, spireH: 2.6, wingW: 4.4, wingD: 3, wingH: 3.2 },
+    /** Bay State Road brownstones, in an arc with their doors to the track. */
+    brownstones: {
+      count: 4,
+      arcRadius: 13.6,
+      arcFromDeg: 158,
+      arcToDeg: 200,
       width: 3.3,
       depth: 3.4,
-      heights: [4.2, 5.2, 3.8, 4.8, 4.4],
-      colors: ["rust", "brick", "paperLo", "rust", "brick"],
+      heights: [4.2, 5, 3.8, 4.6],
+      colors: ["rust", "brick", "rust", "brick"],
       roofHeight: 1.5,
     },
-    pond: { x: -7, z: 5, radius: 4.3 },
     trees: {
-      count: 20,
+      count: 30,
       trunkRadius: 0.38,
       trunkHeight: 1.5,
-      canopyRadius: [1.6, 2.4],
+      canopyRadius: [1.5, 2.3],
       /** Trees grow inside the loop within this radius, and in a band outside it. */
-      innerRadius: 16.4,
+      innerRadius: 16.6,
       outerBand: [24.9, 26.4],
-      spacing: 3.1,
+      spacing: 2.7,
+      /** Leaf colours, picked at random: mostly green, with autumn yellow, orange and red. */
+      tones: ["green", "greenDk", "green", "leafDk", "yellow", "orange", "rust"],
     },
     rocks: { count: 7, size: [0.9, 1.8] },
   },
@@ -281,6 +311,36 @@ export const CONFIG = {
     dwellSeconds: 1.5,
     /** Where on its timetable the train is when the intro starts. */
     startSeconds: 2.6,
+  },
+
+  // ---------------------------------------------------------------- platform view (in the app)
+  /**
+   * The live scene on the app's ride screens: you stand on a platform of the same
+   * island and watch the trolley come round the bend and pull in.
+   * Positions are in platform space: x along the platform (the train comes from +x
+   * and leaves towards -x), y above the platform top, z away from the track.
+   */
+  platformScene: {
+    /** Which stop you stand at (index into world.stations.anglesDeg). */
+    station: 0,
+    fovDeg: 52,
+    /** Just past the end of the platform and above head height, so the trolley's nose stops beside you. */
+    eye: [-14, 4.9, 1.3],
+    lookAt: [-1, 1.5, -3],
+    /** Your rider: where they stand, how tall, and which way they face (degrees; 180 = square to the track). */
+    rider: { x: -6.3, z: 0.45, height: 2.5, turnDeg: 150 },
+    /** Direction to the sun as the viewer sees it (right, up, towards you): over the right shoulder, so the trolley's near side is lit. */
+    sun: [0.5, 0.8, 0.5],
+    /** Seconds for the trolley to go once round the island, and to stand at the platform. */
+    legSeconds: 9,
+    dwellSeconds: 3.6,
+    /** "loop": the first train pulls in this long after the scene appears. */
+    leadInSeconds: 4,
+    /** "arrive": until its last seconds the train waits this far round the loop, out of sight. */
+    holdAt: 0.55,
+    /** The view drifts a little, like someone shifting their weight. */
+    swayAmount: 0.14,
+    swaySeconds: 6,
   },
 
   // ---------------------------------------------------------------- title and button

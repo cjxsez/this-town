@@ -71,7 +71,7 @@ export default function Stamp() {
       footer={
         canPhoto ? (
           <Card style={{ borderRadius: "var(--r2)" }}>
-            <h2 className="q-title--md" style={{ fontSize: 31 }}>
+            <h2 className="q-title--md">
               Snap a memory together?
             </h2>
             <p className="q-hint" style={{ fontSize: 18 }}>
@@ -88,10 +88,10 @@ export default function Stamp() {
               </div>
             ) : (
               <ButtonRow>
-                <Button variant="secondary" tilt={-0.4} onClick={() => act.photoVote(false)}>
+                <Button variant="secondary" onClick={() => act.photoVote(false)}>
                   No thanks
                 </Button>
-                <Button tilt={0.8} onClick={() => act.photoVote(true)}>
+                <Button onClick={() => act.photoVote(true)}>
                   Yes
                 </Button>
               </ButtonRow>

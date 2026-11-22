@@ -28,7 +28,7 @@ export default function Keep() {
       footer={
         // The sheet sits at the bottom for one-handed use on the train.
         <Card>
-          <h1 className="q-title" style={{ fontSize: 40 }}>
+          <h1 className="q-title">
             Keep this one?
           </h1>
           <div
@@ -54,10 +54,10 @@ export default function Keep() {
             .
           </p>
           <ButtonRow>
-            <Button variant="danger" tilt={-0.7} onClick={() => act.keepVote(false)}>
+            <Button variant="danger" onClick={() => act.keepVote(false)}>
               Delete
             </Button>
-            <Button tilt={0.5} onClick={() => act.keepVote(true)}>
+            <Button onClick={() => act.keepVote(true)}>
               Keep
             </Button>
           </ButtonRow>

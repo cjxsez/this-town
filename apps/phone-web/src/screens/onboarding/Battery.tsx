@@ -24,7 +24,6 @@ export default function Battery() {
       footer={
         <ButtonRow>
           <Button
-            tilt={0.5}
             onClick={() => {
               actions.updateDraft({ battery, useAi });
               navigate("/join/handles");
@@ -50,7 +49,7 @@ export default function Battery() {
         </div>
         <Hint>You can change this every ride.</Hint>
       </Card>
-      <Card style={{ rotate: "-0.7deg", borderRadius: "var(--r1)" }}>
+      <Card style={{ borderRadius: "var(--r1)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ font: "700 24px/1.08 var(--font-hand)" }}>
             Use AI to match me

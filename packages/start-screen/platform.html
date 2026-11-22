@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>In This Town platform scene</title>
+    <style>
+      html, body { height: 100%; margin: 0; }
+      body { display: flex; align-items: center; justify-content: center; background: #e7e9da; }
+      #stage { position: relative; width: 402px; height: 300px; overflow: hidden; background: #62c1bc; }
+    </style>
+  </head>
+  <body>
+    <!-- Preview of the app's live platform scene.
+         ?line=red  ?mode=arrive  ?in=6 (seconds until the train, arrive mode)
+         ?clock=-1.5 (freeze at that timetable second)  ?w=402&h=300  ?tod=Night -->
+    <div id="stage"></div>
+    <script type="module">
+      import { mountPlatformScene } from "/src/platform.ts";
+      const q = new URLSearchParams(location.search);
+      const stage = document.getElementById("stage");
+      if (q.get("w")) stage.style.width = q.get("w") + "px";
+      if (q.get("h")) stage.style.height = q.get("h") + "px";
+      mountPlatformScene(stage, {
+        line: q.get("line") ?? "green",
+        mode: q.get("mode") ?? "loop",
+        arriveAt: q.get("in") ? Date.now() + Number(q.get("in")) * 1000 : undefined,
+        timeOfDay: q.get("tod") ?? "Day",
+        freezeClock: q.get("clock") === null ? null : Number(q.get("clock")),
+      });
+    </script>
+  </body>
+</html>

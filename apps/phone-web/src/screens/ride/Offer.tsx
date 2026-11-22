@@ -103,10 +103,10 @@ export default function Offer() {
             </div>
           </div>
           <ButtonRow>
-            <Button variant="secondary" tilt={0.5} onClick={act.skip}>
+            <Button variant="secondary" onClick={act.skip}>
               Skip
             </Button>
-            <Button variant={rare ? "dark" : "primary"} tilt={-0.4} onClick={act.yes}>
+            <Button variant={rare ? "dark" : "primary"} onClick={act.yes}>
               Yes
             </Button>
           </ButtonRow>

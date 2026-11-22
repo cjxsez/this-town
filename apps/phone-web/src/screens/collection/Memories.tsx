@@ -1,4 +1,4 @@
-import { Body, Card, Screen } from "../../ui";
+import { Body, Card, Screen, TileTitle } from "../../ui";
 import { useApp } from "../../state/store";
 import { hoursLeft } from "../../state/format";
 import { useNow } from "../../state/useNow";
@@ -6,7 +6,6 @@ import { stationById } from "../../../shared/catalog";
 import type { Memory } from "../../../shared/types";
 import { MemoryPhoto } from "./parts";
 
-const TILTS = [-0.4, 0.8, -0.5, 0.6];
 
 export default function Memories() {
   const { state, actions } = useApp();
@@ -20,16 +19,16 @@ export default function Memories() {
 
   return (
     <Screen tabs label="H6">
-      <h1 className="cl-h1">MEMORIES</h1>
+      <TileTitle text="MEMORIES" />
 
       {deciding.length > 0 && (
         <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <h2 className="cl-eyebrow">DECIDING · AUTO-DELETES</h2>
           <div className="cl-grid">
-            {deciding.map((m, i) => {
+            {deciding.map((m) => {
               const name = nameOf(m);
               return (
-                <Card key={m.id} className="cl-tile" style={{ rotate: `${TILTS[i % TILTS.length]}deg` }}>
+                <Card key={m.id} className="cl-tile">
                   <MemoryPhoto memory={m} name={name} style={{ height: 108 }} />
                   <div className="cl-tile__cap">{caption(m)}</div>
                   {m.youKept ? (
@@ -71,8 +70,8 @@ export default function Memories() {
           </Card>
         ) : (
           <div className="cl-grid">
-            {kept.map((m, i) => (
-              <Card key={m.id} className="cl-tile" style={{ rotate: `${TILTS[(i + 2) % TILTS.length]}deg` }}>
+            {kept.map((m) => (
+              <Card key={m.id} className="cl-tile">
                 <MemoryPhoto memory={m} name={nameOf(m)} style={{ height: 108 }} />
                 <div className="cl-tile__cap">
                   {caption(m)}

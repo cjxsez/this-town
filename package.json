@@ -19,7 +19,8 @@
     "db:migrate:remote": "pnpm --filter @questline/worker db:migrate:remote",
     "seed": "tsx scripts/seed.ts",
     "ghosts": "tsx scripts/ghost-riders.ts",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "art": "pnpm --filter @questline/start-screen art"
   },
   "devDependencies": {
     "@questline/protocol": "workspace:*",

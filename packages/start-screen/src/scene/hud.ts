@@ -70,7 +70,7 @@ function circle(diameter: number): Shape {
 }
 
 /** `corners` are top-left, top-right, bottom-right, bottom-left radii (CSS order). */
-function roundedRect(w: number, h: number, corners: readonly number[]): Shape {
+export function roundedRect(w: number, h: number, corners: readonly number[]): Shape {
   const [tl = 0, tr = 0, br = 0, bl = 0] = corners;
   const x0 = -w / 2;
   const x1 = w / 2;

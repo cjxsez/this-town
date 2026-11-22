@@ -32,7 +32,7 @@ export default function CantSpot() {
       blobs="c"
       footer={
         <>
-          <Button variant="secondary" tilt={-0.7} onClick={act.withdraw}>
+          <Button variant="secondary" onClick={act.withdraw}>
             Call it off, no hard feelings
           </Button>
           <TextLink small onClick={act.backToMeet}>
@@ -42,7 +42,7 @@ export default function CantSpot() {
       }
     >
       <MeetTopBar />
-      <h1 style={{ font: "700 44px/1.03 var(--font-hand)", textWrap: "balance" }}>Can't spot {match.firstName}?</h1>
+      <h1 className="q-title">Can't spot {match.firstName}?</h1>
       <p style={{ fontSize: 21, lineHeight: 1.2, textWrap: "pretty" }}>
         {p.is.charAt(0).toUpperCase() + p.is.slice(1)} heading to the same spot. Look for a {badgeName(match.badge)} badge at chest height.
       </p>
@@ -97,11 +97,11 @@ export default function CantSpot() {
       </div>
 
       {ride.youAtSpot ? (
-        <Button variant="leaf" tilt={-0.5} disabled aria-live="polite" style={{ flex: "none", opacity: 1, filter: "var(--wob)", cursor: "default" }}>
+        <Button variant="leaf" disabled aria-live="polite" style={{ flex: "none", opacity: 1, filter: "var(--wob)", cursor: "default" }}>
           ✓ Sent to {match.firstName}
         </Button>
       ) : (
-        <Button tilt={-0.5} onClick={act.atSpot} style={{ flex: "none" }}>
+        <Button onClick={act.atSpot} style={{ flex: "none" }}>
           I'm at the spot
         </Button>
       )}
@@ -109,7 +109,7 @@ export default function CantSpot() {
         {ride.youAtSpot ? "Sent" : "Sends"} {match.firstName} {sentLine} Nothing about where you are beyond that.
       </p>
 
-      <Card style={{ rotate: "0.6deg", borderRadius: "var(--r4)" }}>
+      <Card style={{ borderRadius: "var(--r4)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <AnimalToken badge={match.badge} size={46} style={{ fontSize: 9 }} />
           <div>

@@ -38,19 +38,17 @@ export function EarnedTicket({
   to,
   rare,
   isNew,
-  tilt,
 }: {
   station: Station;
   to: string;
   rare: boolean;
   isNew: boolean;
-  tilt: number;
 }) {
   const tag = rare ? "★ RARE" : isNew ? "NEW" : "✓";
   const label = `${station.name} stamp${rare ? ", rare" : ""}${isNew ? ", new today" : ""}`;
   return (
     <Link to={to} className={`cl-ticket${rare ? " cl-ticket--rare" : ""}`} aria-label={label}>
-      <div className="cl-ticket__tilt" style={{ rotate: `${tilt}deg` }}>
+      <div className="cl-ticket__tilt">
         <div className="cl-ticket__ol">
           <div className="cl-ticket__paper" aria-hidden>
             <div className="cl-ticket__name">

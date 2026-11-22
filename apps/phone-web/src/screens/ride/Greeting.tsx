@@ -15,13 +15,13 @@ export default function Greeting() {
       label="E3"
       blobs="b"
       footer={
-        <Button tilt={0.8} onClick={act.startQuest}>
+        <Button onClick={act.startQuest}>
           Start the quest
         </Button>
       }
     >
       <MeetTopBar />
-      <h1 style={{ font: "700 50px/1.03 var(--font-hand)", textWrap: "balance" }}>That's {match.firstName} ✓</h1>
+      <h1 className="q-title">That's {match.firstName} ✓</h1>
       {glasses && (
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span className="q-pill" style={{ background: "var(--sky)" }}>
@@ -32,11 +32,11 @@ export default function Greeting() {
       )}
       {opener && (
         <>
-          <Card style={{ rotate: "0.5deg", gap: 6, marginRight: 34, borderRadius: "var(--r1)" }}>
+          <Card style={{ gap: 6, marginRight: 34, borderRadius: "var(--r1)" }}>
             <Eyebrow>You say</Eyebrow>
             <div style={{ font: "700 31px/1.03 var(--font-hand)", textWrap: "balance" }}>"{opener.say}"</div>
           </Card>
-          <Card style={{ rotate: "-0.4deg", gap: 6, marginLeft: 34, background: "var(--ticket)", borderRadius: "var(--r2)" }}>
+          <Card style={{ gap: 6, marginLeft: 34, background: "var(--ticket)", borderRadius: "var(--r2)" }}>
             <Eyebrow>Listen for</Eyebrow>
             <div style={{ font: "700 31px/1.03 var(--font-hand)", textWrap: "balance" }}>"{opener.listenFor}"</div>
           </Card>

@@ -13,6 +13,7 @@ import {
   nextStops,
   stationFor,
 } from "./parts/PlatformKit";
+import { PlatformScene3D, PlatformSign } from "./parts/PlatformScene3D";
 
 const MOODS: { value: SocialBattery; label: string }[] = [
   { value: "nod", label: "Nod" },
@@ -72,8 +73,35 @@ export default function Waiting() {
   );
 }
 
-/** The illustrated platform: line strip, next stops, your rider, the train coming up. */
+/**
+ * The platform, live: you on the platform, the trolley coming round the bend and
+ * pulling in. The station sign, the next stops and "you're here" are laid over it.
+ */
 function WaitingPlatformScene() {
+  const { ride, profile } = useRide();
+  const c = ride.checkIn;
+  const station = stationFor(c?.stationId);
+  const line = LINES[c?.line ?? "green"];
+  const stops = nextStops(c).map((s) => s.name);
+  return (
+    <div style={{ flex: "1 0 auto", minHeight: 300, position: "relative", margin: "0 calc(-1 * var(--gutter))" }}>
+      <PlatformScene3D line={c?.line} mode="loop" fallback={<WaitingPlatformFlat />} style={{ position: "absolute", inset: 0 }}>
+        <PlatformSign name={station.name} color={line.hex} style={{ right: 16, top: 12 }} />
+        {stops.length > 0 && (
+          <div className="q-scene3d__note" style={{ left: 16, top: 14, fontSize: 16 }}>
+            Next: {stops.join(", ")}
+          </div>
+        )}
+        <div className="q-scene3d__note" style={{ left: 16, bottom: 12 }}>
+          You're here{profile.badge ? ` · ${badgeName(profile.badge)}` : ""}
+        </div>
+      </PlatformScene3D>
+    </div>
+  );
+}
+
+/** The flat platform (line strip, next stops, your rider), shown when the 3D scene cannot run. */
+function WaitingPlatformFlat() {
   const { ride, profile } = useRide();
   const c = ride.checkIn;
   const station = stationFor(c?.stationId);
@@ -143,7 +171,7 @@ function WaitingPlatformScene() {
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 10, background: "var(--yellow)", borderRight: "2px solid var(--ink)" }} />
       </div>
       <div style={{ position: "absolute", left: 150, bottom: 84, width: 100, height: 110 }}>
-        <ArtSlot id="ride-rider" placeholder="your rider" style={{ width: "100%", height: "100%" }} />
+        <ArtSlot id="ride-rider" fit="contain" placeholder="your rider" style={{ width: "100%", height: "100%" }} />
       </div>
       {/* station sign */}
       <div style={{ position: "absolute", left: 318, bottom: 92, width: 4, height: 52, background: "var(--ink)" }} />

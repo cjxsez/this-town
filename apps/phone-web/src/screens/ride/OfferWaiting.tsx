@@ -24,7 +24,7 @@ export default function OfferWaiting() {
               </TextLink>
             </div>
           )}
-          <Button variant="secondary" tilt={0.8} onClick={act.withdraw}>
+          <Button variant="secondary" onClick={act.withdraw}>
             Never mind
           </Button>
         </>
@@ -75,7 +75,7 @@ export default function OfferWaiting() {
       </PlatformStage>
 
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <Title style={{ fontSize: 54 }}>You're in.</Title>
+        <Title>You're in.</Title>
         <Body style={{ fontSize: 22 }}>Waiting for the other rider to decide.</Body>
       </div>
       <div style={{ display: "flex" }}>

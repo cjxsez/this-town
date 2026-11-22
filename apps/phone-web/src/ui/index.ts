@@ -7,3 +7,4 @@ export { Segmented, Chip, Toggle, Checkbox, Radio, TextField, Steps } from "./Co
 export { LinePill, TrainPill } from "./Pills";
 export { ArtSlot, AnimalToken } from "./Art";
 export { Wordmark, GAME_NAME } from "./Wordmark";
+export { TileTitle } from "./TileTitle";

@@ -31,10 +31,10 @@ export default function Spots() {
       blobs="b"
       footer={
         <ButtonRow>
-          <Button variant="secondary" tilt={-0.5} onClick={skip}>
+          <Button variant="secondary" onClick={skip}>
             Skip
           </Button>
-          <Button tilt={0.6} onClick={next}>
+          <Button onClick={next}>
             Next
           </Button>
         </ButtonRow>
@@ -45,8 +45,8 @@ export default function Spots() {
       <Card style={{ borderRadius: "var(--r1)" }}>
         <Hint style={{ fontSize: 18 }}>Optional. Used for "show me" missions.</Hint>
         <div className="q-chips">
-          {spotsFor(station.id).map((s, n) => (
-            <Chip key={s.id} index={n} selected={picked.includes(s.id)} onToggle={() => toggle(s.id)}>
+          {spotsFor(station.id).map((s) => (
+            <Chip key={s.id} selected={picked.includes(s.id)} onToggle={() => toggle(s.id)}>
               {s.label}
             </Chip>
           ))}

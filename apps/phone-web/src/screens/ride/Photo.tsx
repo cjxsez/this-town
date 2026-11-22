@@ -54,10 +54,10 @@ export default function Photo() {
       blobs="b"
       footer={
         <ButtonStack>
-          <Button tilt={-0.5} onClick={() => setCount(3)} disabled={counting}>
+          <Button onClick={() => setCount(3)} disabled={counting}>
             Take it
           </Button>
-          <Button variant="secondary" tilt={0.6} onClick={cancel} disabled={count === 0}>
+          <Button variant="secondary" onClick={cancel} disabled={count === 0}>
             Changed my mind
           </Button>
         </ButtonStack>

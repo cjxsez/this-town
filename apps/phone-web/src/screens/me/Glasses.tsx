@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useApp } from "../../state/store";
-import { ArtSlot, BackLink, Button, Card, Hint, Screen, Toggle } from "../../ui";
+import { ArtSlot, BackLink, Button, Card, Hint, Screen, Toggle, TileTitle } from "../../ui";
 
 /** Small status pill: "CONNECTED" (leaf) or "NOT CONNECTED" (paper). */
 export function StatusPill({ children, tone = "leaf" }: { children: ReactNode; tone?: "leaf" | "paper" | "ink" }) {
@@ -69,11 +69,11 @@ export default function Glasses() {
       blobs={false}
       footer={
         g.connected ? (
-          <Button onClick={start} tilt={-0.7}>
+          <Button onClick={start}>
             Start session
           </Button>
         ) : (
-          <Button onClick={() => setPairing(true)} disabled={pairing} tilt={-0.7}>
+          <Button onClick={() => setPairing(true)} disabled={pairing}>
             {pairing ? "Connecting…" : "Connect"}
           </Button>
         )
@@ -85,13 +85,11 @@ export default function Glasses() {
         <BackLink to="/me">Me</BackLink>
         <GlassesTag />
       </div>
-      <div className="q-display" style={{ fontSize: 28, lineHeight: 1.02 }}>
-        GLASSES
-      </div>
+      <TileTitle text="GLASSES" />
       <div style={{ flex: "1 0 110px", minHeight: 110, color: "var(--ink)", display: "flex" }}>
-        <ArtSlot id="glasses-art" placeholder="glasses illustration" style={{ width: "100%", flex: 1 }} />
+        <ArtSlot id="glasses-art" fit="contain" placeholder="glasses illustration" style={{ width: "100%", flex: 1 }} />
       </div>
-      <Card style={{ gap: 4, rotate: "0.6deg" }}>
+      <Card style={{ gap: 4, }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <div className="q-title--sm">{g.model}</div>
           {g.connected ? <StatusPill>CONNECTED</StatusPill> : <StatusPill tone="paper">{pairing ? "PAIRING…" : "NOT CONNECTED"}</StatusPill>}

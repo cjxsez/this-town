@@ -126,7 +126,7 @@ export function StampTicketLarge({
   style?: CSSProperties;
 }) {
   return (
-    <div style={{ height: 160, rotate: "-5deg", filter: "var(--wob)", ...style }}>
+    <div style={{ height: 160, filter: "var(--wob)", ...style }}>
       <TicketShape stub={246} edgeR={6} edgeStep={20} notchR={9} ol={2} shadow="5px 7px 0" rare={rare}>
         <div style={{ flex: "none", width: 246, boxSizing: "border-box", padding: "14px 12px 0 24px" }}>
           <div
@@ -196,7 +196,7 @@ export function StampTicketSmall({
   style?: CSSProperties;
 }) {
   return (
-    <div style={{ flex: "none", width: 176, height: 64, rotate: "-1.5deg", filter: "var(--wob)", ...style }}>
+    <div style={{ flex: "none", width: 176, height: 64, filter: "var(--wob)", ...style }}>
       <TicketShape stub={124} edgeR={3.5} edgeStep={12.8} notchR={6} ol={1.5} shadow="3px 4px 0" rare={rare}>
         <div style={{ flex: "none", width: 124, boxSizing: "border-box", padding: "10px 6px 0 14px" }}>
           <div style={{ font: "400 15px/1 var(--font-display)", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden" }}>

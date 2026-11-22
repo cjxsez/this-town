@@ -1,7 +1,9 @@
 /**
  * The little world behind the title: an island in the sea with a trolley loop.
  *
- * - shore and grass, a pond, a clock tower, a row of brick houses, trees and rocks
+ * - shore and grass, and a little Boston University inside the loop: the stacked
+ *   CDS building, Warren Towers, Marsh Chapel, Bay State Road brownstones
+ * - trees in greens and autumn colours, and rocks along the beach
  * - a loop of track with three stops and a tunnel under a hill
  * - a two-car trolley that runs the loop on a timetable
  * - rings of foam on the water around the shore
@@ -22,6 +24,7 @@ import {
   Matrix4,
   Mesh,
   PlaneGeometry,
+  Vector3,
   type Material,
 } from "three";
 import type { Config } from "../config";
@@ -57,8 +60,12 @@ export interface World {
   /** Foam rings. They stay on the water, so they are not inside `group`. */
   foam: Group;
   cars: Mesh<BufferGeometry>[];
-  /** Where the trees ended up (for tests and debugging). */
-  trees: { x: number; z: number; radius: number }[];
+  /** Where the trees ended up and their leaf colour (for tests and debugging). */
+  trees: { x: number; z: number; radius: number; tone: string }[];
+  /** Circles the buildings stand in. Trees keep out of them. */
+  keepOut: { name: string; x: number; z: number; r: number }[];
+  /** The CDS building: the height of its roof, and the id of each stacked block. */
+  cds: { top: number; blockIds: number[] };
   /** Move the train and the foam to where they are at `seconds`. */
   update(seconds: number, foamGrow?: number): void;
   dispose(): void;
@@ -71,7 +78,7 @@ type Pt = readonly [number, number]; // x, z
 type Lumps = ReadonlyArray<readonly [number, number]>;
 
 /** Paint the top, the sides and the underside of a shape. */
-const faces =
+export const faces =
   (top: string, side: string, bottom = side): Paint =>
   (n) =>
     n.y > 0.5 ? top : n.y < -0.5 ? bottom : side;
@@ -146,9 +153,9 @@ function blob(radius: number, lumps: Lumps, phases: readonly number[], segments:
 }
 
 /** A rectangle lying flat, facing up: `sx` along X, `sz` along Z. */
-const flatQuad = (sx: number, sz: number) => new PlaneGeometry(sx, sz).rotateX(-Math.PI / 2);
+export const flatQuad = (sx: number, sz: number) => new PlaneGeometry(sx, sz).rotateX(-Math.PI / 2);
 /** A rectangle standing up, facing +Z. */
-const wallQuad = (w: number, h: number) => new PlaneGeometry(w, h);
+export const wallQuad = (w: number, h: number) => new PlaneGeometry(w, h);
 
 /** A pitched roof: ridge along X, eaves at y = 0. */
 function gable(w: number, h: number, d: number): BufferGeometry {
@@ -179,12 +186,12 @@ function upperHalf(geometry: BufferGeometry): BufferGeometry {
  * A frame on a circle around the island: local +Z points outwards, local X runs
  * along the circle. Stations, the tunnel and the houses are laid out in these.
  */
-function ringFrame(radius: number, deg: number, y = 0): Matrix4 {
+export function ringFrame(radius: number, deg: number, y = 0): Matrix4 {
   const a = deg * RAD;
   return place(radius * Math.cos(a), y, radius * Math.sin(a), Math.PI / 2 - a);
 }
 
-function carGeometry(config: Config, id: number, lead: boolean, tail: boolean): BufferGeometry {
+export function carGeometry(config: Config, id: number, lead: boolean, tail: boolean, stripe: string = config.lineColors[0]): BufferGeometry {
   const T = config.train;
   const C = config.colors;
   const L = T.carLength;
@@ -205,7 +212,7 @@ function carGeometry(config: Config, id: number, lead: boolean, tail: boolean): 
   for (const side of [1, -1]) {
     const yaw = side > 0 ? 0 : Math.PI;
     const z = side * (wide / 2 + proud);
-    b.add(wallQuad(L * 0.985, T.stripeHeight), place(0, stripeY, z, yaw), C.green, id);
+    b.add(wallQuad(L * 0.985, T.stripeHeight), place(0, stripeY, z, yaw), stripe, id);
     for (let k = 0; k < T.windows; k++) {
       b.add(wallQuad(bay * 0.72, windowH), place((k - (T.windows - 1) / 2) * bay, windowY, z, yaw), C.inkSoft, id);
     }
@@ -213,7 +220,7 @@ function carGeometry(config: Config, id: number, lead: boolean, tail: boolean): 
   for (const end of [1, -1]) {
     const yaw = (end * Math.PI) / 2;
     const x = end * (L / 2 + proud);
-    b.add(wallQuad(wide * 0.985, T.stripeHeight), place(x, stripeY, 0, yaw), C.green, id);
+    b.add(wallQuad(wide * 0.985, T.stripeHeight), place(x, stripeY, 0, yaw), stripe, id);
     b.add(wallQuad(wide * 0.72, windowH), place(x, windowY, 0, yaw), C.inkSoft, id);
     // Headlights on the nose of the first car, tail lights on the back of the last.
     const light = end > 0 ? (lead ? C.yellow : null) : tail ? C.red : null;
@@ -230,7 +237,20 @@ function carGeometry(config: Config, id: number, lead: boolean, tail: boolean): 
   return b.build();
 }
 
-export function buildWorld(config: Config, sea: SeaColors, ids: IdAllocator, materials: SceneMaterials): World {
+export interface WorldOptions {
+  /** Stripe colour of the trolley. Default: the first line colour (Green Line). */
+  trainStripe?: string;
+  /** Where the train stops, if not at every station. One stop sends it right round the loop each time. */
+  stopsDeg?: readonly number[];
+}
+
+export function buildWorld(
+  config: Config,
+  sea: SeaColors,
+  ids: IdAllocator,
+  materials: SceneMaterials,
+  options: WorldOptions = {},
+): World {
   const W = config.world;
   const C = config.colors;
   const K = W.track;
@@ -252,12 +272,6 @@ export function buildWorld(config: Config, sea: SeaColors, ids: IdAllocator, mat
   const grassId = ids.next();
   b.add(cap(grass, grassTop), IDENTITY, C.leaf, grassId);
   b.add(wall(grass, W.shore.height, grassTop), IDENTITY, C.green, grassId);
-
-  // ---- pond: a sandy rim painted on the grass, then the water with its own outline
-  const pondPhases = W.outlineLumps.map(() => rand() * TAU);
-  const pondBlob = (radius: number) => blob(radius, W.outlineLumps, pondPhases, 28, W.pond.x, W.pond.z);
-  b.add(cap(pondBlob(W.pond.radius * 1.2), grassTop + 0.02, W.pond.x, W.pond.z), IDENTITY, C.sand, grassId);
-  b.add(cap(pondBlob(W.pond.radius), grassTop + 0.04, W.pond.x, W.pond.z), IDENTITY, sea.sea, ids.next());
 
   // ---- the loop: bed, ties and rails
   const trackTop = grassTop + K.height;
@@ -332,26 +346,149 @@ export function buildWorld(config: Config, sea: SeaColors, ids: IdAllocator, mat
   // Fine enough to read as one round, grassy mound: only its silhouette is inked.
   b.add(upperHalf(new IcosahedronGeometry(1, 2)), inTunnel(0, grassTop, 0, 0, U.hillAlong, U.hillHeight, U.hillAcross), C.leaf, ids.next());
 
-  // ---- clock tower
-  const O = W.tower;
-  const towerId = ids.next();
-  const capWidth = O.width + O.capOverhang * 2;
-  b.add(new BoxGeometry(O.width, O.height, O.width), place(O.x, grassTop + O.height / 2, O.z), faces(C.paperLo, C.paper), towerId);
-  b.add(new BoxGeometry(capWidth, O.capHeight, capWidth), place(O.x, grassTop + O.height + O.capHeight / 2, O.z), C.paperLo, towerId);
-  b.add(new ConeGeometry((capWidth / 2) * Math.SQRT2 * 0.96, O.roofHeight, 4), place(O.x, grassTop + O.height + O.capHeight + O.roofHeight / 2, O.z, Math.PI / 4), C.greenDk, towerId);
-  for (let side = 0; side < 4; side++) {
-    const turn = place(O.x, 0, O.z, (side * Math.PI) / 2);
-    const onWall = (y: number, out: number) => turn.clone().multiply(place(0, grassTop + y, O.width / 2 + out));
-    b.add(new CircleGeometry(O.clockRadius, 18), onWall(O.clockY, 0.03), C.yellow, ids.next());
-    for (const y of [2.3, 4.7]) b.add(wallQuad(0.75, 1.1), onWall(y, 0.014), C.inkSoft, towerId);
+  // ---- the CDS building: a wide base and a stack of blocks pushed alternately each way
+  const D = W.cds;
+  const proud = 0.014;
+  /** Places a flat detail on one of the four walls of a box: `u` along the wall, `v` up from its middle. */
+  const onWalls = (frame: Matrix4, w: number, d: number, y: number) => (side: number, u: number, v: number, lift = 1, lean = 0) => {
+    const out = proud * lift;
+    const spot =
+      side === 0 ? place(u, y + v, d / 2 + out)
+      : side === 1 ? place(-u, y + v, -d / 2 - out, Math.PI)
+      : side === 2 ? place(w / 2 + out, y + v, -u, Math.PI / 2)
+      : place(-w / 2 - out, y + v, u, -Math.PI / 2);
+    return frame.clone().multiply(spot).multiply(placeTurned(0, 0, 0, 0, 0, lean));
+  };
+  /** Evenly spaced upright strips across a wall `span` wide. */
+  const strips = (span: number, every: number) => {
+    const count = Math.max(1, Math.round(span / every));
+    return Array.from({ length: count }, (_, i) => (i + 0.5 - count / 2) * (span / count));
+  };
+  const keepOut: World["keepOut"] = [];
+  const cdsFrame = place(D.x, 0, D.z, D.yawDeg * RAD);
+  const cdsAt = (x: number, z: number) => cdsFrame.clone().multiply(place(x, 0, z));
+  {
+    // Base: dark glass with slanted brown bracing, a brown band round the roof and a green roof.
+    const P = D.podium;
+    const id = ids.next();
+    const frame = cdsAt(P.dx, 0);
+    const wallsOf = onWalls(frame, P.w, P.d, grassTop + P.h / 2);
+    b.add(new BoxGeometry(P.w, P.h, P.d), frame.clone().multiply(place(0, grassTop + P.h / 2, 0)), faces(C.paperLo, C.glassDk), id);
+    for (let side = 0; side < 4; side++) {
+      const span = side < 2 ? P.w : P.d;
+      for (const u of strips(span - 1.6, 1.15)) b.add(wallQuad(0.16, P.h * 0.98), wallsOf(side, u, -0.1, 1, 0.42), C.cdsFin, id);
+    }
+    b.add(new BoxGeometry(P.w + 0.3, 0.4, P.d + 0.3), frame.clone().multiply(place(0, grassTop + P.h - 0.2, 0)), faces(C.paperLo, C.cdsFin), id);
+    b.add(flatQuad(P.w * 0.34, P.d * 0.62), frame.clone().multiply(place(P.w * 0.27, grassTop + P.h + proud, 0)), C.leaf, id);
+    for (const end of [-1, 1]) {
+      const c = new Vector3(P.dx + end * P.w * 0.27, 0, 0).applyMatrix4(cdsFrame);
+      keepOut.push({ name: "cds base", x: c.x, z: c.z, r: 5 });
+    }
+  }
+  const blockIds: number[] = [];
+  let cdsY = grassTop + D.podium.h;
+  D.blocks.forEach((block, n) => {
+    const id = ids.next();
+    blockIds.push(id);
+    const frame = cdsAt(block.dx, block.dz);
+    const mid = cdsY + block.h / 2;
+    const wallsOf = onWalls(frame, block.w, block.d, mid);
+    const last = n === D.blocks.length - 1;
+    if (block.kind === "glass") {
+      // A recessed band of glass with thin mullions.
+      b.add(new BoxGeometry(block.w, block.h, block.d), frame.clone().multiply(place(0, mid, 0)), faces(C.paperLo, C.glass, C.glassDk), id);
+      for (let side = 0; side < 4; side++) {
+        const span = side < 2 ? block.w : block.d;
+        for (const u of strips(span, 0.95)) b.add(wallQuad(0.07, block.h), wallsOf(side, u, 0), C.glassDk, id);
+      }
+    } else {
+      // A louvered block: brown fins on every wall, over brown on two walls and over glass on the other two.
+      // Which pair is glass swaps from block to block, so every view shows both.
+      b.add(new BoxGeometry(block.w, block.h, block.d), frame.clone().multiply(place(0, mid, 0)), faces(C.paperLo, C.cdsFin, C.cdsFinDk), id);
+      const glassOnZ = n % 2 === 0;
+      for (let side = 0; side < 4; side++) {
+        const span = side < 2 ? block.w : block.d;
+        const glassy = side < 2 === glassOnZ;
+        if (glassy) b.add(wallQuad(span - 0.34, block.h - 0.34), wallsOf(side, 0, 0), C.glass, id);
+        for (const u of strips(span - 0.3, D.finEvery)) {
+          b.add(wallQuad(glassy ? D.glassFinWidth : D.finWidth, block.h - (glassy ? 0.34 : 0.2)), wallsOf(side, u, 0, 2), glassy ? C.cdsFin : C.cdsFinDk, id);
+        }
+        // A dark line where the floors meet, across the glass.
+        if (glassy) b.add(wallQuad(span - 0.34, 0.09), wallsOf(side, 0, 0, 3), C.glassDk, id);
+      }
+      if (last) {
+        // The top block's glass corner.
+        const cornerH = block.h * 0.62;
+        b.add(wallQuad(block.w * 0.42, cornerH), wallsOf(0, block.w * 0.27, (block.h - cornerH) / 2 - 0.12, 3), C.glass, id);
+        b.add(wallQuad(block.d * 0.42, cornerH), wallsOf(2, -block.d * 0.27, (block.h - cornerH) / 2 - 0.12, 3), C.glass, id);
+        b.add(new BoxGeometry(2.2, 0.55, 1.8), frame.clone().multiply(place(-1, cdsY + block.h + 0.275, -0.8)), faces(C.paperLo, C.stone), id);
+      }
+    }
+    cdsY += block.h;
+  });
+  keepOut.push({ name: "cds tower", x: D.x, z: D.z, r: 5.6 });
+
+  // ---- Warren Towers: three slabs with window strips, on one long base
+  {
+    const N = W.warren;
+    const frame = place(N.x, 0, N.z, N.yawDeg * RAD);
+    const baseId = ids.next();
+    b.add(new BoxGeometry(N.baseW, N.baseH, N.baseD), frame.clone().multiply(place(0, grassTop + N.baseH / 2, 0)), faces(C.paperLo, C.limestoneDk), baseId);
+    const baseWalls = onWalls(frame, N.baseW, N.baseD, grassTop + N.baseH / 2);
+    for (const side of [0, 1]) b.add(wallQuad(N.baseW - 1, N.baseH * 0.36), baseWalls(side, 0, 0.1), C.inkSoft, baseId);
+    for (let i = 0; i < N.towers; i++) {
+      const id = ids.next();
+      const x = (i - (N.towers - 1) / 2) * N.towerGap;
+      const tower = frame.clone().multiply(place(x, 0, 0));
+      const mid = grassTop + N.baseH + N.towerH / 2;
+      b.add(new BoxGeometry(N.towerW, N.towerH, N.towerD), tower.clone().multiply(place(0, mid, 0)), faces(C.paperLo, C.limestone), id);
+      const walls = onWalls(tower, N.towerW, N.towerD, mid);
+      for (let side = 0; side < 4; side++) {
+        const span = side < 2 ? N.towerW : N.towerD;
+        for (const u of strips(span - 0.7, 0.95)) b.add(wallQuad(0.3, N.towerH - 1.1), walls(side, u, -0.1), C.inkSoft, id);
+      }
+      const c = new Vector3(x, 0, 0).applyMatrix4(frame);
+      keepOut.push({ name: "warren towers", x: c.x, z: c.z, r: 4.2 });
+    }
   }
 
-  // ---- brick rowhouses in an arc, doors facing the track
-  const H = W.rowhouses;
-  const keepOut: { x: number; z: number; r: number }[] = [
-    { x: O.x, z: O.z, r: O.width * 0.75 + 1.2 },
-    { x: W.pond.x, z: W.pond.z, r: W.pond.radius * 1.25 },
-  ];
+  // ---- Marsh Chapel: the nave between two pointed towers, a wing either side
+  {
+    const M = W.marsh;
+    const frame = place(M.x, 0, M.z, M.yawDeg * RAD);
+    const at = (x: number, y: number, z: number, yaw = 0) => frame.clone().multiply(place(x, y, z, yaw));
+    const nave = ids.next();
+    b.add(new BoxGeometry(M.naveW, M.naveH, M.naveD), at(0, grassTop + M.naveH / 2, 0), C.limestone, nave);
+    // Roof ridge runs front to back: the gable (built along X) is turned a quarter.
+    b.add(gable(M.naveD + 0.3, M.roofH, M.naveW + 0.3), at(0, grassTop + M.naveH, 0, Math.PI / 2), (n) => (Math.abs(n.y) < 0.1 ? C.limestone : C.inkSoft), nave);
+    b.add(wallQuad(0.9, 1.7), at(0, grassTop + 0.85, M.naveD / 2 + proud), C.inkSoft, nave);
+    b.add(new CircleGeometry(0.55, 14), at(0, grassTop + M.naveH + 0.1, M.naveD / 2 + proud), C.glass, ids.next());
+    const towerX = M.naveW / 2 + M.towerW / 2 + 0.5;
+    for (const s of [-1, 1]) {
+      const id = ids.next();
+      b.add(new BoxGeometry(M.towerW, M.towerH, M.towerW), at(s * towerX, grassTop + M.towerH / 2, M.naveD / 2 - M.towerW / 2), C.limestone, id);
+      b.add(new ConeGeometry((M.towerW / 2) * Math.SQRT2 * 0.98, M.spireH, 4), at(s * towerX, grassTop + M.towerH + M.spireH / 2, M.naveD / 2 - M.towerW / 2, Math.PI / 4), C.limestoneDk, id);
+      for (const y of [M.towerH * 0.45, M.towerH * 0.78]) {
+        b.add(wallQuad(0.5, 1.1), at(s * towerX, grassTop + y, M.naveD / 2 + proud), C.inkSoft, id);
+      }
+      // Wing with tall arched windows.
+      const wing = ids.next();
+      const wingX = towerX + M.towerW / 2 + M.wingW / 2;
+      b.add(new BoxGeometry(M.wingW, M.wingH, M.wingD), at(s * wingX, grassTop + M.wingH / 2, M.naveD / 2 - M.wingD / 2), faces(C.limestoneDk, C.limestone), wing);
+      for (const u of strips(M.wingW - 0.6, 0.85)) {
+        b.add(wallQuad(0.4, M.wingH * 0.6), at(s * wingX + u, grassTop + M.wingH * 0.5, M.naveD / 2 + proud), C.inkSoft, wing);
+      }
+      for (const x of [towerX, wingX]) {
+        const c = new Vector3(s * x, 0, M.naveD / 2 - 1.4).applyMatrix4(frame);
+        keepOut.push({ name: "marsh chapel", x: c.x, z: c.z, r: 3.1 });
+      }
+    }
+    const c = new Vector3(0, 0, 0).applyMatrix4(frame);
+    keepOut.push({ name: "marsh chapel", x: c.x, z: c.z, r: 3.6 });
+  }
+
+  // ---- Bay State Road brownstones in an arc, doors facing the track
+  const H = W.brownstones;
   for (let i = 0; i < H.count; i++) {
     const deg = mix(H.arcFromDeg, H.arcToDeg, H.count > 1 ? i / (H.count - 1) : 0.5);
     const frame = ringFrame(H.arcRadius, deg);
@@ -359,9 +496,9 @@ export function buildWorld(config: Config, sea: SeaColors, ids: IdAllocator, mat
     const tall = H.heights[i % H.heights.length]!;
     const colorName = H.colors[i % H.colors.length]!;
     const wallColor = C[colorName];
-    const glass = colorName === "paperLo" ? C.inkSoft : C.mint;
+    const glass = C.mint;
     const id = ids.next();
-    keepOut.push({ x: H.arcRadius * Math.cos(deg * RAD), z: H.arcRadius * Math.sin(deg * RAD), r: H.width * 0.72 + 0.6 });
+    keepOut.push({ name: "brownstone", x: H.arcRadius * Math.cos(deg * RAD), z: H.arcRadius * Math.sin(deg * RAD), r: H.width * 0.72 + 0.6 });
 
     b.add(new BoxGeometry(H.width, tall, H.depth), at(0, grassTop + tall / 2, 0), faces(C.stoneDk, wallColor), id);
     if (i % 2 === 0) {
@@ -406,18 +543,21 @@ export function buildWorld(config: Config, sea: SeaColors, ids: IdAllocator, mat
     if (onHill(x, z)) continue;
     if (keepOut.some((k) => Math.hypot(x - k.x, z - k.z) < k.r + radius * 0.5)) continue;
     if (trees.some((t) => Math.hypot(x - t.x, z - t.z) < W.trees.spacing)) continue;
-    trees.push({ x, z, radius });
+    const tone = C[W.trees.tones[Math.floor(rand() * W.trees.tones.length)]!];
+    trees.push({ x, z, radius, tone });
   }
   for (const tree of trees) {
     const id = ids.next();
     const trunkTop = grassTop + W.trees.trunkHeight;
-    const tone = rand() < 0.5 ? C.green : C.greenDk;
+    const { tone } = tree;
+    // The smaller second blob is a shade away: darker on greens, lighter on autumn colours.
+    const second = tone === C.green ? C.greenDk : tone === C.greenDk ? C.green : tone === C.leafDk ? C.green : tone === C.yellow ? C.orange : tone === C.orange ? C.yellow : C.orange;
     b.add(new CylinderGeometry(W.trees.trunkRadius * 0.75, W.trees.trunkRadius, W.trees.trunkHeight, 8), place(tree.x, grassTop + W.trees.trunkHeight / 2, tree.z, rand() * TAU), C.inkSoft, id);
     b.add(new IcosahedronGeometry(tree.radius, 0), placeTurned(tree.x, trunkTop + tree.radius * 0.62, tree.z, rand() * 0.5, rand() * TAU, rand() * 0.5), tone, id);
     if (rand() < 0.45) {
       const a = rand() * TAU;
       const reach = tree.radius * 0.6;
-      b.add(new IcosahedronGeometry(tree.radius * 0.62, 0), placeTurned(tree.x + Math.cos(a) * reach, trunkTop + tree.radius * 1.25, tree.z + Math.sin(a) * reach, rand(), rand() * TAU, rand()), tone === C.green ? C.greenDk : C.green, id);
+      b.add(new IcosahedronGeometry(tree.radius * 0.62, 0), placeTurned(tree.x + Math.cos(a) * reach, trunkTop + tree.radius * 1.25, tree.z + Math.sin(a) * reach, rand(), rand() * TAU, rand()), second, id);
     }
   }
 
@@ -439,14 +579,14 @@ export function buildWorld(config: Config, sea: SeaColors, ids: IdAllocator, mat
   // ---- the trolley
   const cars: Mesh<BufferGeometry>[] = [];
   for (let i = 0; i < T.cars; i++) {
-    const car = new Mesh(carGeometry(config, ids.next(), i === 0, i === T.cars - 1), materials.world);
+    const car = new Mesh(carGeometry(config, ids.next(), i === 0, i === T.cars - 1, options.trainStripe), materials.world);
     car.layers.enable(SHADOW_LAYER);
     group.add(car);
     cars.push(car);
   }
   const carY = trackTop + 0.06;
   const carStepDeg = (T.carLength + T.carGap) / K.radius / RAD;
-  const timetable = { stopsDeg: S.anglesDeg, legSeconds: T.legSeconds, dwellSeconds: T.dwellSeconds, startSeconds: T.startSeconds };
+  const timetable = { stopsDeg: options.stopsDeg ?? S.anglesDeg, legSeconds: T.legSeconds, dwellSeconds: T.dwellSeconds, startSeconds: T.startSeconds };
 
   // ---- foam on the water: colour only, so id 0 (never inked)
   const foam = new Group();
@@ -479,6 +619,8 @@ export function buildWorld(config: Config, sea: SeaColors, ids: IdAllocator, mat
     foam,
     cars,
     trees,
+    keepOut,
+    cds: { top: cdsY, blockIds },
     update,
     dispose() {
       island.geometry.dispose();

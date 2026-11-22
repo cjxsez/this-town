@@ -14,7 +14,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/*.test.ts"
+    "test": "tsx --test test/*.test.ts",
+    "art": "node scripts/render-art.mjs"
   },
   "dependencies": {
     "@fontsource/bungee": "^5.3.0",

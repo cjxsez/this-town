@@ -15,7 +15,7 @@ export default function FellThrough() {
       label="D3"
       blobs="b"
       footer={
-        <Button tilt={-0.5} onClick={act.dismiss}>
+        <Button onClick={act.dismiss}>
           OK
         </Button>
       }
@@ -41,7 +41,7 @@ export default function FellThrough() {
       </PlatformStage>
 
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <Title style={{ fontSize: 54 }}>Not this one.</Title>
+        <Title>Not this one.</Title>
         <Body style={{ fontSize: 23 }}>Still looking. Quests stay on.</Body>
       </div>
     </Screen>

@@ -43,7 +43,7 @@ export default function StampDetail() {
         <p style={{ fontSize: 21, lineHeight: 1.2, margin: "6px 0 0", textWrap: "pretty" }}>{meta}</p>
       </div>
 
-      <Card style={{ rotate: "0.8deg", gap: 6 }}>
+      <Card style={{ gap: 6 }}>
         {mission && (
           <>
             <div className="q-eyebrow">MISSION</div>

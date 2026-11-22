@@ -92,7 +92,8 @@ export default function BadgePrint() {
               style={{ background: BADGE_COLORS[badge.color], color: lightBg ? "var(--ink)" : "var(--paper)" }}
             >
               <ArtSlot
-                id={`animal-${badge.color}-${badge.animal}`}
+                id={`animal-${badge.animal}`}
+                fit="contain"
                 placeholder={`${badge.color} ${badge.animal} art`}
                 round
                 style={{ width: "100%", height: "100%", border: 0, background: "transparent", color: "inherit" }}

@@ -1,8 +1,10 @@
 import { LINES, LINE_STATION_COUNT, stationById } from "../../../shared/catalog";
-import type { CheckIn, GreenBranch, Stamp } from "../../../shared/types";
+import type { CheckIn, GreenBranch, LineColor, Stamp } from "../../../shared/types";
 import { useApp, useRide } from "../../state/store";
 import { Body, Button, LinePill, Screen, Title, TrainPill } from "../../ui";
 import { lineName, stationFor } from "./parts/PlatformKit";
+import { PlatformScene3D, PlatformSign } from "./parts/PlatformScene3D";
+import { TrolleySprite } from "./parts/QuestTrainScene";
 
 /** Stops per Green Line branch, trunk included (Gov't Ctr out to the end of the branch). */
 const BRANCH_STOPS: Record<GreenBranch, number> = { B: 23, C: 19, D: 19, E: 18 };
@@ -29,7 +31,6 @@ export default function NoMatch() {
   const { state, actions } = useApp();
   const c = ride.checkIn;
   const station = stationFor(c?.stationId);
-  const lineHex = LINES[c?.line ?? "green"].hex;
   const hasHere = state.stamps.some((s) => s.stationId === station.id);
   const progress = c ? lineProgress(state.stamps, c) : undefined;
   const [shortA, shortB] = station.short.includes("-") ? [station.short.split("-")[0] + "-", station.short.split("-").slice(1).join("-")] : [station.short, ""];
@@ -46,10 +47,10 @@ export default function NoMatch() {
       blobs={false}
       footer={
         <>
-          <Button variant="secondary" tilt={0.6} onClick={turnOff}>
+          <Button variant="secondary" onClick={turnOff}>
             Turn quests off
           </Button>
-          <Button tilt={-0.7} onClick={act.keepOnNextStation}>
+          <Button onClick={act.keepOnNextStation}>
             Keep on for the next station
           </Button>
         </>
@@ -63,31 +64,14 @@ export default function NoMatch() {
         <TrainPill>ARRIVING</TrainPill>
       </div>
 
-      {/* the train pulls in and out, without you on a quest */}
-      <div
-        aria-hidden
-        style={{ flex: "1 0 auto", minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))", background: "var(--ink)", overflow: "hidden" }}
-      >
-        {["15%", "49%", "83%"].map((l) => (
-          <div key={l} style={{ position: "absolute", left: l, top: 22, width: 10, height: 10, borderRadius: "50%", background: "var(--yellow)" }} />
-        ))}
-        <div className="anim-trainIn" style={{ position: "absolute", left: -160, bottom: 70, display: "flex", gap: 8 }}>
-          <NoMatchCar lineHex={lineHex} />
-          <NoMatchCar lineHex={lineHex} front />
-        </div>
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 52, height: 10, background: "repeating-linear-gradient(90deg, var(--stone-dk) 0 18px, var(--ink) 18px 24px)" }} />
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40, background: "var(--stone)", borderTop: "2.5px solid var(--ink)" }}>
-          <div
-            style={{
-              height: 16,
-              background: "radial-gradient(circle, var(--yellow-dk) 3px, transparent 3.5px) 0 0/14px 16px, var(--yellow)",
-              borderBottom: "2.5px solid var(--ink)",
-            }}
-          />
-        </div>
+      {/* the train pulls in, without you on a quest */}
+      <div style={{ flex: "1 0 auto", minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))" }}>
+        <PlatformScene3D line={c?.line} mode="arrive" fallback={<NoMatchFlatScene line={c?.line} />} style={{ position: "absolute", inset: 0 }}>
+          <PlatformSign name={station.name} color={LINES[c?.line ?? "green"].hex} style={{ right: 16, top: 12 }} />
+        </PlatformScene3D>
       </div>
 
-      <Title style={{ fontSize: 40 }}>No quest this time</Title>
+      <Title>No quest this time</Title>
       <Body style={{ fontSize: 21 }}>Nobody heading your way was a match. That's most rides.</Body>
 
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -125,29 +109,30 @@ export default function NoMatch() {
   );
 }
 
-function NoMatchCar({ lineHex, front }: { lineHex: string; front?: boolean }) {
+/** The flat tunnel scene, shown when the 3D scene cannot run. */
+function NoMatchFlatScene({ line }: { line?: LineColor }) {
   return (
     <div
-      style={{
-        flex: "none",
-        width: 270,
-        height: 98,
-        position: "relative",
-        background: "var(--paper)",
-        borderRadius: front ? "14px 30px 8px 8px" : "14px 14px 8px 8px",
-      }}
+      aria-hidden
+      style={{ position: "absolute", inset: 0, background: "var(--ink)", overflow: "hidden" }}
     >
-      <div style={{ position: "absolute", left: 14, right: front ? 30 : 14, top: 14, display: "flex", justifyContent: "space-between" }}>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <span key={i} style={{ width: 38, height: 30, borderRadius: 6, background: "#62C1BC", border: "2.5px solid var(--ink)" }} />
-        ))}
+      {["15%", "49%", "83%"].map((l) => (
+        <div key={l} style={{ position: "absolute", left: l, top: 22, width: 10, height: 10, borderRadius: "50%", background: "var(--yellow)" }} />
+      ))}
+      {/* Negative delay, as on F3: the first frame (and the paused frame with motion off) shows the train at the platform. */}
+      <div className="anim-trainIn" style={{ position: "absolute", left: -160, bottom: 70, display: "flex", gap: 8, animationDelay: "-3.4s" }}>
+        <TrolleySprite line={line} width={420} />
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 56, height: 14, background: lineHex }} />
-      {front && (
-        <div style={{ position: "absolute", right: 10, top: 74, width: 14, height: 14, borderRadius: "50%", background: "var(--yellow)", border: "2.5px solid var(--ink)" }} />
-      )}
-      <div style={{ position: "absolute", left: 36, bottom: -9, width: 20, height: 20, borderRadius: "50%", background: "var(--stone-dk)" }} />
-      <div style={{ position: "absolute", right: 36, bottom: -9, width: 20, height: 20, borderRadius: "50%", background: "var(--stone-dk)" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 52, height: 10, background: "repeating-linear-gradient(90deg, var(--stone-dk) 0 18px, var(--ink) 18px 24px)" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40, background: "var(--stone)", borderTop: "2.5px solid var(--ink)" }}>
+        <div
+          style={{
+            height: 16,
+            background: "radial-gradient(circle, var(--yellow-dk) 3px, transparent 3.5px) 0 0/14px 16px, var(--yellow)",
+            borderBottom: "2.5px solid var(--ink)",
+          }}
+        />
+      </div>
     </div>
   );
 }
