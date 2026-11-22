@@ -96,9 +96,9 @@ pnpm dev:worker                                           # wrangler dev on :878
 pnpm smoke                                                # in another terminal: end-to-end check
 ```
 
-`GAMES_ONLY = "true"` in `wrangler.toml` (the demo setting, decisions D26) means a match leads only to the two-player games: no mission starts and riders' stops are ignored for matching. `pnpm smoke` checks the mission path, so run the worker with `npx wrangler dev --var GAMES_ONLY:false` for it.
+`GAMES_ONLY = "true"` in `wrangler.toml` (the demo setting, decisions D26) means a match leads only to the two-player games: no mission starts and riders' stops are ignored for matching. `pnpm smoke` reads `GET /api/health` and checks whichever flow is running: the games path by default, or the mission path when the worker runs with `npx wrangler dev --var GAMES_ONLY:false`. Run it both ways before changing the room.
 
-`pnpm smoke` (`scripts/smoke.ts`) plays two riders, a pair of glasses and the car 1413 kiosk through onboarding, glasses link, check-in, match, mission and stamp, then "Not now", the late-train bonus and check-out at a stop. It needs `KIOSK_KEY` in `.dev.vars` and resets the demo trip first.
+`pnpm smoke` (`scripts/smoke.ts`) plays two riders, a pair of glasses and the car 1413 kiosk through onboarding, glasses link, check-in, match and the pair's game room, then People (block and unblock), "Not now", a report mid-match and delete-my-data. Games-only it checks that no mission starts, that the pair can start Tall tale and that passing a stop doesn't end the game; with missions it checks the mission, the two-tap stamp, the passport, the late-train bonus and check-out at a stop. It needs `KIOSK_KEY` in `.dev.vars` and resets the demo trip first.
 
 `wrangler dev` needs `public/` to exist. It is gitignored and filled by `pnpm build` (root), which builds the three web apps and copies their `dist/` folders in. During development the web apps run on their own Vite servers and should proxy `/api` and `/ws` to `http://localhost:8787`.
 
