@@ -30,7 +30,7 @@ export default function SignInEmail() {
       await api.auth.sendCode(addr);
     } catch (e) {
       // "too-soon" means a code is already on its way, so carry on to the code screen.
-      const tooSoon = e instanceof ApiError && (e.body as { code?: string } | undefined)?.code === "too-soon";
+      const tooSoon = e instanceof ApiError && e.code === "too-soon";
       if (!tooSoon) {
         setError(errorMessage(e));
         setSending(false);

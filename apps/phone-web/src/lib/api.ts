@@ -24,12 +24,12 @@
  * - POST /api/report         ReportReq -> (no body defined in protocol)
  *
  * TODO:
- * - Agree on a shared error body shape with the worker (protocol has none besides TapRes "error").
  * - Handle 401 globally: clear token and route to onboarding.
  * - Request timeout via AbortController (train Wi-Fi / cell in tunnels is flaky).
  */
 import {
   AuthVerifyRes,
+  ErrorRes,
   CreateUserRes,
   GlassesLinkRes,
   MeRes,
@@ -62,11 +62,15 @@ type GlassesLinkBody = Infer<typeof GlassesLinkReq>;
 export class ApiError extends Error {
   readonly status: number;
   readonly body: unknown;
+  /** The worker's machine reason (ErrorRes.code), e.g. "too-soon", "rate-limited". */
+  readonly code: string | undefined;
   constructor(status: number, message: string, body: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.body = body;
+    const parsed = ErrorRes.safeParse(body);
+    this.code = parsed.success ? parsed.data.code : undefined;
   }
 }
 
@@ -105,13 +109,9 @@ async function request<T = void>(
   }
 
   if (!res.ok) {
-    const message =
-      typeof json === "object" && json !== null && "message" in json && typeof json.message === "string"
-        ? json.message
-        : typeof json === "object" && json !== null && "error" in json && typeof json.error === "string"
-          ? json.error
-          : `${method} ${path} failed (${res.status})`;
-    throw new ApiError(res.status, message, json);
+    // Every worker error is an ErrorRes; anything else (a proxy's HTML page) gets a generic line.
+    const parsed = ErrorRes.safeParse(json);
+    throw new ApiError(res.status, parsed.success ? parsed.data.error : `${method} ${path} failed (${res.status})`, json);
   }
 
   return schema ? schema.parse(json) : (undefined as T);

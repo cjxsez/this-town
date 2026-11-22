@@ -52,7 +52,7 @@ export default function SignInCode() {
       setError(errorMessage(e));
       setBusy(false);
       // An expired or burnt code needs a new one, so let them resend right away.
-      const reason = e instanceof ApiError ? (e.body as { code?: string } | undefined)?.code : undefined;
+      const reason = e instanceof ApiError ? e.code : undefined;
       if (reason === "expired" || reason === "too-many-attempts") setWait(0);
     }
   };
