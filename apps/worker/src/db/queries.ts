@@ -590,6 +590,26 @@ export async function recordMet(db: D1Database, a: string, b: string, at: number
     .run();
 }
 
+/**
+ * DELETE met_pairs where both riders have a checkin on the given trip.
+ * Used by DEMO_MODE reset so rehearsals do not keep growing passport "people met".
+ * Bind the trip id once as ?1.
+ */
+export const DELETE_MET_PAIRS_FOR_TRIP_SQL = `DELETE FROM met_pairs
+WHERE EXISTS (SELECT 1 FROM checkins WHERE user_id = met_pairs.user_a AND trip_id = ?1)
+  AND EXISTS (SELECT 1 FROM checkins WHERE user_id = met_pairs.user_b AND trip_id = ?1)`;
+
+/** Pure shape of the demo-reset met_pairs wipe (SQL + trip bind). */
+export function metPairsForTripDelete(tripId: string): { sql: string; tripId: string } {
+  return { sql: DELETE_MET_PAIRS_FOR_TRIP_SQL, tripId };
+}
+
+/** Delete met_pairs rows whose both users checked in on this trip (any checkin row). */
+export async function clearMetPairsForTrip(db: D1Database, tripId: string): Promise<void> {
+  const { sql, tripId: id } = metPairsForTripDelete(tripId);
+  await db.prepare(sql).bind(id).run();
+}
+
 /** User ids this rider met at or after sinceMs. */
 export async function metSince(db: D1Database, userId: string, sinceMs: number): Promise<string[]> {
   const { results } = await db

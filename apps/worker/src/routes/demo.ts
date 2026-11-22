@@ -7,20 +7,18 @@
  *   Scripted delay; once delaySec > LATE_BONUS_MIN_DELAY_S the late-bonus missions unlock
  *   (demo step 6).
  * - POST /api/demo/advance  jump to just before the next stop.
- * - POST /api/demo/reset    clear the demo room (check everyone out, restart the clock).
+ * - POST /api/demo/reset    clear the demo room (check everyone out, restart the clock) and
+ *   delete met_pairs where both users have a checkin on that demo trip (rehearsals stay clean).
  *
  * Which room: the trip id in DEMO_CAR_TRIPS (first value), or body.tripId.
  *
  * Protocol types: none (demo-only, not part of the contract).
- *
- * TODO:
- * - DEMO_MODE reset should also clear met_pairs between the demo users so rehearsals
- *   do not trip the 7-day gate (pool.ts ignores it in demo mode, but passport counts grow).
  */
 import { Hono } from "hono";
 import { z } from "zod";
 import { readConfig, type AppEnv } from "../env";
 import { requireKiosk } from "../auth";
+import { clearMetPairsForTrip } from "../db/queries";
 import type { OkResT as OkRes } from "../lib/api";
 import { readJson } from "../lib/http";
 import { DEMO_DEFAULT_DELAY_SEC, DEMO_TRIP_ID } from "../mbta/demo";
@@ -61,7 +59,11 @@ demoRoutes.post("/demo/advance", async (c) => {
 
 demoRoutes.post("/demo/reset", async (c) => {
   const body = await readJson(c.req.raw, TripReq);
-  await roomFor(c.env, demoTripId(c.env, body.ok ? body.data.tripId : undefined)).demoReset();
+  const tripId = demoTripId(c.env, body.ok ? body.data.tripId : undefined);
+  // Clear met_pairs for this trip's riders before the room wipes in-memory riders.
+  // Scoped by checkins.trip_id only; DEMO_MODE gate is on the route above.
+  await clearMetPairsForTrip(c.env.DB, tripId);
+  await roomFor(c.env, tripId).demoReset();
   const res: OkRes = { ok: true };
   return c.json(res);
 });
