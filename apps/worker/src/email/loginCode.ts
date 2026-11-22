@@ -14,9 +14,9 @@
  */
 import type { Env } from "../env";
 import { LOGIN_CODE_TTL_MS, MINUTE } from "../lib/time";
-import { loginCodeEmail } from "./template";
+import { GAME_NAME, loginCodeEmail } from "./template";
 
-const FROM_NAME = "Questline";
+const FROM_NAME = GAME_NAME;
 
 export async function sendLoginCode(env: Env, to: string, code: string): Promise<void> {
   const { subject, text, html } = loginCodeEmail(code, Math.round(LOGIN_CODE_TTL_MS / MINUTE));

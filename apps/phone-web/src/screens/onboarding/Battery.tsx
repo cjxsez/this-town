@@ -23,7 +23,6 @@ export default function Battery() {
       footer={
         <ButtonRow>
           <Button
-            tilt={0.5}
             onClick={() => {
               actions.updateDraft({ battery });
               navigate("/join/ride-mode");

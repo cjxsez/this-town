@@ -31,7 +31,7 @@ export default function Interests() {
       blobs="c"
       footer={
         <ButtonRow>
-          <Button tilt={0.5} disabled={picked.length < MIN} onClick={() => navigate("/join/about")}>
+          <Button disabled={picked.length < MIN} onClick={() => navigate("/join/about")}>
             Next · {picked.length} picked
           </Button>
         </ButtonRow>
@@ -42,8 +42,8 @@ export default function Interests() {
       <Card>
         <Eyebrow>Pick 3 or more</Eyebrow>
         <div className="q-chips">
-          {FEATURED.map((i, n) => (
-            <Chip key={i.id} index={n} selected={picked.includes(i.id)} onToggle={() => toggle(i.id)}>
+          {FEATURED.map((i) => (
+            <Chip key={i.id} selected={picked.includes(i.id)} onToggle={() => toggle(i.id)}>
               {i.label}
             </Chip>
           ))}
@@ -74,8 +74,8 @@ export default function Interests() {
           <div key={c} id={`cat-${c}`} className="anim-fadeIn" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <Eyebrow>{c}</Eyebrow>
             <div className="q-chips">
-              {INTERESTS.filter((i) => i.category === c && !i.featured).map((i, n) => (
-                <Chip key={i.id} index={n} selected={picked.includes(i.id)} onToggle={() => toggle(i.id)}>
+              {INTERESTS.filter((i) => i.category === c && !i.featured).map((i) => (
+                <Chip key={i.id} selected={picked.includes(i.id)} onToggle={() => toggle(i.id)}>
                   {i.label}
                 </Chip>
               ))}

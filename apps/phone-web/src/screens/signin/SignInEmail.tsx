@@ -49,7 +49,7 @@ export default function SignInEmail() {
       footer={
         <>
           <ButtonRow>
-            <Button tilt={0.6} disabled={!ready} onClick={() => void send()}>
+            <Button disabled={!ready} onClick={() => void send()}>
               {sending ? "Sending…" : "Email me a code"}
             </Button>
           </ButtonRow>

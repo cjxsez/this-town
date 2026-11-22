@@ -15,7 +15,7 @@ export default function FellThrough() {
       label="D3"
       blobs="b"
       footer={
-        <Button tilt={-0.5} onClick={act.dismiss}>
+        <Button onClick={act.dismiss}>
           OK
         </Button>
       }
@@ -43,12 +43,12 @@ export default function FellThrough() {
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {ride.fellThroughReason === "you" ? (
           <>
-            <Title style={{ fontSize: 54 }}>Skipped.</Title>
+            <Title>Skipped.</Title>
             <Body style={{ fontSize: 23 }}>No matches for the next 10 minutes. Ride Mode stays on.</Body>
           </>
         ) : (
           <>
-            <Title style={{ fontSize: 54 }}>Not this one.</Title>
+            <Title>Not this one.</Title>
             <Body style={{ fontSize: 23 }}>Still looking. Ride Mode stays on.</Body>
           </>
         )}

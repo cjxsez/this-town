@@ -79,7 +79,7 @@ export default function SignInCode() {
       blobs="a"
       footer={
         <ButtonRow>
-          <Button tilt={-0.5} disabled={code.length !== 6 || busy} onClick={() => void verify(code)}>
+          <Button disabled={code.length !== 6 || busy} onClick={() => void verify(code)}>
             {busy ? "Checking…" : "Continue"}
           </Button>
         </ButtonRow>

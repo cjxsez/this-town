@@ -40,7 +40,7 @@ export default function Offline() {
       </PlatformStage>
 
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <Title style={{ fontSize: 42 }}>Reconnecting…</Title>
+        <Title>Reconnecting…</Title>
         <Body style={{ fontSize: 21 }}>
           Ride Mode is still on. When the signal comes back you'll see any match that came in.
         </Body>

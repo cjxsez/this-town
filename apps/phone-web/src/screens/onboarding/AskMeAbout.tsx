@@ -24,10 +24,10 @@ export default function AskMeAbout() {
       blobs="b"
       footer={
         <ButtonRow>
-          <Button variant="secondary" tilt={-0.5} onClick={skip}>
+          <Button variant="secondary" onClick={skip}>
             Skip
           </Button>
-          <Button tilt={0.6} onClick={next}>
+          <Button onClick={next}>
             Next
           </Button>
         </ButtonRow>

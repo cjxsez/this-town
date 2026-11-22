@@ -74,7 +74,7 @@ export default function Poster() {
         </button>
       </div>
 
-      <article className="ql-poster" aria-label={`Questline kiosk sign for car ${car}`}>
+      <article className="ql-poster" aria-label={`In This Town kiosk sign for car ${car}`}>
         <header className="ql-poster__head">
           <h1 className="ql-poster__title">TAP HERE TO TURN ON RIDE MODE</h1>
         </header>

@@ -44,7 +44,7 @@ export function Idle({ car, stats, nextStopAt }: IdleProps) {
         </div>
       </header>
       <NfcHint label="Tap to play" size={96} />
-      <footer className="screen-foot">Questline · car {car}</footer>
+      <footer className="screen-foot">In This Town · car {car}</footer>
     </main>
   );
 }

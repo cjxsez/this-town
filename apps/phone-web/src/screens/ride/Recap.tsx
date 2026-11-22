@@ -50,7 +50,7 @@ export default function Recap() {
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <PairToken color={person.color} name={person.firstName} size={64} />
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ font: "700 30px/1.08 var(--font-hand)" }}>{person.firstName}</h1>
+              <h1 className="q-title--md">{person.firstName}</h1>
               {mission && (
                 <p className="q-body" style={{ fontSize: 18, marginTop: 4 }}>
                   "{recapMissionLabel(mission, station, person.firstName)}"
@@ -76,7 +76,7 @@ export default function Recap() {
           />
         </div>
       ) : (
-        <Card style={{ rotate: "-0.4deg" }}>
+        <Card>
           <span style={{ font: "700 22px/1.1 var(--font-hand)" }}>No stamp this time: the tag needs both of you to tap it before the stop.</span>
         </Card>
       )}
@@ -84,7 +84,7 @@ export default function Recap() {
       <p className="q-hint">Ride Mode is still on{dest ? ` until ${dest}` : ""}. You can be matched again after the next stop.</p>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 4 }}>
-        <Button tilt={0.8} onClick={finish}>
+        <Button onClick={finish}>
           Back to riding
         </Button>
         <TextLink onClick={seePassport}>See passport</TextLink>

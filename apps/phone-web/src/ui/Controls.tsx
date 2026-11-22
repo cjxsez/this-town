@@ -29,20 +29,15 @@ export function Segmented<T extends string>({
   );
 }
 
-/** A tiny rotation per chip index so a wall of chips looks hand-placed. */
-const TILTS = [-0.5, 0.6, -0.7, 0.4, -0.3, 0.7];
-
 export function Chip({
   selected,
   onToggle,
   children,
-  index = 0,
   style,
 }: {
   selected: boolean;
   onToggle: () => void;
   children: ReactNode;
-  index?: number;
   style?: CSSProperties;
 }) {
   return (
@@ -51,7 +46,7 @@ export function Chip({
       className="q-chip"
       aria-pressed={selected}
       onClick={onToggle}
-      style={{ rotate: selected ? `${TILTS[index % TILTS.length]}deg` : undefined, ...style }}
+      style={style}
     >
       {children}
     </button>

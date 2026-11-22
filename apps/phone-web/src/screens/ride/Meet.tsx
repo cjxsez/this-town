@@ -57,7 +57,7 @@ export default function Meet() {
             {ride.arrived ? (
               <Hint style={{ textAlign: "center" }}>You're at the kiosk. The mission starts on its screen.</Hint>
             ) : (
-              <Button tilt={0.8} onClick={act.arrived} style={{ minHeight: 60 }}>
+              <Button onClick={act.arrived} style={{ minHeight: 60 }}>
                 I'm at the kiosk
               </Button>
             )}
@@ -76,7 +76,7 @@ export default function Meet() {
         </div>
       </div>
 
-      <Card style={{ rotate: "0.5deg", gap: 8, borderRadius: "var(--r1)", borderColor: hex, borderWidth: 4 }}>
+      <Card style={{ gap: 8, borderRadius: "var(--r1)", borderColor: hex, borderWidth: 4 }}>
         <Eyebrow>Meet at</Eyebrow>
         <div style={{ font: "400 28px/1.02 var(--font-display)", textTransform: "uppercase" }}>{where.headline}</div>
         <Body style={{ margin: 0 }}>{where.detail}</Body>
@@ -88,7 +88,7 @@ export default function Meet() {
       </Card>
 
       {shared.length > 0 && (
-        <Card style={{ rotate: "-0.4deg", gap: 6, borderRadius: "var(--r2)" }}>
+        <Card style={{ gap: 6, borderRadius: "var(--r2)" }}>
           <Eyebrow>You both like</Eyebrow>
           <div style={{ font: "700 24px/1.08 var(--font-hand)" }}>{shared.join(", ")}</div>
         </Card>

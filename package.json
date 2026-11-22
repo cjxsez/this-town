@@ -11,6 +11,7 @@
     "dev:phone": "pnpm --filter @questline/phone-web dev",
     "dev:glasses": "pnpm --filter @questline/glasses-web dev",
     "dev:kiosk": "pnpm --filter @questline/kiosk-web dev",
+    "dev:start": "pnpm --filter @questline/start-screen dev",
     "build": "pnpm -r --filter \"./apps/*-web\" build && node scripts/build-assets.mjs",
     "deploy": "pnpm build && pnpm --filter @questline/worker run deploy",
     "typecheck": "pnpm -r typecheck",
@@ -18,7 +19,8 @@
     "db:migrate:remote": "pnpm --filter @questline/worker db:migrate:remote",
     "seed": "tsx scripts/seed.ts",
     "ghosts": "tsx scripts/ghost-riders.ts",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "art": "pnpm --filter @questline/start-screen art"
   },
   "devDependencies": {
     "@questline/protocol": "workspace:*",

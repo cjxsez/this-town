@@ -1,0 +1,171 @@
+/* Start screen chrome: the canvas, the train doors that open and close over it,
+   and the real <button> that sits invisibly on top of the 3D one. Colours come
+   in as custom properties set from config.ts. */
+@import "@fontsource/gaegu/latin-700.css";
+
+.qls {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--qls-sea);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.qls--dragging { cursor: grabbing; }
+.qls--pointing { cursor: pointer; }
+
+.qls__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Read by screen readers, not seen. */
+.qls__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.qls__probe {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+
+/* A real button exactly over the 3D one: it gives keyboard focus, Enter/Space,
+   and the pointer cursor for free. */
+.qls__begin {
+  position: absolute;
+  z-index: 1;
+  translate: -50% -50%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+}
+.qls__begin:disabled { pointer-events: none; }
+.qls__begin:focus-visible { outline: 3px solid var(--qls-focus); outline-offset: 5px; }
+
+/* ---------- train doors ---------- */
+.qls__doors {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.qls__doors[hidden] { display: none; }
+/* While loading, the door outlines "boil" like the rest of the app's hand-drawn UI. */
+.qls--loading .qls__doors { filter: url(#qls-wobble); }
+
+.qls__door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: hidden;
+  will-change: transform;
+}
+.qls__door--left { left: 0; border-right: 3px solid var(--qls-ink); }
+.qls__door--right { right: 0; border-left: 3px solid var(--qls-ink); }
+
+/* The window is a hole: its huge shadow paints the door around it. */
+.qls__window {
+  position: absolute;
+  top: 12%;
+  left: 20%;
+  right: 20%;
+  height: 36%;
+  border: 2.5px solid var(--qls-ink);
+  border-radius: 14px 20px 16px 22px;
+  box-shadow: 0 0 0 200vmax var(--qls-paper);
+}
+.qls__door--right .qls__window { border-radius: 20px 14px 22px 16px; }
+
+/* The trolley's line stripe runs across both doors. */
+.qls__stripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60%;
+  height: 6.5%;
+  background: var(--qls-line);
+  border-block: 2.5px solid var(--qls-ink);
+}
+.qls__handle {
+  position: absolute;
+  top: 50.5%;
+  width: 11px;
+  height: 7%;
+  background: var(--qls-yellow);
+  border: 2.5px solid var(--qls-ink);
+  border-radius: 6px;
+}
+.qls__door--left .qls__handle { right: 12px; }
+.qls__door--right .qls__handle { left: 12px; }
+
+/* "Next stop:" on the left door, "In This Town" on the right, meeting at the seam. */
+.qls__caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 72%;
+  margin: 0;
+  padding: 0 10px;
+  color: var(--qls-ink);
+  font: 700 26px/1.15 "Gaegu", "Comic Sans MS", cursive;
+  white-space: nowrap;
+}
+.qls__door--left .qls__caption { text-align: right; }
+.qls__door--right .qls__caption { text-align: left; }
+
+/* ---------- no WebGL: the doors stay shut and plain HTML takes over ---------- */
+.qls--fallback .qls__canvas { display: none; }
+.qls--fallback .qls__caption { display: none; }
+.qls--fallback .qls__title {
+  z-index: 3;
+  top: 69%;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  color: var(--qls-ink);
+  font: 400 clamp(30px, 9vw, 54px) / 1 "Bungee", "Arial Black", sans-serif;
+  text-align: center;
+}
+.qls--fallback .qls__begin {
+  z-index: 3;
+  top: 84% !important;
+  left: 50% !important;
+  width: min(240px, 70%) !important;
+  height: 56px !important;
+  border: 2px solid var(--qls-ink);
+  border-radius: 4px 7px 5px 8px;
+  background: var(--qls-yellow);
+  box-shadow: inset 0 -5px 0 var(--qls-yellow-dk), 3px 4px 0 var(--qls-shadow);
+  color: var(--qls-ink);
+  font: 400 18px/1 "Bungee", "Arial Black", sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qls--loading .qls__doors { filter: none; }
+}
