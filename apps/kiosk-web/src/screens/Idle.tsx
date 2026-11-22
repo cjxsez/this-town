@@ -6,11 +6,12 @@
  * opens /k/<car> on phone-web and checks the rider in. A trolley rolls along the town
  * strip at the bottom so the screen never looks frozen.
  *
- * Public screen: counts only, no names here.
+ * Touch/click anywhere shows a 10 s "How it works" overlay (three steps, no names or
+ * interests). Tap again closes it early.
  *
- * TODO:
- * - Touch anywhere: show a 10 s "How it works" overlay.
+ * Public screen: counts only, no names here.
  */
+import { useEffect, useState } from "react";
 import type { ServerToKiosk } from "@questline/protocol";
 import { Countdown } from "../components/Countdown";
 import { NfcMark, Screen, Wordmark, art } from "../components/Ui";
@@ -24,9 +25,30 @@ interface IdleProps {
   nextStopAt: number | null;
 }
 
+const HOW_IT_WORKS_MS = 10_000;
+
+const STEPS = [
+  "Tap the kiosk tag with your phone when you board.",
+  "Get matched with a rider who shares your interests.",
+  "Meet at the kiosk, do the mission, both tap for a stamp.",
+] as const;
+
 export function Idle({ car, stats, nextStopAt }: IdleProps) {
+  const [howTo, setHowTo] = useState(false);
+
+  useEffect(() => {
+    if (!howTo) return;
+    const id = window.setTimeout(() => setHowTo(false), HOW_IT_WORKS_MS);
+    return () => window.clearTimeout(id);
+  }, [howTo]);
+
   return (
-    <Screen label="Kiosk idle" blobs="a">
+    <Screen
+      label="Kiosk idle"
+      blobs="a"
+      onClick={() => setHowTo((open) => !open)}
+      style={{ cursor: "pointer" }}
+    >
       <header className="k-topbar">
         <Wordmark size={24} />
         <span className="k-pill k-pill--dark">Car {car}</span>
@@ -58,6 +80,23 @@ export function Idle({ car, stats, nextStopAt }: IdleProps) {
       </section>
 
       <TownStrip />
+
+      {howTo && (
+        <div className="k-howto" role="dialog" aria-label="How it works">
+          <div className="k-howto__card">
+            <div className="k-eyebrow" style={{ color: "var(--ink)" }}>How it works</div>
+            <ol className="k-howto__steps">
+              {STEPS.map((step, i) => (
+                <li key={step}>
+                  <span className="k-howto__num">{i + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="k-hint" style={{ margin: 0 }}>Tap again to close</p>
+          </div>
+        </div>
+      )}
     </Screen>
   );
 }

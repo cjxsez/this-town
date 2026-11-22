@@ -211,6 +211,53 @@ img, svg { display: block; }
 .k-float { animation: k-float 2.4s ease-in-out infinite alternate; }
 .k-in { animation: k-in .5s cubic-bezier(.2, .9, .3, 1.2) both; }
 
+/* ---------- how it works (idle overlay) ---------- */
+.k-howto {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(43, 70, 86, 0.72);
+  padding: 24px;
+}
+.k-howto__card {
+  width: min(640px, 100%);
+  background: var(--paper, #f7f1e3);
+  border: 3px solid var(--ink);
+  border-radius: var(--r1, 28px);
+  padding: 22px 28px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 6px 8px 0 rgba(0, 0, 0, 0.18);
+}
+.k-howto__steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font: 700 26px/1.2 var(--font-hand);
+  color: var(--ink);
+}
+.k-howto__steps li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.k-howto__num {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 3px solid var(--ink);
+  background: var(--yellow, #facc15);
+  display: grid;
+  place-items: center;
+  font: 800 20px/1 var(--font-display);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

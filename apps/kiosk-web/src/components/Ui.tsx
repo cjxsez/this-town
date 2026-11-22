@@ -65,15 +65,17 @@ export function Screen({
   className,
   style,
   label,
+  onClick,
 }: {
   children: ReactNode;
   blobs?: keyof typeof BLOBS | false;
   className?: string;
   style?: CSSProperties;
   label: string;
+  onClick?: () => void;
 }) {
   return (
-    <main className={`k-screen ${className ?? ""}`} style={style} aria-label={label}>
+    <main className={`k-screen ${className ?? ""}`} style={style} aria-label={label} onClick={onClick}>
       {blobs && BLOBS[blobs].map((s, i) => <div key={i} className="k-blob" style={s} />)}
       {children}
     </main>
