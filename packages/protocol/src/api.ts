@@ -111,13 +111,14 @@ export const TapRes = z.discriminatedUnion("result", [
 ]);
 export type TapRes = z.infer<typeof TapRes>;
 
-// GET  /api/ride/state     -> RideSnapshot (polling fallback for glasses, and reload recovery)
+// GET  /api/ride/state     -> RideStateRes (= RideSnapshot: state, match, mission, serverNow).
+//   Glasses polling fallback when WebSockets are unavailable; phone reload recovery.
 export const RideStateRes = RideSnapshot;
 export type RideStateRes = z.infer<typeof RideStateRes>;
 // POST /api/ride/end       -> OkRes   (check out, Ride Mode off)
 // POST /api/ride/not-now   -> OkRes   (REST twin of rider.notNow)
 // POST /api/ride/arrived   -> OkRes   (REST twin of rider.arrived)
-// PUT  /api/ride/ghost     { ghost } -> OkRes
+// PUT  /api/ride/ghost     { ghost } -> OkRes   (body only; do not return RideState)
 // POST /api/ride/mood      { mood } -> OkRes   (social battery for the rest of this ride and after)
 export const GhostReq = z.object({ ghost: z.boolean() });
 export type GhostReq = z.infer<typeof GhostReq>;
