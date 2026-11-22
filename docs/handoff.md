@@ -52,10 +52,12 @@ cd apps/kiosk-pi && python -m questline_kiosk --fake   # Pi agent with fake LEDs
 
 ## 1. Kiosk Pi agent (`apps/kiosk-pi`), highest priority
 
-Status today: scaffold. Config, protocol parsing, NDEF builder, `FakeLeds` and `FakeTag`
-work. Everything that talks to the server or the hardware raises `NotImplementedError`.
-Without it, demo steps 3 and 5 (LEDs glow the pair color; fresh tag nonce for the stamp)
-don't happen. Contract: `apps/kiosk-pi/protocol.md`.
+**Status (2026-11-22):** Shipped in software — socket loop with close-code handling, LED
+animations + FakeLeds mapping tests, lazy real LED drivers, dynamic NFC writers + FakeTag /
+fake SMBus tests, browser launcher crash-flag clear, README/hardware docs, and a local
+websockets integration test (hello → nfc.written → 4002 reconnect → 1001 shutdown). Still
+needs a real Pi with LEDs + NFC board (or static stickers) for demo steps 3 and 5.
+Contract: `apps/kiosk-pi/protocol.md`.
 
 ### 1.1 Socket loop (`questline_kiosk/agent.py`)
 - Implement `KioskAgent.connect` / `run`: connect to
@@ -125,8 +127,10 @@ don't happen. Contract: `apps/kiosk-pi/protocol.md`.
 
 ## 2. Live MBTA trips (`apps/worker/src/mbta`)
 
-Today only the scripted demo trip has stops and ETAs (`TrainRoom.ts`: "Live MBTA timelines
-are not wired yet"). The demo does not need this, so do it after section 1 and 3.
+**Status (2026-11-22):** Shipped — `resolveLiveCarTrip` / `parseVehicles` (10 s cache),
+`fetchTripTimeline` / `parseTimeline`, TrainRoom empty-poll trip end + `WS_CLOSE.tripChanged`,
+fixture unit tests. Demo mode still preferred for rehearsals. Still needs a live Orange/Red
+car label with `DEMO_MODE=false` + `MBTA_API_KEY` to confirm on the real line.
 
 - `vehicles.ts` `resolveLiveCarTrip()`: `GET /vehicles?filter[route]=Orange,Red&include=trip`,
   find the vehicle whose `carriages[].label` contains the car, return `TripInfo`. Cache the
@@ -145,6 +149,12 @@ are not wired yet"). The demo does not need this, so do it after section 1 and 3
 ---
 
 ## 3. Glasses web app (`apps/glasses-web`)
+
+**Status (2026-11-22):** Shipped — wake lock, ErrorBoundary, WS_CLOSE + REST send fallback,
+visibility pause, server clock, snapshot restore, stamp progress / stamped timeout, linking
+429 + "Linked as", pure `src/state.ts` + tsx tests, unknown-`carOrder` "Go to car" copy.
+Still needs on-device checks: WebSockets vs polling, Escape/back (hidden unlink skipped until
+then), type size / color on the waveguide.
 
 ### 3.1 Staying alive
 - Screen Wake Lock: request `navigator.wakeLock.request("screen")` when a ride starts and
@@ -194,6 +204,11 @@ are not wired yet"). The demo does not need this, so do it after section 1 and 3
 ---
 
 ## 5. Kiosk screen (`apps/kiosk-web`)
+
+**Status (2026-11-22):** Shipped — server clock, key strip from URL, How it works overlay,
+one-pair replace / stale clear, ErrorBoundary + 5 min offline reload, WS_CLOSE reject /
+tripChanged, pure `src/state.ts` + tsx tests. Still needs a Pi Chromium session against a
+deployed worker for the unattended path.
 
 - Clock offset from `serverNow` in `App.tsx` and `components/Countdown.tsx` (same as 3.3).
 - `lib/config.ts`: after saving `?key=` to storage, strip it from the URL with `history.replaceState`.

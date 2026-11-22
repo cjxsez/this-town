@@ -93,7 +93,7 @@ Ride Mode on = consent. There is no accept step. The consent is explicit: onboar
 
 1. **Pool:** riders checked in to this trip, not ghost, not in a `notNow` cooldown, not already paired, whose remaining journeys overlap by at least one more stop.
 2. **Interest gate:** shared interest tags >= 1 (tunable `MIN_SHARED_TAGS`), not met in the last 7 days, not blocked either way.
-3. **Rank by closeness first:** car distance (0 = same car, 1 = adjacent, ...). Ties broken by interest score (shared tags + "ask me about" similarity), then social battery match, then novelty.
+3. **Rank by closeness first:** car distance (0 = same car, 1 = adjacent, ...). Ties broken by interest score (shared tags + "ask me about" similarity), then social battery match, then novelty (`1 / (1 + timesMet)` from lifetime `met_pairs`, loaded into `RoomRider.metCounts` at check-in).
 4. **Pair greedily:** take the best-scoring pair overall, lock both, repeat. Everyone gets at most one partner at a time.
 5. **Meeting point:** the rider with more stops left stays put and the other walks to their kiosk. On a tie, whoever checked in last stays (they just sat down; the rider already waiting walks over). Same car means nobody walks.
 6. **Blurb:** Claude writes one line grounded in shared tags. Cached per pair. If the call fails or is slow (> 1.5 s), fall back to a template ("You both like ramen and books").
