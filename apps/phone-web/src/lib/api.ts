@@ -6,7 +6,8 @@
  * - Adding `Authorization: Bearer <token>` from auth.ts (except POST /api/users).
  * - Parsing JSON responses with the @questline/protocol zod schemas so contract drift fails
  *   loudly at the edge instead of deep in a component.
- * - Throwing ApiError (status + parsed body) on non-2xx.
+ * - Throwing ApiError (status + parsed body) on non-2xx, and ApiError status 0 (code
+ *   "timeout" or "offline") when the request never got an answer.
  *
  * Routes used:
  * - POST /api/auth/email/start   AuthStartReq -> OkRes                  (no auth)
@@ -25,7 +26,6 @@
  *
  * TODO:
  * - Handle 401 globally: clear token and route to onboarding.
- * - Request timeout via AbortController (train Wi-Fi / cell in tunnels is flaky).
  */
 import {
   AuthVerifyRes,
@@ -74,6 +74,9 @@ export class ApiError extends Error {
   }
 }
 
+/** How long a request may hang before it fails with ApiError status 0, code "timeout". */
+const TIMEOUT_MS = 8_000;
+
 interface RequestOpts<T> {
   body?: unknown;
   schema?: Schema<T>;
@@ -92,11 +95,26 @@ async function request<T = void>(
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(path, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  // Train Wi-Fi and tunnels drop requests without failing them; give up after TIMEOUT_MS.
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: abort.signal,
+    });
+  } catch (e) {
+    const timedOut = abort.signal.aborted;
+    throw new ApiError(0, timedOut ? "No signal. Try again in a moment." : "Can't reach In This Town. Check your connection.", {
+      error: timedOut ? "timeout" : "network",
+      code: timedOut ? "timeout" : "offline",
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   const text = await res.text();
   let json: unknown = undefined;
