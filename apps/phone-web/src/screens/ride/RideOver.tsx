@@ -1,5 +1,7 @@
 import { LINES } from "../../../shared/catalog";
 import type { LineColor } from "../../../shared/types";
+import { rideOverEmpty } from "../../lib/rideModeCopy";
+import { useGamesOnly } from "../../lib/useWorkerMode";
 import { lineProgress } from "../../state/progress";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -16,6 +18,7 @@ export default function RideOver() {
   const { ride, act } = useRide();
   const { state } = useApp();
   const navigate = useNavigate();
+  const gamesOnly = useGamesOnly();
   const frame = useRef<HTMLDivElement>(null);
   const [flat, setFlat] = useState(false);
   const c = ride.checkIn;
@@ -33,7 +36,7 @@ export default function RideOver() {
       ? `${ride.stampsThisRide} stamp${ride.stampsThisRide === 1 ? "" : "s"} and ${ride.peopleThisRide} new ${ride.peopleThisRide === 1 ? "person" : "people"} this ride.`
       : ride.peopleThisRide > 0
         ? `You met ${ride.peopleThisRide} ${ride.peopleThisRide === 1 ? "person" : "people"} this ride.`
-        : "No quest this ride. That's most rides.";
+        : rideOverEmpty(gamesOnly);
 
   return (
     <Screen
