@@ -13,7 +13,6 @@ import Interests from "./screens/onboarding/Interests";
 import AskMeAbout from "./screens/onboarding/AskMeAbout";
 import Battery from "./screens/onboarding/Battery";
 import RideModeRules from "./screens/onboarding/RideModeRules";
-import LinkGlasses from "./screens/onboarding/LinkGlasses";
 import SignInEmail from "./screens/signin/SignInEmail";
 import SignInCode from "./screens/signin/SignInCode";
 import Poster from "./screens/print/Poster";
@@ -116,7 +115,6 @@ function Shell() {
         <Route path="/join/about" element={<AskMeAbout />} />
         <Route path="/join/battery" element={<Battery />} />
         <Route path="/join/ride-mode" element={<RideModeRules />} />
-        <Route path="/join/glasses" element={<LinkGlasses />} />
 
         <Route path="/ride" element={<RideRoute />} />
         <Route path="/k/:car" element={<Tap />} />

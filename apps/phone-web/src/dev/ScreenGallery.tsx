@@ -14,7 +14,6 @@ export const SCREENS: { id: string; label: string; to?: string }[] = [
   { id: "B4", label: "Ask me about", to: "/join/about" },
   { id: "B5", label: "Social battery", to: "/join/battery" },
   { id: "B6", label: "How Ride Mode works", to: "/join/ride-mode" },
-  { id: "B7", label: "Link glasses", to: "/join/glasses" },
   { id: "K1", label: "Kiosk tap: pick stop, confirm Ride Mode", to: "/k/1412" },
   { id: "C1", label: "Ride Mode off: tap the kiosk" },
   { id: "C2", label: "Ride Mode on, looking" },

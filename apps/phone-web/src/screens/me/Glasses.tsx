@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react";
+import { useNavigate } from "react-router";
 import { useApp } from "../../state/store";
 import { ArtSlot, BackLink, Body, Button, Card, Hint, Screen, TileTitle } from "../../ui";
-import LinkGlasses from "../onboarding/LinkGlasses";
+import LinkGlasses from "./LinkGlasses";
 
 /** Small status pill: "LINKED" (leaf) or "NOT LINKED" (paper). */
 export function StatusPill({ children, tone = "leaf" }: { children: ReactNode; tone?: "leaf" | "paper" | "ink" }) {
@@ -36,10 +37,14 @@ export const GlassesTag = () => (
  */
 export default function Glasses() {
   const { state } = useApp();
+  const navigate = useNavigate();
   const linked = !!state.profile?.glassesLinked;
   const [relink, setRelink] = useState(false);
 
-  if (!linked || relink) return <LinkGlasses />;
+  // Not linked yet, or linking different ones: the form. Back goes to Me, or back to these glasses.
+  if (!linked || relink) {
+    return <LinkGlasses onBack={relink ? () => setRelink(false) : () => navigate("/me")} onLinked={() => setRelink(false)} />;
+  }
 
   return (
     <Screen

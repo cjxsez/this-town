@@ -2,7 +2,7 @@
 
 The rider's phone app for **In This Town** (the product was called Questline; code identifiers still are). Mobile web (React 19 + Vite 8 + TypeScript, react-router 8), served by the worker at `/`.
 
-The screens follow the product in `docs/architecture.md` and are listed one by one in `docs/phone-flow.md`: onboarding (B1 to B7), the kiosk tap with the Ride Mode confirmation (`/k/:car`), the ride (C1 to H1), passport, people, me, glasses, and the printable kiosk sign. They talk to the backend through one seam, `src/api/types.ts` (`QuestlineApi` + `RideChannel`), which has two implementations:
+The screens follow the product in `docs/architecture.md` and are listed one by one in `docs/phone-flow.md`: onboarding (B1 to B6), the kiosk tap with the Ride Mode confirmation (`/k/:car`), the ride (C1 to H1), passport, people, me, glasses, and the printable kiosk sign. They talk to the backend through one seam, `src/api/types.ts` (`QuestlineApi` + `RideChannel`), which has two implementations:
 
 | Mode | Code | What it is |
 |---|---|---|
@@ -64,7 +64,7 @@ Every screen follows the start screen:
 | `/` | The 3D start screen once per visit (`packages/start-screen`); BEGIN closes its train doors and they open onto Landing (B1), or Ride Mode once a profile exists |
 | `/start` | The start screen, every time (for demos). BEGIN goes to `/` |
 | `/signin`, `/signin/code` | Email sign-in S1 (email) and S2 (6-digit code). Known email: back to the parked tap or `/ride`. New email: onboarding, then an account |
-| `/join/name`, `/join/interests`, `/join/about`, `/join/battery`, `/join/ride-mode`, `/join/glasses` | Onboarding B2 to B7 |
+| `/join/name`, `/join/interests`, `/join/about`, `/join/battery`, `/join/ride-mode` | Onboarding B2 to B6. The last step creates the rider; glasses are linked from Me > Glasses |
 | `/k/:car?n=<nonce>` | Kiosk tag landing: pick your stop, confirm Ride Mode, or a car move / stamp tap. Signed out (worker mode): parks the tap and goes to `/signin` first |
 | `/ride` | Ride Mode. One URL; the screen follows the ride phase |
 | `/passport`, `/passport/:id`, `/people`, `/people/:id`, `/people/:id/report`, `/me`, `/me/glasses` | Collection and settings |
