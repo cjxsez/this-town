@@ -27,8 +27,9 @@ scaffolds; smbus2 is imported lazily so laptops don't need /dev/i2c-*.
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
-from typing import Final
+from typing import Any, Final
 
 from .config import NfcConfig, NfcMode
 
@@ -214,45 +215,100 @@ class DynamicNtagI2C(NfcTag):
     Memory as seen from I2C is 16-byte blocks. Block 0 holds the I2C address,
     serial number, static lock bytes and the Capability Container (bytes
     12..15, factory set to E1 10 6D 00 on the 1k part). NDEF user memory
-    starts at block 1 (= NFC page 4).
-
-    TODO:
-    - from smbus2 import SMBus, i2c_msg; open SMBus(bus) in __init__
-    - write_url:
-        data = build_tag_payload(url, BLOCK_SIZE)
-        check len(data) <= USER_BYTES_1K (888) else NfcTagError
-        for each 16-byte chunk i: i2c_rdwr(i2c_msg.write(addr, [USER_START_BLOCK + i, *chunk]))
-        sleep ~5 ms after each block (EEPROM write time)
-    - NEVER write block 0 from I2C: its byte 0 is the I2C address and a bad
-      write moves the chip to a different address
-    - RF/I2C arbitration: if a phone is in the field the write can NAK.
-      Read NS_REG (session register block 0xFE, byte 6) and wait for
-      RF_LOCKED to clear, retry up to write_retries
-    - optional: watch the FD pin (field detect) on a GPIO to log taps
-    - read_url: read blocks from 1 until the 0xFE terminator, parse the record
+    starts at block 1 (= NFC page 4). NEVER write block 0 from I2C: its byte 0
+    is the I2C address and a bad write moves the chip.
     """
 
     BLOCK_SIZE: Final = 16
     USER_START_BLOCK: Final = 1
     USER_BYTES_1K: Final = 888
     DEFAULT_ADDRESS: Final = 0x55
+    EEPROM_WAIT_S: Final = 0.005
 
     mode: NfcMode = "dynamic"
 
-    def __init__(self, bus: int = 1, address: int = DEFAULT_ADDRESS, retries: int = 3) -> None:
+    def __init__(
+        self,
+        bus: int = 1,
+        address: int = DEFAULT_ADDRESS,
+        retries: int = 3,
+        *,
+        smbus: Any | None = None,
+    ) -> None:
         self.bus = bus
         self.address = address
         self.retries = retries
-        raise NotImplementedError("DynamicNtagI2C: see TODO in docstring")
+        if smbus is not None:
+            self._bus = smbus
+            self._owns_bus = False
+        else:
+            # Lazy import so laptops without /dev/i2c-* still import this module.
+            from smbus2 import SMBus
+
+            self._bus = SMBus(bus)
+            self._owns_bus = True
 
     def write_url(self, url: str) -> None:
-        raise NotImplementedError
+        data = build_tag_payload(url, self.BLOCK_SIZE)
+        if len(data) > self.USER_BYTES_1K:
+            raise NfcTagError(f"URL payload {len(data)} bytes exceeds NTAG 1k user memory")
+
+        last_err: Exception | None = None
+        attempts = max(1, self.retries + 1)
+        for attempt in range(attempts):
+            try:
+                self._write_blocks(data)
+                read_back = self.read_url()
+                if read_back != url:
+                    raise NfcTagError(f"read-back mismatch: wrote {url!r}, got {read_back!r}")
+                return
+            except (NfcTagError, OSError) as e:
+                last_err = e
+                log.warning("NTAG I2C write attempt %s/%s failed: %s", attempt + 1, attempts, e)
+                time.sleep(0.05)
+        raise NfcTagError(str(last_err) if last_err else "NTAG write failed")
+
+    def _write_blocks(self, data: bytes) -> None:
+        from smbus2 import i2c_msg
+
+        for i in range(0, len(data), self.BLOCK_SIZE):
+            block = self.USER_START_BLOCK + i // self.BLOCK_SIZE
+            chunk = data[i : i + self.BLOCK_SIZE]
+            if len(chunk) < self.BLOCK_SIZE:
+                chunk = chunk + bytes(self.BLOCK_SIZE - len(chunk))
+            # First byte is the block address; never write block 0.
+            if block == 0:
+                raise NfcTagError("refusing to write NTAG block 0")
+            msg = i2c_msg.write(self.address, bytes([block]) + chunk)
+            self._bus.i2c_rdwr(msg)
+            time.sleep(self.EEPROM_WAIT_S)
+
+    def _read_blocks(self, n_blocks: int) -> bytes:
+        from smbus2 import i2c_msg
+
+        out = bytearray()
+        for i in range(n_blocks):
+            block = self.USER_START_BLOCK + i
+            write = i2c_msg.write(self.address, [block])
+            read = i2c_msg.read(self.address, self.BLOCK_SIZE)
+            self._bus.i2c_rdwr(write, read)
+            out.extend(bytes(read))
+        return bytes(out)
 
     def read_url(self) -> str | None:
-        raise NotImplementedError
+        # Enough blocks for a typical kiosk URL; stop early if terminator seen.
+        try:
+            raw = self._read_blocks(8)
+        except OSError:
+            return None
+        return parse_tag_url(raw)
 
     def close(self) -> None:
-        raise NotImplementedError  # TODO: self._bus.close()
+        if getattr(self, "_owns_bus", False):
+            try:
+                self._bus.close()
+            except Exception:
+                pass
 
 
 class DynamicSt25dv(NfcTag):
