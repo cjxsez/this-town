@@ -4,7 +4,9 @@ import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
 import { backend } from "../../api";
 import { errorMessage, type TapResult } from "../../lib/api";
 import { unlockWaitingMusic } from "../../lib/music";
+import { destinationHint, rideModeEndsRule, rideModeMissionRule } from "../../lib/rideModeCopy";
 import { playTapSound } from "../../lib/sound";
+import { useGamesOnly } from "../../lib/useWorkerMode";
 import { useApp } from "../../state/store";
 import { Body, Button, Card, Eyebrow, Hint, Screen, TextLink, Title } from "../../ui";
 
@@ -62,6 +64,7 @@ export default function Tap() {
   const navigate = useNavigate();
   const { state, actions } = useApp();
   const profile = state.profile;
+  const gamesOnly = useGamesOnly();
   const [view, setView] = useState<View>({ step: "working" });
   const partner = useRef(state.ride.match?.firstName);
   partner.current = state.ride.match?.firstName ?? partner.current;
@@ -163,7 +166,7 @@ export default function Tap() {
       {view.step === "destination" && (
         <>
           <Title>Where are you getting off?</Title>
-          <Hint>Ride Mode turns off at your stop, and missions always end before a stop, so you never miss it.</Hint>
+          <Hint>{destinationHint(gamesOnly)}</Hint>
           <Card>
             <div role="radiogroup" aria-label="Your stop" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {view.stops.map((stop) => (
@@ -192,9 +195,9 @@ export default function Tap() {
             <Eyebrow>While Ride Mode is on</Eyebrow>
             <Rule>We'll match you with the closest rider on this train who shares your interests. There's no accept step: turning this on is your yes.</Rule>
             <Rule>Your glasses and the kiosk show who and where. Your match sees your first name and your pair color. The kiosk screen only shows first names.</Rule>
-            <Rule>You meet at a kiosk, play a short mission, and both tap the tag for a stamp. Missions end before your stop.</Rule>
+            <Rule>{rideModeMissionRule(gamesOnly)}</Rule>
             <Rule>Not into it? Tap "Not now" any time, or turn on ghost mode. You can report or block anyone you're matched with.</Rule>
-            <Rule>Ride Mode turns off by itself at {view.dest.name}.</Rule>
+            <Rule>{rideModeEndsRule(view.dest.name, gamesOnly)}</Rule>
           </Card>
           {state.settings.ghost && <Hint>Ghost mode is on, so nobody will be matched with you until you turn it off.</Hint>}
           <TextLink onClick={() => setView({ step: "destination", stops: view.stops, picked: view.dest.id })}>Change my stop</TextLink>
