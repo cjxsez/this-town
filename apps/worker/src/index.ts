@@ -30,7 +30,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { CarId } from "@questline/protocol";
-import type { AppEnv, Env } from "./env";
+import { readConfig, type AppEnv, type Env } from "./env";
 import { checkKioskKey, riderFromToken } from "./auth";
 import { activeCheckin } from "./db/queries";
 import { resolveCarTrip } from "./mbta/vehicles";
@@ -54,7 +54,11 @@ const app = new Hono<AppEnv>();
 
 // ---------- REST ----------
 
-app.get("/api/health", (c) => c.json({ ok: true }));
+// Also says which flow this worker runs, so pnpm smoke checks the one that is deployed.
+app.get("/api/health", (c) => {
+  const cfg = readConfig(c.env);
+  return c.json({ ok: true, gamesOnly: cfg.gamesOnly, demoMode: cfg.demoMode });
+});
 app.route("/api", authRoutes);
 app.route("/api", usersRoutes);
 app.route("/api", glassesRoutes);
