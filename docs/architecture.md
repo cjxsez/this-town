@@ -30,7 +30,7 @@ https://<domain>/k/:car?n=<nonce> phone-web NFC landing (same SPA, client route)
 https://<domain>/g/               glasses-web (SPA): games at /g/, ride HUD at /g/?ride
 https://<domain>/m                phone-web: the phone seat of the two-player games
 https://<domain>/kiosk/:car       kiosk-web (SPA)
-https://<domain>/api/*            REST (Hono)
+https://<domain>/api/*            REST (Hono); GET /api/health says {gamesOnly, demoMode}
 wss://<domain>/ws/rider           rider socket (phone + glasses), auth via ?token=
 wss://<domain>/ws/kiosk/:car      kiosk socket (screen + Pi agent), auth via ?key=
 ```
@@ -139,6 +139,14 @@ A player who joined on a phone can move to glasses mid-game (D24): "Play on glas
 - The kiosk screen is public: it shows colors and first names, never interests or blurbs.
 - No camera, no microphone, no location tracking. The only location signal is which kiosk tag you tapped.
 - Ghost mode, "Not now", block and report are always one action away.
+- A report (`POST /api/report`) ends a live pair and the room never pairs those two again on
+  that trip. With "block" the block also lands in the room's copy of both riders right away,
+  not only at their next check-in. The reported rider only hears that their partner left
+  (`match.cleared` reason `partner-left`); the reporter gets `reported`.
+- Unblock (`POST /api/unblock`) lifts only your own block. A block the other rider placed on
+  you stays, and matching treats a block in either direction as a hard filter.
+- People (`GET /api/matches/recent`) carry the block flag and where you got your stamp, so a
+  new phone shows the same list.
 
 ## Hardware (per kiosk)
 
