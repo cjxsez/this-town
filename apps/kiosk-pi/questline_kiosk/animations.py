@@ -32,12 +32,23 @@ log = logging.getLogger(__name__)
 FPS = 30
 FRAME_S = 1.0 / FPS
 OFFLINE_RGB: RGB = (255, 120, 0)
+WHITE: RGB = (255, 255, 255)
 
 
 def scale(rgb: RGB, factor: float) -> RGB:
     """Multiply a color by 0..1."""
     f = max(0.0, min(1.0, factor))
     return (int(rgb[0] * f), int(rgb[1] * f), int(rgb[2] * f))
+
+
+def lerp(a: RGB, b: RGB, t: float) -> RGB:
+    """Linear blend from a to b; t in 0..1."""
+    t = max(0.0, min(1.0, t))
+    return (
+        int(a[0] + (b[0] - a[0]) * t),
+        int(a[1] + (b[1] - a[1]) * t),
+        int(a[2] + (b[2] - a[2]) * t),
+    )
 
 
 def _breath_level(t: float, period_s: float, low: float, high: float) -> float:
@@ -95,14 +106,39 @@ async def pulse(strip: LedStrip, rgb: RGB, period_s: float = 2.5, low: float = 0
 
 
 async def burst(strip: LedStrip, rgb: RGB, duration_s: float = 2.0) -> None:
-    """Celebration: white flash from the center outward, settling into the pair color.
+    """Celebration: white flash from the center outward, settling into the pair color."""
+    n = max(1, strip.count)
+    center = n // 2
+    expand_s = max(0.05, duration_s * 0.4)
+    fade_s = 0.15
+    t = 0.0
+    while t < expand_s:
+        radius = (t / expand_s) * (n / 2)
+        for i in range(n):
+            dist = abs(i - center)
+            if dist <= radius:
+                # White at the wave front, blending toward the pair color behind it.
+                age = (radius - dist) / max(1.0, n / 2)
+                strip.set_pixel(i, lerp(WHITE, rgb, min(1.0, age * (expand_s / fade_s))))
+            else:
+                strip.set_pixel(i, OFF)
+        strip.show()
+        await asyncio.sleep(FRAME_S)
+        t += FRAME_S
 
-    TODO:
-    - center = strip.count // 2; radius grows 0 -> count/2 over duration_s * 0.4
-    - pixels inside the radius: white fading to rgb over ~150 ms
-    - 2 to 3 quick full-strip flashes, then end on solid rgb
-    """
-    raise NotImplementedError
+    # Two quick full-strip white flashes, then settle on the pair color.
+    for _ in range(2):
+        strip.fill(WHITE)
+        strip.show()
+        await asyncio.sleep(0.06)
+        strip.fill(rgb)
+        strip.show()
+        await asyncio.sleep(0.08)
+
+    remaining = duration_s - expand_s - 0.28
+    if remaining > 0:
+        await asyncio.sleep(remaining)
+    await solid(strip, rgb)
 
 
 async def rainbow(strip: LedStrip, duration_s: float | None = None, speed: int = 3) -> None:
