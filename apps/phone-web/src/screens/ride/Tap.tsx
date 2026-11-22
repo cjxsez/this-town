@@ -4,7 +4,13 @@ import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
 import { backend } from "../../api";
 import { errorMessage, type TapResult } from "../../lib/api";
 import { unlockWaitingMusic } from "../../lib/music";
-import { destinationHint, rideModeEndsRule, rideModeMissionRule } from "../../lib/rideModeCopy";
+import {
+  destinationHint,
+  rideModeEndsRule,
+  rideModeMissionRule,
+  tapAlreadyMeeting,
+  tapMeetingStarts,
+} from "../../lib/rideModeCopy";
 import { playTapSound } from "../../lib/sound";
 import { useGamesOnly } from "../../lib/useWorkerMode";
 import { useApp } from "../../state/store";
@@ -227,7 +233,7 @@ export default function Tap() {
       {view.step === "moved" && (
         <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Title>{view.meeting ? "You made it." : `You're in car ${view.car} now.`}</Title>
-          <Body>{view.meeting ? "This is your meeting kiosk. The mission starts on its screen in a moment." : "Ride Mode moved with you. Matching uses this car now."}</Body>
+          <Body>{view.meeting ? tapMeetingStarts(gamesOnly) : "Ride Mode moved with you. Matching uses this car now."}</Body>
           <Button huge onClick={toRide}>
             OK
           </Button>
@@ -237,7 +243,7 @@ export default function Tap() {
       {view.step === "already" && (
         <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Title>Ride Mode is already on.</Title>
-          <Body>You're checked in to car {view.car}. If you're meeting someone here, the mission starts on the kiosk.</Body>
+          <Body>{tapAlreadyMeeting(view.car, gamesOnly)}</Body>
           <Button huge onClick={toRide}>
             OK
           </Button>
