@@ -1,18 +1,29 @@
+import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router";
 import { ArtSlot, Button, ButtonRow, Screen, TextLink, Wordmark } from "../../ui";
 import { useApp } from "../../state/store";
+import { DOORS_ENTER_DELAY_MS, doorsOpening } from "../../state/doors";
 
 /**
  * B1 Landing. Rendered at "/", and where a kiosk tag tap lands a rider with no profile
- * (the tap is replayed after onboarding). Every sign-in goes to B2.
+ * (the tap is replayed after onboarding). Two ways in: a one-time code by email, or
+ * "Just play today" with a first name only. Every sign-in goes to B2.
+ *
+ * Everything enters in order: the island, the name tile by tile, the line, then the
+ * buttons. When the start screen's doors are opening onto this page, it all waits
+ * until they have parted.
  */
 export default function Landing() {
   const navigate = useNavigate();
   const { actions } = useApp();
+  // Read once: whether the train doors are opening onto this page right now.
+  const [offset] = useState(() => (doorsOpening() ? DOORS_ENTER_DELAY_MS : 0));
+  /** Entrance `ms` after the page appears (plus the doors' delay), merged with any style of its own. */
+  const at = (ms: number, style?: CSSProperties) => ({ className: "q-enter", style: { ...style, "--d": offset + ms } as CSSProperties });
 
-  // TODO(backend): Sign in with Apple and the email magic link are stubs.
-  // Both should authenticate first and then continue to B2 like "Just play today".
-  const signIn = (_method: "apple" | "email" | "guest") => navigate("/join/name");
+  // TODO(backend): the one-time email code is PR #4 (feat/email-signin). Until it lands,
+  // email continues like "Just play today"; with it, email goes to its /signin code screen.
+  const signIn = (_method: "email" | "guest") => navigate("/join/name");
 
   const skipSetup = () => {
     actions.useDemoProfile();
@@ -26,24 +37,19 @@ export default function Landing() {
       footer={
         <>
           <ButtonRow>
-            <Button variant="dark" onClick={() => signIn("apple")}>
-              Continue with Apple
+            <Button variant="secondary" onClick={() => signIn("email")} {...at(520)}>
+              Sign in with email
             </Button>
           </ButtonRow>
           <ButtonRow>
-            <Button variant="secondary" onClick={() => signIn("email")}>
-              Email me a link
-            </Button>
-          </ButtonRow>
-          <ButtonRow>
-            <Button onClick={() => signIn("guest")}>
+            <Button onClick={() => signIn("guest")} {...at(600)}>
               Just play today (first name only)
             </Button>
           </ButtonRow>
         </>
       }
     >
-      <div style={{ flex: 1, minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))" }}>
+      <div {...at(0, { flex: 1, minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))" })}>
         <div
           className="anim-drift"
           style={{
@@ -74,9 +80,9 @@ export default function Landing() {
         </TextLink>
       </div>
       <h1>
-        <Wordmark />
+        <Wordmark enterAt={offset + 120} />
       </h1>
-      <p style={{ fontSize: 21, lineHeight: 1.2, textWrap: "pretty", textAlign: "center" }}>
+      <p {...at(440, { fontSize: 21, lineHeight: 1.2, textWrap: "pretty", textAlign: "center" })}>
         Tap the kiosk in your train car and meet one other rider who likes what you like. A short game, face to face, done before your stop.
       </p>
     </Screen>

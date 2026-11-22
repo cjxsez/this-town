@@ -238,3 +238,5 @@
 
 /* ---------- 3D start screen host ---------- */
 .q-start { position: absolute; inset: 0; z-index: 5; background: var(--sea); }
+/* After BEGIN only the doors remain on top, and the page behind shows through as they part. */
+.q-start--revealing { background: transparent; pointer-events: none; }

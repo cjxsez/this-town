@@ -51,11 +51,25 @@ screen.dispose();
 
 `element` needs a size; the screen fills it. All options are documented on `StartScreenOptions` in `src/index.ts`.
 
+### Opening the doors onto the next page
+
+With `revealAfterBegin: true` the doors don't just close: after `onBegin()` they stay shut on top while you mount the next page behind this element, hold for a beat, then slide open onto it. Everything else (the 3D scene, the title, the button) is gone by then and the element turns see-through. `onRevealed()` fires once they are open; dispose the screen then.
+
+```ts
+const screen = mountStartScreen(element, {
+  revealAfterBegin: true,
+  onBegin: () => showSignInPage(),      // mount it now, behind the shut doors
+  onRevealed: () => screen.dispose(),   // the doors are open
+});
+```
+
+The hold and the opening are `reveal` in `config.ts`; the `doors-open` cue fires as they start to part. With reduced motion they open at once.
+
 ### In the phone app
 
 `apps/phone-web/src/screens/onboarding/Start.tsx` mounts it. It loads the package with a dynamic `import()`, so three.js (about 160 kB gzipped) is a separate download and stays out of the app's first load; if that download fails, the rider is sent straight on. It passes the app's time of day and its Motion setting.
 
-`App.tsx` shows it once per visit (tab session) at `/` and `/:stationId`, then the landing page for new riders or Ride Mode for returning ones. `/start` always shows it.
+`App.tsx` shows it once per visit (tab session) at `/`, and every time at `/start`. It sits in the app shell above the routes, so after BEGIN the landing page (new riders) or Ride Mode (returning riders) mounts behind the shut doors and they open onto it, even across the redirect to `/ride`. The landing page's pieces rise in one after another as the doors part (`src/state/doors.ts` tells a page it is being revealed).
 
 ## The live platform scene (in the app's ride screens)
 

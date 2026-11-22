@@ -135,6 +135,12 @@
 .qls__door--left .qls__caption { text-align: right; }
 .qls__door--right .qls__caption { text-align: left; }
 
+/* ---------- after BEGIN with revealAfterBegin: only the doors remain, over the next page ---------- */
+.qls--revealing { background: transparent; pointer-events: none; cursor: default; }
+.qls--revealing .qls__canvas,
+.qls--revealing .qls__begin,
+.qls--revealing .qls__title { visibility: hidden; }
+
 /* ---------- no WebGL: the doors stay shut and plain HTML takes over ---------- */
 .qls--fallback .qls__canvas { display: none; }
 .qls--fallback .qls__caption { display: none; }

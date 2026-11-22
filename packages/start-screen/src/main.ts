@@ -31,9 +31,13 @@ const mount = () => {
   screen = mountStartScreen(stage, {
     timeOfDay,
     title: params.get("title")?.toUpperCase() || undefined,
-    // Replace this with the real next step, e.g. navigate("/join/name").
+    // The note mounts behind the shut doors, then the doors open onto it.
+    revealAfterBegin: true,
     onBegin: () => {
       note.hidden = false;
+    },
+    onRevealed: () => {
+      screen.dispose();
       again.focus();
     },
     // Sound hook: nothing plays yet, the cues are just logged.

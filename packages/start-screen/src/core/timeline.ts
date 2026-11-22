@@ -95,6 +95,14 @@ export function roundelIdleTurn(
   return Math.PI * 2 * curve(r.idleEase)(inCycle / r.idleSpinSeconds);
 }
 
+/**
+ * How shut the doors are `t` seconds after onBegin() when revealing the next page:
+ * 1 while they hold shut, then easing open to 0.
+ */
+export function revealCover(t: number, r: { holdSeconds: number; openSeconds: number; ease: Bezier }): number {
+  return 1 - progress(t, { start: r.holdSeconds, dur: r.openSeconds, ease: r.ease });
+}
+
 export interface OutroState {
   /** Per tile: 0 = still in place, 1 = gone. */
   tiles: number[];

@@ -6,6 +6,7 @@
 import "./styles.css";
 import type { Config } from "./config";
 import { clamp01 } from "./core/ease";
+import { revealCover } from "./core/timeline";
 import type { HudLayout, Insets } from "./core/layout";
 import type { SeaColors } from "./scene/world";
 
@@ -23,6 +24,11 @@ export interface Overlay {
   readInsets(): Insets;
   /** No WebGL: leave the doors shut and show the title and button as plain HTML. */
   showFallback(): void;
+  /**
+   * After BEGIN: drop everything but the shut doors (the page behind shows through
+   * once they part), hold, then slide them open. Resolves when they are fully open.
+   */
+  reveal(instant: boolean, onOpening?: () => void): Promise<void>;
   dispose(): void;
 }
 
@@ -92,6 +98,7 @@ export function createOverlay(container: HTMLElement, config: Config, sea: SeaCo
 
   let boil = 0;
   let seed = 0;
+  let revealRaf = 0;
   const stopBoil = () => {
     if (boil) clearInterval(boil);
     boil = 0;
@@ -135,6 +142,32 @@ export function createOverlay(container: HTMLElement, config: Config, sea: SeaCo
       button.style.width = `${b.w}px`;
       button.style.height = `${b.h}px`;
     },
+    reveal(instant, onOpening) {
+      stopBoil();
+      root.classList.remove("qls--loading", "qls--fallback");
+      root.classList.add("qls--revealing");
+      overlay.setCover(1);
+      if (instant) {
+        overlay.setCover(0);
+        return Promise.resolve();
+      }
+      return new Promise<void>((resolve) => {
+        const began = performance.now();
+        let told = false;
+        const tick = (now: number) => {
+          const t = (now - began) / 1000;
+          if (!told && t >= config.reveal.holdSeconds) {
+            told = true;
+            onOpening?.();
+          }
+          const cover = revealCover(t, config.reveal);
+          overlay.setCover(cover);
+          if (cover <= 0) resolve();
+          else revealRaf = requestAnimationFrame(tick);
+        };
+        revealRaf = requestAnimationFrame(tick);
+      });
+    },
     showFallback() {
       stopBoil();
       root.classList.remove("qls--loading");
@@ -144,6 +177,7 @@ export function createOverlay(container: HTMLElement, config: Config, sea: SeaCo
     },
     dispose() {
       stopBoil();
+      cancelAnimationFrame(revealRaf);
       root.remove();
     },
   };

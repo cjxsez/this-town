@@ -57,6 +57,18 @@
 }
 @keyframes q-sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes q-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* Entrance: rise into place with a little settle. Delay with --d (ms). */
+@keyframes q-enter {
+  from { opacity: 0; transform: translateY(22px) scale(.97); }
+  60% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+/* A letter tile drops onto the page and settles. */
+@keyframes q-tile-in {
+  0% { opacity: 0; transform: translateY(-16px) scale(.6) rotateX(70deg); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
 
 .anim-float { animation: q-float 2.4s ease-in-out infinite alternate; }
 .anim-bob { animation: q-bob 2.2s ease-in-out infinite alternate; }
@@ -83,3 +95,8 @@
 .anim-fadeIn { animation: q-fadeIn .25s both; }
 
 :root.no-motion [class*="anim-"] { animation-play-state: paused !important; }
+
+/* Entrances (not "anim-" classes, so Motion off skips them instead of freezing them invisible). */
+.q-enter { animation: q-enter .62s cubic-bezier(.2,.9,.3,1.15) both; animation-delay: calc(var(--d, 0) * 1ms); }
+.q-enter-tile { animation: q-tile-in .5s cubic-bezier(.2,.9,.3,1.3) both; animation-delay: calc(var(--d, 0) * 1ms); }
+:root.no-motion .q-enter, :root.no-motion .q-enter-tile { animation: none; }

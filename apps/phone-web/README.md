@@ -43,6 +43,10 @@ Other scripts (here, or `pnpm --filter @questline/phone-web <script>`):
 
 This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: it is on TypeScript 7 and Vite 8, and the screens were not written for `noUncheckedIndexedAccess`.
 
+## Landing
+
+Landing (B1) has two ways in: **Sign in with email** (a one-time code; the code screens and accounts are PR #4, `feat/email-signin`; until it lands the button continues like the guest path) and **Just play today** (first name only). There is no Apple sign-in. Its pieces enter in order (island, name tile by tile, line, buttons), held back while the start screen's doors are opening onto it.
+
 ## Look
 
 Every screen follows the start screen:
@@ -56,7 +60,7 @@ Every screen follows the start screen:
 
 | Path | Screen |
 |---|---|
-| `/` | The 3D start screen once per visit (`packages/start-screen`), then Landing (B1), or Ride Mode once a profile exists |
+| `/` | The 3D start screen once per visit (`packages/start-screen`); BEGIN closes its train doors and they open onto Landing (B1), or Ride Mode once a profile exists |
 | `/start` | The start screen, every time (for demos). BEGIN goes to `/` |
 | `/join/name`, `/join/interests`, `/join/about`, `/join/battery`, `/join/ride-mode`, `/join/glasses` | Onboarding B2 to B7 |
 | `/k/:car?n=<nonce>` | Kiosk tag landing: pick your stop, confirm Ride Mode, or a car move / stamp tap |
