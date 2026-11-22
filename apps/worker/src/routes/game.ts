@@ -8,6 +8,7 @@
 import { Hono } from "hono";
 import { ROOM_CODE, type Seat } from "@questline/protocol/games";
 import type { AppEnv, Env } from "../env";
+import { openFreeRoom } from "../rooms/GameRoom";
 
 export const gameRoutes = new Hono<AppEnv>();
 
@@ -31,11 +32,8 @@ gameRoutes.post("/game/rooms", async (c) => {
     await room(c.env, body.code).open(body.code, true);
     return c.json({ code: body.code });
   }
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const code = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-    if (await room(c.env, code).open(code, false)) return c.json({ code });
-  }
-  return c.json({ error: "no free room code" }, 503);
+  const code = await openFreeRoom(c.env);
+  return code ? c.json({ code }) : c.json({ error: "no free room code" }, 503);
 });
 
 gameRoutes.post("/game/rooms/:code/join", async (c) => {

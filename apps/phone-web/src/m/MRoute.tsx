@@ -13,6 +13,7 @@ import "./m.css";
  *
  *   /m              type the code
  *   /m?code=1234    join that room straight away
+ *   /m?code=1234&seat=a   take that seat: the link two matched riders get on their match screen
  *   /m?host         open a room from this phone and show its code, for two phones
  *
  * "Play on glasses" moves this player's screen onto a pair of glasses mid-game: the glasses
@@ -150,10 +151,17 @@ export default function MRoute() {
 
   // ?code= and ?host act once, on arrival.
   useEffect(() => {
-    if (auto.current || joined) return;
+    if (auto.current) return;
     auto.current = true;
     const params = new URLSearchParams(location.search);
     const wanted = params.get("code");
+    const seat = params.get("seat");
+    // A match link names the seat, and wins over a game left open in this tab.
+    if (wanted && ROOM_CODE.test(wanted) && (seat === "a" || seat === "b")) {
+      if (joined?.code !== wanted || joined.seat !== seat) enter({ code: wanted, seat });
+      return;
+    }
+    if (joined) return;
     if (wanted && ROOM_CODE.test(wanted)) void join(wanted);
     else if (params.has("host")) void host();
   }, []);

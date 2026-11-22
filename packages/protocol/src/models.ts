@@ -114,6 +114,9 @@ export const MatchInfo = z.object({
   meetAtCar: CarId,            // whose kiosk to go to
   carDelta: z.number().int(),
   youWalk: z.boolean(),        // false = stay put, they come to you
+  // The two-player game room opened for this pair (games/client.ts) and this rider's seat in
+  // it, so both phones can go straight to /m without a code. Absent if no room could be opened.
+  game: z.object({ code: z.string().regex(/^\d{4}$/), seat: z.enum(["a", "b"]) }).optional(),
 });
 export type MatchInfo = z.infer<typeof MatchInfo>;
 

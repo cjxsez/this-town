@@ -132,6 +132,8 @@ export interface RoomPair {
   autoStartAt: number | null;
   /** Current mission session, if one is running. */
   sessionId: string | null;
+  /** Code of the GameRoom opened for this pair (rider a sits in seat a). Missing if none could be opened. */
+  gameCode?: string;
 }
 
 export interface MissionSessionState {

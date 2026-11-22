@@ -80,6 +80,8 @@ export interface Match {
   shared: string[];
   /** "You both like ramen and film". Private to the two riders, never on the kiosk. */
   why: string;
+  /** The game room opened for the two of you and your seat in it (the games at /m). */
+  game?: { code: string; seat: "a" | "b" };
 }
 
 /** Where to meet: always a kiosk. */

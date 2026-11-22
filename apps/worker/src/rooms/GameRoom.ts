@@ -37,6 +37,15 @@ export const ROOM_IDLE_MS = 2 * 60 * 60 * 1000;
 
 const ROOM_KEY = "room";
 
+/** Open a room on a code nobody is using. null when none was free after a few tries. */
+export async function openFreeRoom(env: Env): Promise<string | null> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const code = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+    if (await env.GAME_ROOM.get(env.GAME_ROOM.idFromName(`room:${code}`)).open(code, false)) return code;
+  }
+  return null;
+}
+
 interface Room {
   code: string;
   /** Index into GAMES. */

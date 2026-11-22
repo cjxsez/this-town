@@ -1,6 +1,6 @@
 import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
 import { sim } from "../../api";
-import { Card, Eyebrow, Screen, TextLink } from "../../ui";
+import { Button, Card, Eyebrow, Screen, TextLink } from "../../ui";
 import { useRide } from "../../state/store";
 import { useNow } from "../../state/useNow";
 import { secondsUntil } from "../../state/format";
@@ -134,20 +134,27 @@ export default function Mission() {
       label="F1"
       blobs="a"
       footer={
-        <Card style={{ gap: 8 }}>
-          <Eyebrow>Stamp</Eyebrow>
-          <div style={{ font: "700 22px/1.1 var(--font-hand)" }}>{tapLine}</div>
-          <div aria-hidden style={{ display: "flex", gap: 6 }}>
-            {[0, 1].map((i) => (
-              <div key={i} style={{ flex: 1, height: 14, borderRadius: 7, border: "var(--ol) solid var(--ink)", background: i < ride.taps ? hex : "var(--paper-hi)" }} />
-            ))}
-          </div>
-          {sim && ride.meet && !ride.youTapped && (
-            <TextLink small to={`/k/${ride.meet.car}`}>
-              demo: tap the kiosk tag →
-            </TextLink>
+        <>
+          <Card style={{ gap: 8 }}>
+            <Eyebrow>Stamp</Eyebrow>
+            <div style={{ font: "700 22px/1.1 var(--font-hand)" }}>{tapLine}</div>
+            <div aria-hidden style={{ display: "flex", gap: 6 }}>
+              {[0, 1].map((i) => (
+                <div key={i} style={{ flex: 1, height: 14, borderRadius: 7, border: "var(--ol) solid var(--ink)", background: i < ride.taps ? hex : "var(--paper-hi)" }} />
+              ))}
+            </div>
+            {sim && ride.meet && !ride.youTapped && (
+              <TextLink small to={`/k/${ride.meet.car}`}>
+                demo: tap the kiosk tag →
+              </TextLink>
+            )}
+          </Card>
+          {match?.game && (
+            <Button variant="secondary" to={`/m?code=${match.game.code}&seat=${match.game.seat}`}>
+              Play a game together
+            </Button>
           )}
-        </Card>
+        </>
       }
     >
       <MeetTopBar partner={match} />

@@ -61,6 +61,11 @@ export default function Meet() {
                 I'm at the kiosk
               </Button>
             )}
+            {match.game && (
+              <Button variant="secondary" to={`/m?code=${match.game.code}&seat=${match.game.seat}`}>
+                Play a game together
+              </Button>
+            )}
             <TextLink onClick={() => setConfirmSkip(true)}>Not now</TextLink>
           </>
         )

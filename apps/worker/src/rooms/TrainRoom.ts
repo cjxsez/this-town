@@ -113,6 +113,7 @@ import { writeWhy } from "../llm/why";
 import { advanceDemoClock, demoTimeline, newDemoClock } from "../mbta/demo";
 import { assignColor, colorsInUse } from "../matching/colors";
 import { carDelta, greedyPairs } from "../matching/pair";
+import { openFreeRoom } from "./GameRoom";
 import { buildPool, stopIndex } from "../matching/pool";
 import { slotValuesFor, toMission } from "../missions/fill";
 import { selectMission } from "../missions/select";
@@ -626,6 +627,10 @@ export class TrainRoom extends DurableObject<Env> {
       s.whyCache[key] = why;
       if (!s.riders[p.a.userId] || !s.riders[p.b.userId] || p.a.pairId || p.b.pairId) continue;
 
+      // A game room for the pair, so their phones can open the two-player games without a code.
+      const gameCode = (await openFreeRoom(this.env).catch(() => null)) ?? undefined;
+      if (!s.riders[p.a.userId] || !s.riders[p.b.userId] || p.a.pairId || p.b.pairId) continue;
+
       const matchId = newId("mat");
       const pair: RoomPair = {
         matchId,
@@ -641,6 +646,7 @@ export class TrainRoom extends DurableObject<Env> {
         arrived: [],
         autoStartAt: now + MISSION_AUTOSTART_DELAY_MS,
         sessionId: null,
+        gameCode,
       };
       s.pairs[matchId] = pair;
       p.a.pairId = matchId;
@@ -952,6 +958,7 @@ export class TrainRoom extends DurableObject<Env> {
       meetAtCar: pair.meetAtCar,
       carDelta: carDelta(s.trip?.carOrder ?? [], r.car, pair.meetAtCar),
       youWalk: pair.walker === userId,
+      ...(pair.gameCode && { game: { code: pair.gameCode, seat: pair.a === userId ? ("a" as const) : ("b" as const) } }),
     };
   }
 

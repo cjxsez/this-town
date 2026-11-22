@@ -103,6 +103,7 @@ export function toMatch(m: MatchInfo): Match {
     color: m.partner.color,
     shared: m.partner.sharedTags,
     why: m.why,
+    game: m.game,
   };
 }
 

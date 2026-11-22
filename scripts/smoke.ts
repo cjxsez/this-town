@@ -150,7 +150,14 @@ async function main() {
   if (match.meetAtCar !== "1413" || !match.youWalk || match.carDelta !== 1) fail("Andres should walk 1 car forward to 1413");
   const incoming = await screen.wait("pair.incoming");
   ok(`kiosk 1413: ${incoming.firstNames.join(" & ")} in ${incoming.color}`);
-  await mayaSock.wait("ride.snapshot");
+  const mayaSnap = await mayaSock.wait("ride.snapshot");
+  // The pair gets one game room, a seat each, so both phones can open /m without a code.
+  const mayaGame = mayaSnap.snapshot.match?.game;
+  if (!match.game || !mayaGame || match.game.code !== mayaGame.code || match.game.seat === mayaGame.seat) {
+    fail(`expected one game room with a seat each, got ${JSON.stringify([match.game, mayaGame])}`);
+  }
+  for (const seat of [match.game.seat, mayaGame.seat]) await api("GET", `/api/game/rooms/${match.game.code}?seat=${seat}`);
+  ok(`game room ${match.game.code}: Andres seat ${match.game.seat}, Maya seat ${mayaGame.seat}`);
 
   // Andres walks to 1413 and taps its tag: that's arriving, which starts the mission.
   const walk = await api<TapRes>("POST", "/api/taps", { car: "1413" }, andres.token);

@@ -4,7 +4,7 @@ import { MISSIONS } from "../../shared/catalog";
 import type { CheckIn, Match, Stamp } from "../../shared/types";
 import { initialRide, type RideState } from "../state/ride";
 
-const maya: Match = { id: "p-maya", firstName: "Maya", color: "orange", shared: ["ramen", "coffee"], why: "You both like ramen and coffee" };
+const maya: Match = { id: "p-maya", firstName: "Maya", color: "orange", shared: ["ramen", "coffee"], game: { code: "1234", seat: "a" }, why: "You both like ramen and coffee" };
 
 export function rideFixture(id: string, now = Date.now()): RideState {
   const checkIn: CheckIn = {

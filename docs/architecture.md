@@ -103,6 +103,8 @@ Ride Mode on = consent. There is no accept step. The consent is explicit: onboar
 ## Two-player games (`/g/` and `/m`)
 
 Separate from the ride flow for now. The glasses open a room and show a 4-digit code, a phone joins with it, and a `GameRoom` Durable Object (one per code) owns the game state. Game rules are pure modules in `packages/protocol/src/games` (`init`, `reduce`, `tick`, `view` per seat); both clients poll every 700 ms and only draw their seat's view, so the two screens cannot drift apart. Three games play in order: Tall tale, First impressions, Left for you. Left for you keeps a short list of questions that pairs leave for the next pair, in Durable Object storage (question, answers and a timestamp, nothing about who wrote it).
+Matched riders get there without a code (D25): when `TrainRoom` locks a pair it opens a game room and puts `game: { code, seat }` in each rider's `match.found`, and the phone's match and mission screens link to `/m?code=…&seat=…`.
+
 A player who joined on a phone can move to glasses mid-game (D24): "Play on glasses" at `/m` takes the code the glasses show at `/g/` and calls `POST /api/game/rooms/:code/lens`. The seat's room records which glasses show it (`RoomView.lens`), and the room the glasses opened for themselves points at that seat (`RoomView.moved`), so the glasses poll the phone's room as that seat. The game state never moves. The phone shows a waiting screen with "Bring it back to my phone", and the game's own screen when something has to be typed.
 
 
