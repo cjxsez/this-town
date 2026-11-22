@@ -9,7 +9,7 @@ Setup: two kiosks on the table labeled **car 1412** and **car 1413**. 1413 is wh
 > impressions and Left for you from the match screen (`/m`; "Play on my glasses" moves a
 > seat to the lens). Steps 4 to 6 below are the kiosk-mission demo; for it, run the worker
 > with `--var GAMES_ONLY:false`. `curl <worker>/api/health` shows which one is running, and
-> `pnpm smoke` checks that one. In games-only the ending is finishing Left for you (D28): both
+> `pnpm smoke` checks that one. In games-only the ending is pressing Finish after Left for you (D28): both
 > riders get a stamp and kiosk 1413 celebrates, so steps 5 and 7 still happen. The glasses at
 > `/g/?ride` switch to the game on their own once Maya opens it on her phone.
 

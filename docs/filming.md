@@ -24,7 +24,7 @@ Green Line cars aren't connected (there's no passage between them), and on the R
 3. You walk to 1413 and tap it. That counts as arriving.
 4. Maya taps **Play a game together** on her phone. Your glasses switch from the match card to the game on their own (D28), so no Neural Band is needed. Your own phone shows a waiting screen and takes over when there's something to type (writing the Left for you question).
 5. Play Tall tale, First impressions and Left for you. Maya's phone presses **Next game** between them. ("Again" replays the same game.)
-6. When Left for you ends, both get a **stamp**, kiosk 1413 **celebrates** in the pair color, and the pair ends. Neither of you is matched again for 90 s.
+6. After Left for you there is one button, **Finish** (it also finishes by itself after 20 s). Both get a **stamp**, kiosk 1413 **celebrates** in the pair color, and the pair ends. Neither of you is matched again for 90 s.
 7. Close on the Passport.
 
 The three games take about 8 to 12 minutes at normal speed. Shoot them as cutaways and don't film every round.
