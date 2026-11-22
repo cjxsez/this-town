@@ -25,6 +25,7 @@ import logging
 import sys
 import time
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from .config import LedConfig
 
@@ -32,6 +33,27 @@ log = logging.getLogger(__name__)
 
 RGB = tuple[int, int, int]
 OFF: RGB = (0, 0, 0)
+
+# Map leds.order strings to rpi_ws281x strip type names (resolved lazily).
+_WS281X_ORDER = {
+    "RGB": "WS2811_STRIP_RGB",
+    "RBG": "WS2811_STRIP_RBG",
+    "GRB": "WS2811_STRIP_GRB",
+    "GBR": "WS2811_STRIP_GBR",
+    "BRG": "WS2811_STRIP_BRG",
+    "BGR": "WS2811_STRIP_BGR",
+    "RGBW": "SK6812_STRIP_RGBW",
+    "GRBW": "SK6812_STRIP_GRBW",
+}
+
+
+def _pi5() -> bool:
+    try:
+        model = Path("/proc/device-tree/model").read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False
+    return "Raspberry Pi 5" in model
+
 
 
 class LedStrip(ABC):
@@ -68,28 +90,60 @@ class LedStrip(ABC):
 class Ws281xStrip(LedStrip):
     """rpi_ws281x ``PixelStrip`` on a Pi 4 (GPIO18 PWM by default).
 
-    TODO:
-    - from rpi_ws281x import PixelStrip, Color, ws
-    - channel = 1 if pin in (13, 19) else 0; dma = 10; freq_hz = 800_000
-    - strip_type from order: "GRB" -> ws.WS2811_STRIP_GRB, etc.
-    - PixelStrip(count, pin, 800_000, 10, False, int(brightness * 255), channel, strip_type).begin()
-    - GPIO18 PWM conflicts with analog audio: dtparam=audio=off in /boot/firmware/config.txt
-    - PWM needs root. Either run the agent service as root or use pin 10 (SPI).
-    - raise a clear error if running on a Pi 5 (/proc/device-tree/model contains "Raspberry Pi 5")
+    GPIO18 PWM conflicts with analog audio: ``dtparam=audio=off`` in
+    ``/boot/firmware/config.txt``. PWM needs root. Either run the agent as
+    root or use pin 10 (SPI) / ``neopixel_spi``. Not supported on Pi 5.
     """
 
     def __init__(self, pin: int, count: int, brightness: float, order: str = "GRB") -> None:
+        if _pi5():
+            raise RuntimeError(
+                "Ws281xStrip is not supported on Raspberry Pi 5; "
+                'set leds.driver = "neopixel_spi" (data on GPIO10)'
+            )
+        # Lazy import so laptops without rpi_ws281x still import this module.
+        from rpi_ws281x import Color, PixelStrip  # type: ignore[import-untyped]
+        import rpi_ws281x as ws  # type: ignore[import-untyped]
+
+        order_key = order.upper()
+        strip_attr = _WS281X_ORDER.get(order_key)
+        if strip_attr is None or not hasattr(ws, strip_attr):
+            raise ValueError(f"unsupported leds.order for ws281x: {order!r}")
+        strip_type = getattr(ws, strip_attr)
+
+        # PWM1 uses channel 1 (GPIO 13/19); everything else channel 0.
+        channel = 1 if pin in (13, 19) else 0
+        # brightness is a current cap: 30 LEDs at full white ~1.8 A.
+        level = max(0, min(255, int(brightness * 255)))
         self.count = count
-        raise NotImplementedError("Ws281xStrip: see TODO in docstring")
+        self._Color = Color
+        self._strip = PixelStrip(
+            count,
+            pin,
+            800_000,
+            10,  # DMA channel
+            False,  # invert
+            level,
+            channel,
+            strip_type,
+        )
+        self._strip.begin()
 
     def set_pixel(self, index: int, rgb: RGB) -> None:
-        raise NotImplementedError  # TODO: self._strip.setPixelColor(index, Color(*rgb))
+        self._strip.setPixelColor(index, self._Color(*rgb))
 
     def show(self) -> None:
-        raise NotImplementedError  # TODO: self._strip.show()
+        self._strip.show()
 
     def set_brightness(self, brightness: float) -> None:
-        raise NotImplementedError  # TODO: self._strip.setBrightness(int(brightness * 255))
+        self._strip.setBrightness(max(0, min(255, int(brightness * 255))))
+
+    def close(self) -> None:
+        try:
+            self.clear()
+        finally:
+            # PixelStrip has no explicit close; drop the reference.
+            self._strip = None  # type: ignore[assignment]
 
 
 class NeopixelSpiStrip(LedStrip):
