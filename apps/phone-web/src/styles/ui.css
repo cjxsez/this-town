@@ -179,7 +179,7 @@
 .q-sheet { background: var(--paper); color: var(--ink); border: var(--ol) solid var(--ink); border-bottom: 0; border-radius: 22px 18px 0 0; padding: 18px 18px calc(var(--safe-bottom) + 18px); display: flex; flex-direction: column; gap: 12px; }
 .q-toast { position: absolute; left: var(--gutter); right: var(--gutter); top: calc(var(--safe-top) + 14px); z-index: 60; }
 
-/* ---------- wordmark: In This Town, every T a green roundel ---------- */
+/* ---------- wordmark: In This Town, the T of TOWN a green roundel ---------- */
 .q-sr {
   position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap;

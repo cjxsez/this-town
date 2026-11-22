@@ -10,7 +10,7 @@ import { PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
 import { CONFIG, type CueName, type TimeOfDay } from "./config";
 import { StartClock } from "./core/clock";
 import { clamp01, mix } from "./core/ease";
-import { computeLayout, hitTest, splitTitle, type HudLayout } from "./core/layout";
+import { computeLayout, hitTest, roundelMask, splitTitle, type HudLayout } from "./core/layout";
 import { Spring } from "./core/spring";
 import { introEnd, introState, outroState, roundelIdleTurn } from "./core/timeline";
 import type { Overlay } from "./dom";
@@ -63,11 +63,12 @@ export function createRuntime(overlay: Overlay, o: RuntimeOptions): Runtime {
 
   const chars = Array.from(splitTitle(o.title, config.maxLettersPerRow).join(""));
   const R = config.hud.roundel;
-  const atlas = buildGlyphAtlas(chars, config.buttonLabel, config);
+  const roundels = roundelMask(o.title, R);
+  const atlas = buildGlyphAtlas(chars, roundels, config.buttonLabel, config);
   const materials = createMaterials(config, pipeline.shadowTarget.depthTexture!, atlas.texture);
   const ids = new IdAllocator();
   const world = buildWorld(config, config.seas[o.timeOfDay], ids, materials);
-  const hud = buildHud(chars, config, ids, atlas, materials);
+  const hud = buildHud(chars, roundels, config, ids, atlas, materials);
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(config.camera.fovDeg, 1, config.camera.near, 1000);

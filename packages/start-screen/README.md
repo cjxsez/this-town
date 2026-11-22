@@ -2,7 +2,7 @@
 
 The 3D start screen for **In This Town**: train doors slide open on a little island with a trolley running a loop of track, IN THIS TOWN flips in as chunky letter tiles, and a yellow BEGIN button closes the doors again and calls `onBegin()`.
 
-Every T is special: a round green roundel with a paper ring and letter, because the T is what Boston calls the MBTA. It spins in like a coin and spins again every few seconds. It is our own mark, not the MBTA logo.
+The T of TOWN is special: a round green roundel with a paper ring and letter, because the T is what Boston calls the MBTA. It spins in like a coin and spins again every few seconds. It is our own mark, not the MBTA logo.
 
 three.js + Vite + TypeScript. It is a package with its own preview page; the phone app shows it at `/` (see "In the phone app" below).
 
@@ -64,7 +64,7 @@ Every number, colour and word is in [`src/config.ts`](src/config.ts): the title,
 - `NAME` is the name as read aloud; `TITLE` sets the letters.
 - The title picks its shape per screen: the words go on one row or stack, whichever gives the biggest tiles. IN THIS TOWN is IN / THIS / TOWN on a phone, one line on a desktop, two lines on a phone held sideways. A single word longer than `maxLettersPerRow` is broken over rows (QUESTLINE becomes QUEST / LINE).
 - The title stays below a notch and the button above a home bar (`env(safe-area-inset-*)`).
-- `hud.roundel` sets which letters become roundels, their colours and their spin.
+- `hud.roundel` sets which letters become roundels (`letters`, limited to `words`), their colours and their spin.
 - Times are seconds from the moment the scene is ready (fonts loaded, first frame drawn).
 
 ### Sound hooks

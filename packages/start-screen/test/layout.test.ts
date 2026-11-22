@@ -122,3 +122,15 @@ test("hit testing finds tiles and the button, and nothing in the gaps", () => {
   const b = l.tiles[1]!;
   assert.equal(hitTest(l, (a.cx + b.cx) / 2, a.cy), null);
 });
+
+import { roundelMask } from "../src/core/layout";
+
+test("roundelMask: only the T of TOWN, not the T of THIS", () => {
+  const R = { letters: ["T"], words: ["TOWN"] };
+  assert.deepEqual(roundelMask("IN THIS TOWN", R), [false, false, false, false, false, false, true, false, false, false]);
+});
+
+test("roundelMask: with no word list, every matching letter is a roundel; other titles get none", () => {
+  assert.deepEqual(roundelMask("TO IT", { letters: ["T"], words: [] }), [true, false, false, true]);
+  assert.deepEqual(roundelMask("QUESTLINE", { letters: ["T"], words: ["TOWN"] }), new Array(9).fill(false));
+});

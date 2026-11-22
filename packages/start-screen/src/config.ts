@@ -345,12 +345,14 @@ export const CONFIG = {
       alpha: 0.62,
     },
     /**
-     * The T, as Boston calls the MBTA: every T in the title is a round green
-     * roundel with a paper ring and letter instead of a square tile. It spins in
-     * like a coin and spins again every so often. Our own mark, not the MBTA logo.
+     * The T, as Boston calls the MBTA: the T of TOWN is a round green roundel
+     * with a paper ring and letter instead of a square tile. It spins in like a
+     * coin and spins again every so often. Our own mark, not the MBTA logo.
      */
     roundel: {
       letters: ["T"],
+      /** Only in these words (THIS keeps a plain T). Empty = in every word. */
+      words: ["TOWN"],
       /** Diameter in tile widths. */
       diameter: 1.12,
       face: "green",

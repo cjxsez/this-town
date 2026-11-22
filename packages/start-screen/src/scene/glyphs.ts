@@ -29,12 +29,16 @@ export async function loadFonts(timeoutMs = 2500): Promise<void> {
 const DARK = "#f00";
 const LIGHT = "#0f0";
 
-export function buildGlyphAtlas(chars: string[], label: string, config: Config): GlyphAtlas {
+export function buildGlyphAtlas(
+  chars: string[],
+  roundelFlags: readonly boolean[],
+  label: string,
+  config: Config,
+): GlyphAtlas {
   const { title, button, roundel, glyphCellPx: cellW } = config.hud;
   const cellH = Math.round(cellW * title.tileAspect);
-  const roundelLetters: readonly string[] = roundel.letters;
-  const unique = [...new Set(chars)].filter((c) => !roundelLetters.includes(c));
-  const roundels = [...new Set(chars)].filter((c) => roundelLetters.includes(c));
+  const unique = [...new Set(chars.filter((_, i) => !roundelFlags[i]))];
+  const roundels = [...new Set(chars.filter((_, i) => roundelFlags[i]))];
   const rows = Math.max(1, Math.ceil(unique.length / COLUMNS));
   const roundelRows = Math.ceil(roundels.length / COLUMNS);
   const width = cellW * COLUMNS;

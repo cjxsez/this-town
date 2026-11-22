@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Material } from "three";
 import { CONFIG } from "../src/config";
-import { computeLayout } from "../src/core/layout";
+import { computeLayout, roundelMask } from "../src/core/layout";
 import { hexToRgb, IdAllocator } from "../src/scene/builder";
 import { buildHud } from "../src/scene/hud";
 
@@ -17,8 +17,9 @@ const atlas = {
     return { u0: i / keys.length, v0: 0.2, u1: (i + 1) / keys.length, v1: 0.8 };
   },
 };
-const isRoundel = (i: number) => chars[i] === "T";
-const hud = buildHud(chars, CONFIG, new IdAllocator(), atlas, materials);
+const roundels = roundelMask("IN THIS TOWN", CONFIG.hud.roundel);
+const isRoundel = (i: number) => roundels[i] === true;
+const hud = buildHud(chars, roundels, CONFIG, new IdAllocator(), atlas, materials);
 const T = CONFIG.hud.title;
 
 /** Where something on (or behind) the title plane appears on screen, and how big, in title-plane units. */
@@ -91,7 +92,7 @@ test("tiles rest tipped back, each with its own small turn, the same every time"
     assert.ok(Math.abs(tile.rest.roll) <= T.restRollDeg * rad + 1e-9);
   }
   assert.ok(new Set(hud.tiles.map((t) => t.rest.roll)).size > 1);
-  const again = buildHud(chars, CONFIG, new IdAllocator(), atlas, materials);
+  const again = buildHud(chars, roundels, CONFIG, new IdAllocator(), atlas, materials);
   assert.deepEqual(again.tiles.map((t) => t.rest), hud.tiles.map((t) => t.rest));
 });
 
@@ -190,10 +191,10 @@ test("a drop shadow looks the same size as its piece and sits a fixed offset awa
   }
 });
 
-test("every T is a round green roundel, a little wider than a tile", () => {
+test("the T of TOWN is a round green roundel; the T of THIS is a plain tile", () => {
   const R = CONFIG.hud.roundel;
   const green = hexToRgb(CONFIG.colors[R.face]);
-  assert.deepEqual(hud.tiles.map((t) => t.roundel), chars.map((c) => c === "T"));
+  assert.deepEqual(hud.tiles.map((t) => t.roundel), chars.map((_, i) => i === 6));
   hud.tiles.forEach((tile, index) => {
     if (!isRoundel(index)) return;
     const g = tile.mesh.geometry;

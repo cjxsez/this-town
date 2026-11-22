@@ -126,6 +126,8 @@ function dropShadow(
 
 export function buildHud(
   chars: string[],
+  /** Which tiles are roundels (see core/layout.ts roundelMask). */
+  roundels: readonly boolean[],
   config: Config,
   ids: IdAllocator,
   atlas: AtlasRects,
@@ -140,11 +142,10 @@ export function buildHud(
   const jitter = (deg: number) => (rand() * 2 - 1) * deg * RAD;
 
   const R = config.hud.roundel;
-  const roundelLetters: readonly string[] = R.letters;
   const tiles: TileView[] = chars.map((char, index) => {
     const rest = { pitch: T.restPitchDeg * RAD, yaw: jitter(T.restYawDeg), roll: jitter(T.restRollDeg) };
     const id = ids.next();
-    if (roundelLetters.includes(char)) {
+    if (roundels[index]) {
       const shape = circle(R.diameter);
       const paint: Paint = (n) => (n.z > 0.5 ? C[R.face] : n.z < -0.5 ? C[R.back] : C[R.side]);
       const geometry = slab(shape, R.diameter, R.diameter, T.depth, paint, id, atlas.rect(`roundel:${char}`), CIRCLE_SEGMENTS);

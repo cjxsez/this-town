@@ -62,6 +62,25 @@ export function splitTitle(title: string, maxPerRow: number): string[] {
     .flatMap((word) => breakWord(word, maxPerRow));
 }
 
+/**
+ * Which letters of the title are roundels, in reading order with spaces dropped
+ * (the same order as the tiles). A letter is one if it is in `letters` and its
+ * word is in `words` (or `words` is empty).
+ */
+export function roundelMask(
+  title: string,
+  r: { readonly letters: readonly string[]; readonly words: readonly string[] },
+): boolean[] {
+  return title
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap((word) => {
+      const inWord = r.words.length === 0 || r.words.includes(word);
+      return Array.from(word).map((c) => inWord && r.letters.includes(c));
+    });
+}
+
 /** A shape for the title: rows, each a list of words. */
 export type RowOption = string[][];
 
