@@ -56,6 +56,12 @@ export const MeRes = z.object({
   email: Email.nullable(), // null for "Just play today" guests
 });
 export type MeRes = z.infer<typeof MeRes>;
+// POST /api/me/email  (rider auth) { email, code } -> MeRes. A guest keeps their profile,
+//   stamps and people by adding an email: send the code with POST /api/auth/email/start, then
+//   this. 400 ErrorRes code "wrong-code" | "expired" | "too-many-attempts" (as verify),
+//   409 code "email-taken" (another account has it) | "has-email" (this rider already has one).
+export const AttachEmailReq = AuthVerifyReq;
+export type AttachEmailReq = z.infer<typeof AttachEmailReq>;
 // PATCH /api/me   -> MeRes. Edit any profile field; the train you're on sees it right away.
 export const UpdateProfileReq = Profile.omit({ is18Plus: true }).partial();
 export type UpdateProfileReq = z.infer<typeof UpdateProfileReq>;
