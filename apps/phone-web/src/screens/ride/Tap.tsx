@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
+import { backend } from "../../api";
 import { errorMessage, type TapResult } from "../../lib/api";
+import { playTapSound } from "../../lib/sound";
 import { useApp } from "../../state/store";
 import { Body, Button, Card, Eyebrow, Hint, Screen, TextLink, Title } from "../../ui";
 
@@ -13,6 +15,16 @@ export function takePendingTap(): string | null {
     const path = sessionStorage.getItem(PENDING_KEY);
     sessionStorage.removeItem(PENDING_KEY);
     return path?.startsWith("/k/") ? path : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The car of a tap waiting on sign-in, without using it up (for "then we'll check you in"). */
+export function peekPendingCar(): string | null {
+  try {
+    const path = sessionStorage.getItem(PENDING_KEY);
+    return path?.startsWith("/k/") ? decodeURIComponent(path.slice(3).split(/[?/]/)[0] ?? "") || null : null;
   } catch {
     return null;
   }
@@ -38,6 +50,9 @@ type View =
  * tap means. On the first tap of a ride that is: pick your stop, then confirm Ride Mode.
  * Confirming is the consent to be matched on this train, so it's its own screen that says
  * exactly what it means, and only "Turn on Ride Mode" sends rideMode: true.
+ *
+ * Not signed in: the tap is parked, the rider signs in with an email code (/signin) or
+ * onboards, and App's usePendingTap brings them back here.
  */
 export default function Tap() {
   const { car = "" } = useParams();
@@ -49,6 +64,9 @@ export default function Tap() {
   const [view, setView] = useState<View>({ step: "working" });
   const partner = useRef(state.ride.match?.firstName);
   partner.current = state.ride.match?.firstName ?? partner.current;
+
+  // Chime as soon as the tag link opens, signed in or not.
+  useEffect(() => playTapSound(), []);
 
   const send = useCallback(
     (destinationStop?: string, rideMode?: true) => {
@@ -95,7 +113,8 @@ export default function Tap() {
     } catch {
       // Storage blocked: they tap again after joining.
     }
-    return <Navigate to="/" replace />;
+    // Not signed in: sign in with an email code (or onboard), then usePendingTap replays this.
+    return <Navigate to={backend ? "/signin" : "/"} replace />;
   }
 
   const toRide = () => navigate("/ride", { replace: true });

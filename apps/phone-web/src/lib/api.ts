@@ -9,7 +9,9 @@
  * - Throwing ApiError (status + parsed body) on non-2xx.
  *
  * Routes used:
- * - POST /api/users          CreateUserReq (= Profile) -> CreateUserRes   (no auth)
+ * - POST /api/auth/email/start   AuthStartReq -> OkRes                  (no auth)
+ * - POST /api/auth/email/verify  AuthVerifyReq -> AuthVerifyRes         (no auth)
+ * - POST /api/users          CreateUserReq (= Profile + signupTicket?) -> CreateUserRes   (no auth)
  * - GET  /api/me             -> MeRes
  * - POST /api/glasses/link   GlassesLinkReq -> GlassesLinkRes
  * - POST /api/taps           TapReq -> TapRes
@@ -27,6 +29,7 @@
  * - Request timeout via AbortController (train Wi-Fi / cell in tunnels is flaky).
  */
 import {
+  AuthVerifyRes,
   CreateUserRes,
   GlassesLinkRes,
   MeRes,
@@ -47,6 +50,7 @@ type Infer<S extends Schema<unknown>> = ReturnType<S["parse"]>;
 
 // protocol/api.ts exports schemas only, so derive the TS types here.
 export type CreateUserResult = Infer<typeof CreateUserRes>;
+export type AuthVerifyResult = Infer<typeof AuthVerifyRes>;
 export type Me = Infer<typeof MeRes>;
 export type TapBody = Infer<typeof TapReq>;
 export type TapResult = Infer<typeof TapRes>;
@@ -119,8 +123,16 @@ export function errorMessage(e: unknown): string {
 }
 
 export const api = {
-  createUser: (profile: Profile) =>
-    request("POST", "/api/users", { body: profile, schema: CreateUserRes, auth: false }),
+  /** Emails a 6-digit sign-in code. 429 (ApiError code "too-soon") if one just went out. */
+  authStart: (email: string) => request("POST", "/api/auth/email/start", { body: { email }, auth: false }),
+
+  /** "signed-in" with a token for an existing account, or "new-account" with a signup ticket. */
+  authVerify: (email: string, code: string) =>
+    request("POST", "/api/auth/email/verify", { body: { email, code }, schema: AuthVerifyRes, auth: false }),
+
+  /** With a signupTicket the rider is an account with that email; without, a guest. */
+  createUser: (profile: Profile, signupTicket?: string) =>
+    request("POST", "/api/users", { body: { ...profile, signupTicket }, schema: CreateUserRes, auth: false }),
 
   getMe: () => request("GET", "/api/me", { schema: MeRes }),
 

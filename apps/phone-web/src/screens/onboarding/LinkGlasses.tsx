@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Body, Button, ButtonRow, Card, Eyebrow, Hint, Screen, TextField, TextLink } from "../../ui";
 import { errorMessage } from "../../lib/api";
 import { useApp } from "../../state/store";
+import { takePendingTap } from "../ride/Tap";
 import { JoinSteps, JoinTitle } from "./parts";
 
 /**
@@ -19,7 +20,8 @@ export default function LinkGlasses() {
   const [linked, setLinked] = useState(false);
   const onboarding = !state.profile;
 
-  const done = () => navigate("/ride", { replace: true });
+  // A kiosk tap made before joining picks up where it left off (pick your stop, Ride Mode).
+  const done = () => navigate(takePendingTap() ?? "/ride", { replace: true });
 
   const ensureProfile = async () => {
     if (!state.profile) await actions.finishOnboarding();

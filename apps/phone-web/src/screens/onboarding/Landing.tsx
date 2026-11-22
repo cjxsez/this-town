@@ -5,9 +5,11 @@ import { useApp } from "../../state/store";
 import { DOORS_ENTER_DELAY_MS, doorsOpening } from "../../state/doors";
 
 /**
- * B1 Landing. Rendered at "/", and where a kiosk tag tap lands a rider with no profile
- * (the tap is replayed after onboarding). Two ways in: a one-time code by email, or
- * "Just play today" with a first name only. Every sign-in goes to B2.
+ * B1 Landing. Rendered at "/", and where a kiosk tag tap lands a rider with no profile in
+ * simulator mode (against the worker a signed-out tap goes to S1 /signin instead; the tap is
+ * replayed after sign-in or onboarding). Email goes to S1 (6-digit code: returning riders
+ * sign straight back in, new ones carry on to B2 as an account). "Just play today" goes to B2
+ * as a guest.
  *
  * Everything enters in order: the island, the name tile by tile, the line, then the
  * buttons. When the start screen's doors are opening onto this page, it all waits
@@ -21,9 +23,7 @@ export default function Landing() {
   /** Entrance `ms` after the page appears (plus the doors' delay), merged with any style of its own. */
   const at = (ms: number, style?: CSSProperties) => ({ className: "q-enter", style: { ...style, "--d": offset + ms } as CSSProperties });
 
-  // TODO(backend): the one-time email code is PR #4 (feat/email-signin). Until it lands,
-  // email continues like "Just play today"; with it, email goes to its /signin code screen.
-  const signIn = (_method: "email" | "guest") => navigate("/join/name");
+  const signIn = (method: "email" | "guest") => navigate(method === "email" ? "/signin" : "/join/name");
 
   const skipSetup = () => {
     actions.useDemoProfile();
@@ -38,7 +38,7 @@ export default function Landing() {
       footer={
         <>
           <ButtonRow>
-            <Button variant="secondary" onClick={() => signIn("email")} {...at(520)}>
+            <Button variant="dark" onClick={() => signIn("email")} {...at(520)}>
               Sign in with email
             </Button>
           </ButtonRow>

@@ -38,7 +38,9 @@ Each web app builds with Vite using its own `base` (`/`, `/g/`, `/kiosk/`). `scr
 
 ## Identity
 
-- **Rider:** onboarding creates a user and returns a bearer token, stored in `localStorage` on the phone.
+- **Rider:** an email address is an account. "Sign in with email" sends a 6-digit code through Cloudflare Email Sending (`POST /api/auth/email/start`, 10 min, single use, 5 wrong tries). Verifying it (`POST /api/auth/email/verify`) either signs in to the existing rider with a new bearer token, or, for a new email, returns a signup ticket; the phone onboards and `POST /api/users` redeems the ticket so the rider is created with that email. "Just play today" skips email and creates a guest (no way back in from another device). Tokens live in `localStorage` on the phone.
+- **Rate limits:** every route that needs no token is capped per client IP, and sign-in emails per address too (`apps/worker/src/lib/rateLimit.ts`). Our own scripts skip the per-IP caps with the kiosk key.
+- **Signed-out kiosk tap:** `/k/:car` parks the tap, sends the rider to `/signin`, and replays the tap once they are signed in (or onboarded).
 - **Glasses:** the glasses have no text input. `glasses-web` calls `POST /api/glasses/code` and shows a 4-digit code. The rider types it on the phone (`POST /api/glasses/link`). The glasses poll `GET /api/glasses/code/:code` until linked, then store the same user token in their own `localStorage`.
 - **Kiosk:** each kiosk has a shared secret in config (`KIOSK_KEY`). Both kiosk-web and the Pi agent connect with it.
 

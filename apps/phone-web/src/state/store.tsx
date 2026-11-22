@@ -194,10 +194,16 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
           rulesAccepted: !!d.rulesAccepted,
           glassesLinked: !!d.glassesLinked,
           createdAt: new Date().toISOString(),
+          email: d.email,
         };
         dispatch({ type: "createProfile", profile, seed: !!sim });
         dispatch({ type: "ride", action: { type: "local/mood", mood: profile.battery } });
         return api.saveProfile(profile);
+      },
+      /** Email sign-in found an existing account: its profile becomes this device's. */
+      signedIn: (profile: Profile) => {
+        dispatch({ type: "createProfile", profile, seed: false });
+        dispatch({ type: "ride", action: { type: "local/mood", mood: profile.battery } });
       },
       /** "Just play today" with everything pre-filled, for demos. */
       useDemoProfile: () => {

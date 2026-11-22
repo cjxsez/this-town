@@ -14,6 +14,8 @@ import AskMeAbout from "./screens/onboarding/AskMeAbout";
 import Battery from "./screens/onboarding/Battery";
 import RideModeRules from "./screens/onboarding/RideModeRules";
 import LinkGlasses from "./screens/onboarding/LinkGlasses";
+import SignInEmail from "./screens/signin/SignInEmail";
+import SignInCode from "./screens/signin/SignInCode";
 import Poster from "./screens/print/Poster";
 import RideRoute from "./screens/ride/RideRoute";
 import Tap, { takePendingTap } from "./screens/ride/Tap";
@@ -88,11 +90,15 @@ const guard = (el: ReactNode) => <RequireProfile>{el}</RequireProfile>;
 function usePendingTap() {
   const { state } = useApp();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const joined = !!state.profile;
+  // Onboarding (B7) and sign-in (S2) hand the tap back themselves when they finish; replaying
+  // it here too would race their own navigate("/ride").
+  const busy = pathname.startsWith("/join/") || pathname.startsWith("/signin");
   useEffect(() => {
-    const path = joined ? takePendingTap() : null;
+    const path = joined && !busy ? takePendingTap() : null;
     if (path) navigate(path, { replace: true });
-  }, [joined, navigate]);
+  }, [joined, busy, navigate]);
 }
 
 function Shell() {
@@ -102,6 +108,8 @@ function Shell() {
     <div className="app-shell">
       {start.gate !== "start" && <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/signin" element={<SignInEmail />} />
+        <Route path="/signin/code" element={<SignInCode />} />
         <Route path="/start" element={<Navigate to="/" replace />} />
         <Route path="/join/name" element={<Name />} />
         <Route path="/join/interests" element={<Interests />} />

@@ -6,7 +6,7 @@ The screens follow the product in `docs/architecture.md` and are listed one by o
 
 | Mode | Code | What it is |
 |---|---|---|
-| `mock` | `src/api/mock/` | In-browser simulator that plays the server. Needs nothing else running. Adds the demo panel and seed data. |
+| `mock` | `src/api/mock/` | In-browser simulator that plays the server. Needs nothing else running. Adds the demo panel and seed data. Email sign-in accepts code `123456` and always treats the email as new. |
 | `http` | `src/api/backend/` | The real worker in `apps/worker`: REST (`src/lib/api.ts`), the rider socket (`src/lib/socket.ts`), bearer token (`src/lib/auth.ts`). |
 
 `VITE_API_MODE` picks one. Unset, `pnpm dev` uses `mock` and a production build uses `http`.
@@ -63,8 +63,9 @@ Every screen follows the start screen:
 |---|---|
 | `/` | The 3D start screen once per visit (`packages/start-screen`); BEGIN closes its train doors and they open onto Landing (B1), or Ride Mode once a profile exists |
 | `/start` | The start screen, every time (for demos). BEGIN goes to `/` |
+| `/signin`, `/signin/code` | Email sign-in S1 (email) and S2 (6-digit code). Known email: back to the parked tap or `/ride`. New email: onboarding, then an account |
 | `/join/name`, `/join/interests`, `/join/about`, `/join/battery`, `/join/ride-mode`, `/join/glasses` | Onboarding B2 to B7 |
-| `/k/:car?n=<nonce>` | Kiosk tag landing: pick your stop, confirm Ride Mode, or a car move / stamp tap |
+| `/k/:car?n=<nonce>` | Kiosk tag landing: pick your stop, confirm Ride Mode, or a car move / stamp tap. Signed out (worker mode): parks the tap and goes to `/signin` first |
 | `/ride` | Ride Mode. One URL; the screen follows the ride phase |
 | `/passport`, `/passport/:id`, `/people`, `/people/:id`, `/people/:id/report`, `/me`, `/me/glasses` | Collection and settings |
 | `/print/tag/:car` | Printable "Tap here" sign for a kiosk, with a QR fallback to `/k/:car` |
@@ -91,7 +92,8 @@ Every screen follows the start screen:
 | Not now | `rider.notNow` (REST fallback) |
 | Turn Ride Mode off | `POST /api/ride/end` |
 | Ghost toggle, mood | `PUT /api/ride/ghost`, `POST /api/ride/mood` |
-| Onboarding done, profile edits | `POST /api/users` once, then `PATCH /api/me` |
+| Sign in with email | `POST /api/auth/email/start`, then `/verify`: a token (known email) or a signup ticket (new email, kept in `localStorage`) |
+| Onboarding done, profile edits | `POST /api/users` once (with the signup ticket if there is one), then `PATCH /api/me` |
 | Link glasses | `POST /api/glasses/link` |
 | Passport, People | `GET /api/passport`, `GET /api/matches/recent` |
 | Report / block | `POST /api/report` with the match id |

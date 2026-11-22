@@ -19,6 +19,7 @@
  */
 import type { z } from "zod";
 import type {
+  AuthVerifyRes,
   CreateUserRes,
   GlassesCodePollRes,
   GlassesCodeRes,
@@ -32,6 +33,7 @@ import type {
 
 export type CreateUserResT = z.infer<typeof CreateUserRes>;
 export type MeResT = z.infer<typeof MeRes>;
+export type AuthVerifyResT = z.infer<typeof AuthVerifyRes>;
 export type GlassesCodeResT = z.infer<typeof GlassesCodeRes>;
 export type GlassesCodePollResT = z.infer<typeof GlassesCodePollRes>;
 export type GlassesLinkResT = z.infer<typeof GlassesLinkRes>;
