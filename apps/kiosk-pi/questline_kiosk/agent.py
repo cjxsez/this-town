@@ -32,7 +32,8 @@ from . import animations as anim
 from .config import Config
 from .leds import LedStrip, make_strip
 from .nfc_tag import NfcTag, NfcTagError, make_tag
-from websockets.asyncio.client import ClientConnection
+from websockets.asyncio.client import ClientConnection, connect
+from websockets.exceptions import ConnectionClosed, InvalidStatus, WebSocketException
 
 from .protocol import (
     CelebrateEvent,
@@ -59,6 +60,12 @@ log = logging.getLogger(__name__)
 
 # A connection that lasted this long resets the backoff.
 STABLE_CONNECTION_S = 30.0
+
+# Worker close codes (packages/protocol WS_CLOSE).
+WS_CLOSE_BAD_AUTH = 4001
+WS_CLOSE_TRIP_CHANGED = 4002
+WS_CLOSE_FORBIDDEN = 4003
+WS_CLOSE_GOING_AWAY = 1001
 
 
 def backoff_delays(min_s: float, max_s: float, factor: float = 2.0, jitter: float = 0.2) -> Iterator[float]:
@@ -88,23 +95,62 @@ class KioskAgent:
     # ---------- connection ----------
 
     async def run(self) -> None:
-        """Connect forever until stop() is called.
+        """Connect forever until stop() is called."""
+        delays = backoff_delays(self.cfg.agent.reconnect_min_s, self.cfg.agent.reconnect_max_s)
+        loop = asyncio.get_running_loop()
 
-        TODO:
-        - from websockets.asyncio.client import connect
-        - delays = backoff_delays(cfg.agent.reconnect_min_s, cfg.agent.reconnect_max_s)
-        - loop until self._stopping is set:
-            try: async with connect(cfg.ws_url, open_timeout=10, ping_interval=20,
-                                    ping_timeout=20, max_size=64 * 1024) as ws:
-                     started = loop.time(); await self._session(ws)
-            except (OSError, websockets.exceptions.WebSocketException, TimeoutError) as e:
-                log.warning(...)  # never log cfg.ws_url, it contains the key
-            if connection lasted >= STABLE_CONNECTION_S: delays = fresh backoff
-            self._show_offline(); await asyncio.wait_for(self._stopping.wait(), next(delays))
-        - a 401/403 on the upgrade (InvalidStatus) means a bad kiosk_key or car:
-          log loudly and back off at reconnect_max_s
-        """
-        raise NotImplementedError
+        while not self._stopping.is_set():
+            started = loop.time()
+            close_code: int | None = None
+            try:
+                async with connect(
+                    self.cfg.ws_url,
+                    open_timeout=10,
+                    ping_interval=20,
+                    ping_timeout=20,
+                    max_size=64 * 1024,
+                ) as ws:
+                    await self._session(ws)
+            except asyncio.CancelledError:
+                raise
+            except InvalidStatus as e:
+                # Never log cfg.ws_url: it contains the kiosk key.
+                status = getattr(getattr(e, "response", None), "status_code", None) or getattr(
+                    e, "status_code", None
+                )
+                log.error(
+                    "kiosk socket rejected (HTTP %s): bad key or car — check config.toml",
+                    status,
+                )
+                close_code = WS_CLOSE_BAD_AUTH if status in (401, 403) else None
+            except ConnectionClosed as e:
+                close_code = e.code
+                log.warning("kiosk socket closed code=%s reason=%r", e.code, e.reason)
+            except (OSError, WebSocketException, TimeoutError, asyncio.TimeoutError) as e:
+                log.warning("kiosk socket error: %s: %s", type(e).__name__, e)
+
+            if self._stopping.is_set():
+                break
+
+            lived = loop.time() - started
+            if lived >= STABLE_CONNECTION_S:
+                delays = backoff_delays(self.cfg.agent.reconnect_min_s, self.cfg.agent.reconnect_max_s)
+
+            self._show_offline()
+
+            if close_code == WS_CLOSE_TRIP_CHANGED:
+                wait_s = 0.0
+                log.info("trip changed; reconnecting immediately")
+            elif close_code in (WS_CLOSE_BAD_AUTH, WS_CLOSE_FORBIDDEN):
+                wait_s = self.cfg.agent.reconnect_max_s
+                log.error("auth/forbidden (code %s); waiting %.0fs before retry", close_code, wait_s)
+            else:
+                wait_s = next(delays)
+
+            try:
+                await asyncio.wait_for(self._stopping.wait(), timeout=wait_s)
+            except asyncio.TimeoutError:
+                pass
 
     async def _session(self, ws: ClientConnection) -> None:
         """One connected session: hello, ping loop, read loop.
