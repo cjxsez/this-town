@@ -16,10 +16,14 @@
  * - Hooks (games/hooks.ts): prepare before a game starts, effect after each change.
  * - `sharedGet` / `sharedPut`: the instance named SHARED_ROOM keeps values that outlive a
  *   room, such as the trivia questions pairs leave for the next pair.
+ * - Idle alarm: after ROOM_STORAGE_TTL_MS with no open/view/act (or lens moves), `alarm`
+ *   runs `storage.deleteAll()` so the DO does not keep state forever. The SHARED_ROOM
+ *   instance never arms this and never deletes (Left for you storage must survive). Codes
+ *   are free to reuse after deletion (`open` sees no room).
  *
- * Methods return JSON strings so the RPC types stay simple. No sockets and no alarms:
- * timers are deadlines in the game state, checked on each poll. Presence is kept in memory
- * only, so after an eviction both seats count as away until their next poll.
+ * Methods return JSON strings so the RPC types stay simple. Game timers are deadlines in
+ * the game state, checked on each poll; the storage TTL is the only DO alarm. Presence is
+ * kept in memory only, so after an eviction both seats count as away until their next poll.
  *
  * Nothing here is authenticated. A seat is whatever the client says it is; the code is the
  * only key. Fine for a demo between two people at a table, not for anything private.
@@ -28,6 +32,9 @@ import { DurableObject } from "cloudflare:workers";
 import { GAMES, type GameCtx, type RoomView, type Seat, type SeatRef } from "@questline/protocol/games";
 import type { Env } from "../env";
 import { HOOKS, type SharedStore } from "../games/hooks";
+import { ROOM_STORAGE_TTL_MS, roomStorageExpired } from "./gameRoomExpiry";
+
+export { ROOM_STORAGE_TTL_MS, roomStorageExpired } from "./gameRoomExpiry";
 
 export const SHARED_ROOM = "shared";
 /** A seat that has not polled for this long is shown as away. */
@@ -96,6 +103,30 @@ export class GameRoom extends DurableObject<Env> {
     if (!this.room) return;
     this.room.touchedAt = Date.now();
     await this.ctx.storage.put(ROOM_KEY, this.room);
+    await this.armStorageAlarm(this.room.touchedAt);
+  }
+
+  /** Re-arm the idle wipe; never called from sharedGet/sharedPut (SHARED_ROOM must keep data). */
+  private async armStorageAlarm(from: number): Promise<void> {
+    await this.ctx.storage.setAlarm(from + ROOM_STORAGE_TTL_MS);
+  }
+
+  /**
+   * Wipe this room's storage once nobody has touched it for ROOM_STORAGE_TTL_MS.
+   * No-op when there is no game room (the SHARED_ROOM instance only holds `shared:*` keys).
+   */
+  async alarm(): Promise<void> {
+    const now = Date.now();
+    const room = this.room ?? (await this.ctx.storage.get<Room>(ROOM_KEY)) ?? null;
+    if (!room) return;
+    if (!roomStorageExpired(room.touchedAt, now)) {
+      this.room = room;
+      await this.armStorageAlarm(room.touchedAt);
+      return;
+    }
+    this.room = null;
+    this.seen = { a: 0, b: 0 };
+    await this.ctx.storage.deleteAll();
   }
 
   /** Open this room. False when the code is in use by a room that is still active. */
@@ -226,6 +257,8 @@ export class GameRoom extends DurableObject<Env> {
       const mod = GAMES[this.room.index]!;
       await this.commit(this.room.game, mod.tick(this.room.game, this.gameCtx()));
     }
+    // Polls count as activity even when the game state did not change (commit may no-op).
+    await this.save();
     return this.render(seat);
   }
 
@@ -243,6 +276,7 @@ export class GameRoom extends DurableObject<Env> {
         await this.commit(room.game, mod.reduce(ticked, seat, action, this.gameCtx()));
       }
     }
+    await this.save();
     return this.render(seat);
   }
 
