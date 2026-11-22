@@ -12,12 +12,14 @@
  *   everything else   static assets via env.ASSETS with per-prefix SPA fallback:
  *                       /g/*      -> /g/      (glasses-web)
  *                       /kiosk/*  -> /kiosk/  (kiosk-web)
- *                       else      -> /        (phone-web, incl. the NFC landing /k/:car)
+ *                       else      -> /        (phone-web, incl. the NFC landing /k/:car
+ *                                              and the phone side of the games at /m)
  *                     Requests that look like files (have an extension) keep their 404.
  *                     Shells are fetched as "/g/" not "/g/index.html" because the assets
  *                     layer's html_handling redirects index.html to the directory URL.
  *
- * Also exports the TrainRoom Durable Object class (wrangler.toml binding TRAIN_ROOM).
+ * Also exports the Durable Object classes: TrainRoom (binding TRAIN_ROOM) and GameRoom
+ * (binding GAME_ROOM, the two-player game rooms behind /api/game, see routes/game.ts).
  *
  * Protocol types: CarId (kiosk path param). Socket payloads are handled in TrainRoom.
  *
@@ -34,6 +36,7 @@ import { activeCheckin } from "./db/queries";
 import { resolveCarTrip } from "./mbta/vehicles";
 import { forwardToRoom, INTERNAL_HEADERS, roomFor } from "./rooms/stub";
 import { demoRoutes } from "./routes/demo";
+import { gameRoutes } from "./routes/game";
 import { glassesRoutes } from "./routes/glasses";
 import { passportRoutes } from "./routes/passport";
 import { reportRoutes } from "./routes/report";
@@ -42,6 +45,7 @@ import { tapsRoutes } from "./routes/taps";
 import { usersRoutes } from "./routes/users";
 
 export { TrainRoom } from "./rooms/TrainRoom";
+export { GameRoom } from "./rooms/GameRoom";
 
 const KioskRole = z.enum(["screen", "pi"]);
 
@@ -57,6 +61,7 @@ app.route("/api", rideRoutes);
 app.route("/api", passportRoutes);
 app.route("/api", reportRoutes);
 app.route("/api", demoRoutes);
+app.route("/api", gameRoutes);
 app.all("/api/*", (c) => c.json({ error: "not found" }, 404));
 
 // ---------- WebSockets ----------

@@ -1,0 +1,14 @@
+/* Styles shared by the /m game screens. Each game adds its own file next to its screen. */
+
+/* The dark "TRAIN 3:00" pill, as a game clock. */
+.m-clock {
+  display: inline-block;
+  min-width: 96px;
+  padding: 6px 12px 4px;
+  border-radius: var(--r2);
+  background: var(--ink);
+  color: var(--paper);
+  font: 400 28px/1 var(--font-display);
+  text-align: center;
+  rotate: 1deg;
+}

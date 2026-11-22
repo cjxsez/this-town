@@ -2,7 +2,7 @@
  * env.ts: the Worker's bindings and config.
  *
  * Responsible for:
- * - `Env`: every binding declared in wrangler.toml (ASSETS, DB, TRAIN_ROOM), every [vars]
+ * - `Env`: every binding declared in wrangler.toml (ASSETS, DB, TRAIN_ROOM, GAME_ROOM), every [vars]
  *   entry, and the secrets from .dev.vars / `wrangler secret put`.
  * - `AppEnv`: the Hono generic (Bindings + per-request Variables such as the authed userId).
  * - `readConfig()`: parses the string [vars] into typed numbers/booleans once per use.
@@ -14,6 +14,7 @@
  * - Consider `wrangler types` to generate this instead once the config settles.
  */
 import type { CarId } from "@questline/protocol";
+import type { GameRoom } from "./rooms/GameRoom";
 import type { TrainRoom } from "./rooms/TrainRoom";
 
 export interface Env {
@@ -21,6 +22,7 @@ export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   TRAIN_ROOM: DurableObjectNamespace<TrainRoom>;
+  GAME_ROOM: DurableObjectNamespace<GameRoom>;
 
   // ---- [vars] (always strings) ----
   PUBLIC_ORIGIN: string;

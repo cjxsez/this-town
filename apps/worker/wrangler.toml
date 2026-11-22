@@ -1,5 +1,5 @@
 # Questline worker: API + static assets for phone-web, glasses-web, kiosk-web,
-# D1, and one TrainRoom Durable Object per MBTA trip. See README.md.
+# D1, one TrainRoom Durable Object per MBTA trip and one GameRoom per game code. See README.md.
 
 name = "questline"
 main = "src/index.ts"
@@ -39,9 +39,19 @@ migrations_dir = "migrations"
 name = "TRAIN_ROOM"
 class_name = "TrainRoom"
 
+# One GameRoom per 4-digit game code (glasses at /g/, phone at /m), plus one instance
+# that keeps what pairs leave for the next pair. See src/rooms/GameRoom.ts.
+[[durable_objects.bindings]]
+name = "GAME_ROOM"
+class_name = "GameRoom"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["TrainRoom"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["GameRoom"]
 
 # Non-secret config. Values are strings; src/env.ts readConfig() parses them.
 # Override any of these locally in .dev.vars (e.g. PUBLIC_ORIGIN).

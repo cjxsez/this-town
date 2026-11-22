@@ -265,3 +265,16 @@
 .guess-answer.is-none {
   color: var(--orange);
 }
+
+/* The room code on the pairing screen (screens/Pair.tsx). */
+.pair-code {
+  margin: 10px 0 6px;
+  font: 400 128px/1 var(--font-display);
+  letter-spacing: 0.08em;
+  color: var(--yellow);
+}
+
+.pair-url {
+  color: var(--yellow);
+  white-space: nowrap;
+}
