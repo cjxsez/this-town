@@ -92,6 +92,11 @@ export interface RoomRider {
   profile: RiderProfileLite;
   /** Loaded from D1 at check-in: user ids met in the last 7 days. */
   metRecently: string[];
+  /**
+   * Lifetime times_met vs other riders currently in this room (optional so older
+   * persisted rooms still load). Filled at check-in; bumped when a pair is created.
+   */
+  metCounts?: Record<string, number>;
   /** Loaded from D1 at check-in: blocks in either direction. */
   blocked: string[];
   /** Loaded from D1 at check-in, appended on mission start: last 10 template ids. */

@@ -576,6 +576,31 @@ export async function metSince(db: D1Database, userId: string, sinceMs: number):
   return results.map((r) => r.other);
 }
 
+/**
+ * Lifetime times_met for this rider vs a set of other user ids (e.g. everyone else
+ * currently in the TrainRoom). Missing partners are omitted (treat as 0).
+ */
+export async function metCountsFor(
+  db: D1Database,
+  userId: string,
+  others: readonly string[],
+): Promise<Record<string, number>> {
+  if (others.length === 0) return {};
+  const want = new Set(others);
+  const { results } = await db
+    .prepare(
+      `SELECT CASE WHEN user_a = ?1 THEN user_b ELSE user_a END AS other, times_met
+       FROM met_pairs WHERE user_a = ?1 OR user_b = ?1`,
+    )
+    .bind(userId)
+    .all<{ other: string; times_met: number }>();
+  const out: Record<string, number> = {};
+  for (const r of results) {
+    if (want.has(r.other)) out[r.other] = r.times_met;
+  }
+  return out;
+}
+
 // ---------- blocks + reports ----------
 
 /** Users this rider blocked or was blocked by. */
