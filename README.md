@@ -21,6 +21,12 @@ Games-only is the default and the demo setting (`GAMES_ONLY`, D26). With `GAMES_
 
 Every diagram below is drawn by [`scripts/diagrams.mjs`](scripts/diagrams.mjs): pencil strokes plus the Gaegu handwriting font the app uses. Run `pnpm diagrams` to redraw them all after a change (`pnpm diagrams ride-flow` redraws one). Each has an SVG (font embedded) next to its PNG in [`docs/diagrams/`](docs/diagrams). [`docs/architecture.md`](docs/architecture.md) stays the source of truth for details.
 
+### At a glance
+
+What a rider does, step by step, and which device does each step.
+
+![The rider's journey: tap in, matched, meet, play, stamp, Passport](docs/diagrams/journey.png)
+
 ### 1. The whole system
 
 One Cloudflare Worker serves the three web apps and the API. A `TrainRoom` Durable Object per trip holds live state (riders, pairs, matching), and a `GameRoom` per pair code runs the games. D1 keeps durable records; MBTA, Claude, Email Sending and R2 sit at the edges.

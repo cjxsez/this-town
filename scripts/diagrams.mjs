@@ -533,8 +533,31 @@ function shipping() {
   return c;
 }
 
+// ================================================================= 0. the rider's journey
+function journey() {
+  const c = canvas("journey", 1900, 560, "In This Town, at a glance", "What a rider does, and which device does it. About 3 minutes from the tap to the stamp.");
+  const steps = [
+    ["Tap in", ["tap the NFC tag", "on your car's kiosk,", "pick your stop,", "turn on Ride Mode"], "phone"],
+    ["Matched", ["closest rider on", "this train who shares", "an interest; no", "accept step"], "phone + glasses"],
+    ["Meet", ["\"kiosk 1 car forward\"", "the kiosk glows your", "pair color, shows", "both first names"], "kiosk + glasses"],
+    ["Play", ["Tall tale", "First impressions", "Left for you", "~2.5 minutes"], "phone or glasses"],
+    ["Stamp", ["both stamped at the", "station; the kiosk", "celebrates; 90 s", "rest, then again"], "kiosk + phone"],
+    ["Passport", ["a real T map of", "all 124 stations", "lights up as you", "collect them"], "phone"],
+  ];
+  const w = 255, gap = 50, x0 = 50, y0 = 190;
+  steps.forEach(([t, body, dev], i) => {
+    const x = x0 + i * (w + gap);
+    c.box(x, y0, w, 190, { title: t, body, size: 18, titleSize: 27, hatch: i === 2, sw: 2.6, pad: 26 });
+    c.badge(x + w - 30, y0 + 34, i + 1, 17);
+    c.text(x + w / 2, y0 + 230, dev, { size: 18, anchor: "middle", opacity: 0.75 });
+    if (i < steps.length - 1) c.arrow([[x + w + 5, y0 + 95], [x + w + gap - 5, y0 + 95]], { sw: 2.6 });
+  });
+  c.note(50, 460, 1800, ["No camera, no mic, no GPS, no BLE: location only comes from NFC taps. Ride Mode on is the consent; \"Not now\", block and report are one tap. The kiosk screen is public, so it shows first names and colors only."]);
+  return c;
+}
+
 // ---------------------------------------------------------------- write + render
-const diagrams = { system, routing, "ride-flow": rideFlow, matching, "data-model": dataModel, "kiosk-hardware": hardware, identity, games, "ci-cd": shipping };
+const diagrams = { journey, system, routing, "ride-flow": rideFlow, matching, "data-model": dataModel, "kiosk-hardware": hardware, identity, games, "ci-cd": shipping };
 mkdirSync(outDir, { recursive: true });
 const only = process.argv[2];
 for (const [name, make] of Object.entries(diagrams)) {
