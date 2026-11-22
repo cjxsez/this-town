@@ -6,7 +6,12 @@ import { CarId, Line, MatchInfo, PairColor, Profile, RideSnapshot, RideState, So
 
 export const OkRes = z.object({ ok: z.literal(true) });
 export type OkRes = z.infer<typeof OkRes>;
-export const ErrorRes = z.object({ error: z.string(), code: z.string().optional() });
+/** `code` is a stable machine reason ("too-soon", "rate-limited"); `issues` lists bad fields on a 400. */
+export const ErrorRes = z.object({
+  error: z.string(),
+  code: z.string().optional(),
+  issues: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+});
 export type ErrorRes = z.infer<typeof ErrorRes>;
 
 // ---- Email sign-in (one-time code) ----
