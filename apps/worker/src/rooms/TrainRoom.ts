@@ -941,7 +941,7 @@ export class TrainRoom extends DurableObject<Env> {
     this.sendToRider(userId, { type: "ride.state", state: offRideState(r.ghost), serverNow: now });
     for (const ws of this.ctx.getWebSockets(riderTag(userId))) {
       try {
-        ws.close(4000, "checked-out");
+        ws.close(WS_CLOSE.checkedOut, "checked-out");
       } catch {
         // already closed
       }

@@ -20,6 +20,7 @@ export const WS_CLOSE = {
   badAuth: 4001,     // missing or invalid rider token / kiosk key
   tripChanged: 4002, // kiosk's car started a new trip: reconnect
   forbidden: 4003,   // e.g. kiosk key valid but car unknown
+  checkedOut: 4000,  // the room checked this rider out (their stop, Ride Mode off): don't reconnect
   noRide: 4009,      // rider has no active check-in: poll GET /api/ride/state instead
 } as const;
 
