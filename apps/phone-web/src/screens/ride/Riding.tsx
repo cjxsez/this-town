@@ -1,8 +1,9 @@
-import { LINES, badgeName } from "../../../shared/catalog";
+import { useState } from "react";
+import { LINES } from "../../../shared/catalog";
 import type { SocialBattery } from "../../../shared/types";
 import { sim } from "../../api";
 import { useApp, useRide } from "../../state/store";
-import { ArtSlot, Card, Eyebrow, Hint, Screen, Segmented, TextLink, Title } from "../../ui";
+import { ArtSlot, Body, Button, ButtonRow, Card, Eyebrow, Hint, Screen, Segmented, TextLink, Title } from "../../ui";
 import {
   PlatformHouse,
   PlatformPuff,
@@ -10,8 +11,6 @@ import {
   PlatformStage,
   PlatformTopBar,
   PlatformTree,
-  nextStops,
-  stationFor,
 } from "./parts/PlatformKit";
 
 const MOODS: { value: SocialBattery; label: string }[] = [
@@ -20,11 +19,16 @@ const MOODS: { value: SocialBattery; label: string }[] = [
   { value: "talk", label: "Talk" },
 ];
 
-/** C2: checked in and in the pool. No "who's here" counter, ever. */
-export default function Waiting() {
-  const { ride, act } = useRide();
+/**
+ * C2: Ride Mode on, in the pool. Turning it off asks first, because it ends matching for
+ * the rest of the ride.
+ */
+export default function Riding() {
+  const { ride, act, profile } = useRide();
   const { state, actions } = useApp();
   const ghost = state.settings.ghost;
+  const [confirmOff, setConfirmOff] = useState(false);
+  const dest = ride.checkIn?.destinationName ?? "your stop";
 
   const turnOff = () => {
     act.checkOut();
@@ -37,23 +41,41 @@ export default function Waiting() {
       <WaitingPlatformScene />
 
       <Card style={{ gap: 8, flex: "none" }}>
-        <PlatformQuestsToggle on onToggle={turnOff} label="Quests" />
-        {ghost ? (
+        <PlatformQuestsToggle on onToggle={() => setConfirmOff(true)} label="Ride Mode" />
+        {confirmOff ? (
+          <>
+            <Title size="sm">Turn off Ride Mode?</Title>
+            <Body style={{ margin: 0 }}>You won't be matched for the rest of this ride. You can turn it back on by tapping the kiosk again.</Body>
+            <ButtonRow>
+              <Button variant="secondary" onClick={() => setConfirmOff(false)}>
+                Keep it on
+              </Button>
+              <Button variant="danger" onClick={turnOff}>
+                Turn it off
+              </Button>
+            </ButtonRow>
+          </>
+        ) : ghost ? (
           <>
             <Title size="sm">Ghost mode</Title>
-            <Hint style={{ fontSize: 19, marginTop: -6 }}>you're invisible to matching</Hint>
+            <Hint style={{ fontSize: 19, marginTop: -6 }}>Ride Mode is on, but nobody gets matched with you.</Hint>
           </>
         ) : (
           <>
-            <Title size="sm">Looking for a good match</Title>
-            <Hint style={{ fontSize: 19, marginTop: -6 }}>Pocket it — we'll buzz.</Hint>
+            <Title size="sm">Looking for your match</Title>
+            <Hint style={{ fontSize: 19, marginTop: -6 }}>
+              {profile.glassesLinked ? "Pocket it. Your glasses will show who and where." : "Keep this open. We'll show who and where."}
+            </Hint>
+            <Hint style={{ marginTop: -6 }}>
+              {ride.ridersOnTrain > 1 ? `${ride.ridersOnTrain - 1} other riders on this train. ` : ""}Ride Mode turns off at {dest}.
+            </Hint>
           </>
         )}
         <Eyebrow>Tonight's mood</Eyebrow>
         <Segmented label="Tonight's mood" value={ride.mood} onChange={act.setMood} options={MOODS} />
         <div style={{ display: "flex", justifyContent: sim && !ghost ? "space-between" : "flex-end", gap: 10 }}>
           {sim && !ghost && (
-            <TextLink small onClick={() => sim?.demo.forceOffer()}>
+            <TextLink small onClick={() => sim?.demo.matchNow()}>
               demo: simulate a match →
             </TextLink>
           )}
@@ -72,13 +94,13 @@ export default function Waiting() {
   );
 }
 
-/** The illustrated platform: line strip, next stops, your rider, the train coming up. */
+/** The illustrated ride: line strip, next stop and your stop, your rider in the car. */
 function WaitingPlatformScene() {
-  const { ride, profile } = useRide();
+  const { ride } = useRide();
   const c = ride.checkIn;
-  const station = stationFor(c?.stationId);
   const line = LINES[c?.line ?? "green"];
-  const [near, far] = nextStops(c);
+  const near = c ? { name: c.nextStationName } : undefined;
+  const far = c && c.destinationId !== c.nextStationId ? { name: `${c.destinationName} ★` } : undefined;
   const stop = (name: string | undefined, bottom: number) =>
     name && (
       <>
@@ -119,7 +141,6 @@ function WaitingPlatformScene() {
           filter: "var(--wob)",
         }}
       />
-      <PlatformHouse w={46} h={48} roof="#C9A9A6" style={{ left: 268, bottom: 230 }} />
       <PlatformTree size={32} float delay={600} style={{ left: 328, bottom: 230 }} />
       <PlatformTree size={30} float style={{ left: 26, bottom: 168 }} />
       <PlatformHouse w={42} h={44} roof="#D9604A" style={{ left: 18, bottom: 104 }} />
@@ -169,13 +190,13 @@ function WaitingPlatformScene() {
           filter: "var(--wob)",
         }}
       >
-        {station.name}
+        CAR {c?.car ?? ""}
       </div>
       {/* you're here */}
       <div className="anim-pulse" style={{ position: "absolute", left: 82, bottom: 60, width: 36, height: 36, borderRadius: "50%", border: "3px solid var(--ink)" }} />
       <div style={{ position: "absolute", left: 82, bottom: 60, width: 36, height: 36, borderRadius: "50%", background: "var(--yellow)", border: "3px solid var(--ink)" }} />
       <div style={{ position: "absolute", left: 132, bottom: 10, font: "700 20px var(--font-hand)", whiteSpace: "nowrap" }}>
-        You're here{profile.badge ? ` · ${badgeName(profile.badge)}` : ""}
+        You're here · car {c?.car ?? ""}
       </div>
       {/* the train, coming up the line */}
       <div

@@ -4,9 +4,9 @@ import { sim } from "../api";
 import { useApp } from "../state/store";
 
 /**
- * Floating controls for judging and design review, mock mode only. Stands in
- * for the things a real platform does on its own: a match appearing, the
- * other rider deciding, a delay, a dead spot, the train pulling in.
+ * Floating controls for judging and design review, mock mode only. Stands in for what the
+ * train and the other rider do on their own: a match, them leaving or tapping the tag, a
+ * delay, a dead spot, the next stop.
  */
 export function DemoPanel() {
   const { state, actions } = useApp();
@@ -50,18 +50,15 @@ export function DemoPanel() {
       {open && (
         <div style={{ width: 176, padding: 8, borderRadius: 10, background: "rgba(244,245,236,.96)", border: "2px solid var(--ink)", boxShadow: "3px 4px 0 var(--shadow)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
           <div className="q-eyebrow" style={{ gridColumn: "1 / -1" }}>Demo · {phase}</div>
-          {btn("Match now", () => d.forceOffer())}
-          {btn("Rare match", () => d.forceOffer(true))}
-          {btn("They say yes", () => d.partnerYes())}
-          {btn("Fall through", () => d.fallThrough())}
-          {btn("They're at spot", () => d.partnerAtSpot())}
-          {btn("Glasses see badge", () => d.verifyBadge())}
-          {btn("Train in 30 s", () => d.trainIn(31))}
-          {btn("Train arrives", () => d.departTrain())}
+          {btn("Match now", () => d.matchNow())}
+          {btn("They left", () => d.partnerLeaves())}
+          {btn("They tap tag", () => d.partnerTaps())}
+          {btn("Time's up", () => d.timeUp())}
+          {btn("Next stop", () => d.nextStop())}
           {btn(d.delayed ? "Delay: on" : "Delay: off", () => d.setDelayed(!d.delayed), d.delayed)}
           {btn(d.online ? "Signal: on" : "Signal: off", () => d.setOnline(!d.online), !d.online)}
           {btn(d.autoplay ? "Autoplay: on" : "Autoplay: off", () => (d.autoplay = !d.autoplay), d.autoplay)}
-          {btn(state.profile?.hasGlasses ? "Glasses: on" : "Glasses: off", () => actions.updateProfile({ hasGlasses: !state.profile?.hasGlasses }), state.profile?.hasGlasses)}
+          {btn(state.profile?.glassesLinked ? "Glasses: on" : "Glasses: off", () => actions.updateProfile({ glassesLinked: !state.profile?.glassesLinked }), state.profile?.glassesLinked)}
           {btn("Hide panel", () => actions.setSettings({ demoPanel: false }))}
           {btn("Reset all", () => void actions.deleteMyData())}
         </div>

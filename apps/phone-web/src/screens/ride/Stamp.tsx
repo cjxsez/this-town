@@ -1,7 +1,7 @@
-import { Button, ButtonRow, Card, Screen, TextLink } from "../../ui";
+import { Button, Screen } from "../../ui";
 import { useRide } from "../../state/store";
 import { stationById } from "../../../shared/catalog";
-import { BumpQuestBar } from "./parts/BumpQuestBar";
+import { MeetTopBar } from "./parts/MeetTopBar";
 import { StampTicketLarge, stampDate, stampLineLabel } from "./parts/StampTicket";
 
 /** The stamp landing on the ticket: ink ring first, then the stamp itself. */
@@ -49,61 +49,21 @@ function StampMark({ rare }: { rare: boolean }) {
   );
 }
 
+/** G2: both tapped the kiosk tag. The stamp lands; the kiosk celebrates in the pair color. */
 export default function Stamp() {
-  const { ride, act, profile } = useRide();
+  const { ride, act } = useRide();
   const m = ride.match;
-  const name = m?.firstName ?? "them";
   const stamp = ride.stamp;
-  const stationId = stamp?.stationId ?? ride.checkIn?.stationId ?? "";
-  const station = stationById(stationId)?.name ?? "Station";
+  const name = m?.firstName ?? stamp?.withFirstName ?? "them";
+  const stationId = stamp?.stationId ?? ride.checkIn?.nextStationId ?? "";
+  const station = stamp?.stationName ?? stationById(stationId)?.name ?? "Station";
   const line = stamp?.line ?? ride.checkIn?.line ?? "green";
   const branch = stamp?.branch ?? ride.checkIn?.branch;
   const rare = !!stamp?.rare;
 
-  // The glasses take the photo, so the question only exists if one of you wears them.
-  const canPhoto = profile.hasGlasses || !!m?.hasGlasses;
-  const waiting = ride.photo?.you === true && ride.photo.partner === undefined;
-
   return (
-    <Screen
-      label="G2"
-      blobs="a"
-      footer={
-        canPhoto ? (
-          <Card style={{ borderRadius: "var(--r2)" }}>
-            <h2 className="q-title--md" style={{ fontSize: 31 }}>
-              Snap a memory together?
-            </h2>
-            <p className="q-hint" style={{ fontSize: 18 }}>
-              Only if you both say yes. Deleted in 24 h unless you both keep it.
-            </p>
-            {waiting ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                <p aria-live="polite" style={{ font: "700 22px var(--font-hand)", minHeight: 44, display: "flex", alignItems: "center" }}>
-                  Waiting on {name}…
-                </p>
-                <TextLink small onClick={() => act.photoVote(false)}>
-                  Changed my mind
-                </TextLink>
-              </div>
-            ) : (
-              <ButtonRow>
-                <Button variant="secondary" tilt={-0.4} onClick={() => act.photoVote(false)}>
-                  No thanks
-                </Button>
-                <Button tilt={0.8} onClick={() => act.photoVote(true)}>
-                  Yes
-                </Button>
-              </ButtonRow>
-            )}
-          </Card>
-        ) : (
-          // No glasses on either side: no photo, straight on to the recap.
-          <Button onClick={() => act.photoVote(false)}>Continue</Button>
-        )
-      }
-    >
-      <BumpQuestBar />
+    <Screen label="G2" blobs="a" footer={<Button onClick={act.toRecap}>Continue</Button>}>
+      <MeetTopBar partner={m} />
 
       <div style={{ position: "relative", height: 216, flex: "none", margin: "0 calc(-1 * var(--gutter))", zIndex: -1 }}>
         <div
@@ -126,12 +86,11 @@ export default function Stamp() {
             <div className="anim-ticketIn">
               <StampTicketLarge
                 station={station}
-                lineLabel={stampLineLabel(line, branch, ride.checkIn?.direction)}
+                lineLabel={stampLineLabel(line, branch, ride.checkIn?.car)}
                 line={line}
                 date={stampDate(stamp?.earnedAt ?? new Date().toISOString())}
                 withName={name}
                 rare={rare}
-                number={profile.badge?.number}
               />
             </div>
             <StampMark rare={rare} />

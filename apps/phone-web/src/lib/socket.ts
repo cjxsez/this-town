@@ -10,10 +10,10 @@
  * - Validating incoming messages against the ServerToRider schema and handing typed events
  *   to the caller (api/backend/ride.ts). Unknown/invalid messages are dropped (logged in dev).
  *
- * Events received (ServerToRider): ride.state, match.found, match.cleared, mission.start,
- * mission.end, stamp.awarded.
- * Events sent (RiderToServer): rider.hello, ping, and rider.notNow via send() if the phone
- * ever offers "Not now" (glasses send it normally). rider.arrived is a glasses message.
+ * Events received (ServerToRider): ride.snapshot, ride.state, match.found, match.cleared,
+ * mission.start, mission.end, stamp.progress, stamp.awarded, pong.
+ * Events sent (RiderToServer): rider.hello, ping, rider.notNow (Not now on the meet screen),
+ * rider.arrived ("I'm at the kiosk").
  *
  * TODO:
  * - Agree on a close code for "bad token" with the worker and stop reconnecting on it.

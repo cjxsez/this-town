@@ -1,38 +1,36 @@
-// Translation between the worker's contract (@questline/protocol) and the shapes the
-// screens were designed around (shared/types.ts). Everything lossy or invented lives here
-// so it is easy to find when the two vocabularies are unified.
+// Translation between the worker's contract (@questline/protocol) and the shapes the screens
+// use (shared/types.ts). The vocabularies are the same now (decision D14), so this is mostly
+// renaming: interests, battery and rider kind pass straight through.
 import { InterestTag } from "@questline/protocol";
 import type {
   Line,
   MatchInfo,
   Mission as WireMission,
-  PairColorName,
   Profile as WireProfile,
+  RecentMatchesRes,
   RideState as WireRide,
   Stamp as WireStamp,
 } from "@questline/protocol";
-import { badgeFor, STATIONS } from "../../../shared/catalog";
+import { STATIONS, stationById } from "../../../shared/catalog";
 import type {
-  BadgeColor,
   CheckIn,
   GreenBranch,
   LineColor,
   Match,
-  MeetSpot,
+  Meet,
   Mission,
   MissionGroup,
+  Person,
   Profile,
   ReportReason,
   Stamp,
 } from "../../../shared/types";
-import type { RideState } from "../../state/ride";
 
 /** The phone's interest ids are the protocol's InterestTag values; drop anything unknown. */
 export function toInterestTags(interests: string[]): InterestTag[] {
   return interests.filter((id): id is InterestTag => InterestTag.safeParse(id).success).slice(0, 8);
 }
 
-/** Spots, handles, badge and the AI opt-in have no home in the worker's Profile yet. */
 export function toWireProfile(p: Profile): WireProfile {
   return {
     firstName: p.firstName.slice(0, 24),
@@ -53,72 +51,42 @@ export function fromLine(line: Line): { line: LineColor; branch?: GreenBranch } 
 const norm = (s: string) =>
   s.toLowerCase().replace(/\bstreet\b/g, "st").replace(/\b(center|centre)\b/g, "ctr").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-/**
- * The worker names stations ("Downtown Crossing"); the screens key them by catalog id.
- * A station missing from the catalog gets a slug id, and screens fall back to their default art.
- */
+/** Fallback for a stop the worker sent without an id. */
 export function stationIdFor(name: string | null | undefined): string {
-  if (!name) return STATIONS[0].id;
+  if (!name) return STATIONS[0]!.id;
   const n = norm(name);
   return STATIONS.find((s) => norm(s.name) === n || s.id === n)?.id ?? n;
 }
 
-/** The train's next stop plays the part of the platform the rider checked in at. */
+const stationName = (id: string, fallback?: string | null) => stationById(id)?.name ?? fallback ?? id;
+
 export function toCheckIn(state: WireRide): CheckIn {
   const { line, branch } = state.line ? fromLine(state.line) : { line: "green" as LineColor, branch: undefined };
+  const nextId = state.nextStopId ?? stationIdFor(state.nextStop);
+  const destId = state.destinationStopId ?? stationIdFor(state.destinationStop);
   return {
-    stationId: state.nextStopId ?? stationIdFor(state.nextStop),
+    car: state.car ?? "",
     line,
     branch,
-    direction: line === "green" ? "eastbound" : "inbound", // the worker does not send a direction
-    via: "beacon",
+    nextStationId: nextId,
+    nextStationName: state.nextStop ?? stationName(nextId),
+    destinationId: destId,
+    destinationName: state.destinationStop ?? stationName(destId),
   };
 }
 
-/** Pair colors the badge palette lacks borrow the nearest one. */
-const BADGE_COLOR: Record<PairColorName, BadgeColor> = {
-  orange: "orange",
-  green: "teal",
-  blue: "blue",
-  pink: "red",
-  yellow: "yellow",
-  purple: "purple",
-};
-
-const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-
-/**
- * The worker has pair colors and kiosks, not animal badges (docs/decisions.md D7). The color
- * is real; the animal is only a stable avatar picked from the match id.
- */
 export function toMatch(m: MatchInfo): Match {
   return {
     id: m.matchId,
     firstName: m.partner.firstName,
-    badge: { ...badgeFor((hash(m.matchId) % 48) + 1), color: BADGE_COLOR[m.partner.color] },
-    pronoun: "they",
-    hasGlasses: false,
+    color: m.partner.color,
+    shared: m.partner.sharedTags,
+    why: m.why,
   };
 }
 
-export function toMeetSpot(m: MatchInfo): MeetSpot {
-  const cars = Math.abs(m.carDelta);
-  const where =
-    cars === 0 ? "in your car" : `${cars} car${cars === 1 ? "" : "s"} toward the ${m.carDelta > 0 ? "front" : "back"}`;
-  return {
-    id: `kiosk-${m.meetAtCar}`,
-    name: `The kiosk in car ${m.meetAtCar}`,
-    detail: m.youWalk ? `${where}, glowing ${m.partner.color}` : `stay put, ${m.partner.firstName} is coming to you`,
-  };
-}
-
-/** The worker has no password exchange; the kiosk color does that job, so the opener says so. */
-export function toOpener(m: MatchInfo): NonNullable<RideState["opener"]> {
-  return {
-    youFirst: !m.youWalk,
-    say: `Are you team ${m.partner.color}?`,
-    listenFor: `Team ${m.partner.color}.`,
-  };
+export function toMeet(m: MatchInfo): Meet {
+  return { car: m.meetAtCar, carDelta: m.carDelta, youWalk: m.youWalk };
 }
 
 const GROUP: Record<WireMission["category"], MissionGroup> = {
@@ -145,17 +113,29 @@ export function toStamp(w: WireStamp, ctx: { missionId?: string; matchId?: strin
   return {
     id: w.id,
     stationId: w.stationId || stationIdFor(w.station),
+    stationName: w.station,
     ...fromLine(w.line),
     earnedAt: new Date(w.awardedAt).toISOString(),
     rare: w.rare,
     missionId: ctx.missionId ?? "",
     withPersonId: ctx.matchId ?? "",
+    withFirstName: w.partnerFirstName,
+  };
+}
+
+export function toPerson(m: RecentMatchesRes["matches"][number]): Person {
+  return {
+    id: m.matchId,
+    firstName: m.partnerFirstName,
+    color: m.color,
+    metAtStationId: "",
+    metAt: new Date(m.at).toISOString(),
+    quests: m.stamped ? 1 : 0,
   };
 }
 
 export const REPORT_REASON: Record<ReportReason, string> = {
   uncomfortable: "Made me uncomfortable",
   didntStop: "Didn't stop when I said stop",
-  photoWithoutAsking: "Took a photo without asking",
   other: "Something else",
 };

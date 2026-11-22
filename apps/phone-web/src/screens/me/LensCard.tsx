@@ -1,69 +1,48 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { LensCard as LensCardValue } from "../../../shared/types";
-import { coarseTime } from "./lens";
+import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
+import type { LensCard as LensCardValue, PairColor } from "../../../shared/types";
 
-// The 600×600 right-eye card, drawn at 300 and scaled. The display is
-// additive (black = transparent), so it's light text on near-black: a title,
-// one body line, a coarse timer, at most two buttons.
+// A preview of the glasses-web HUD (apps/glasses-web), drawn at 300 and scaled from
+// 600×600. The display is additive (black = transparent), so it's light text on
+// near-black. The glasses need no input, so cards have no buttons.
 const SOFT = "#A9CDBF";
 
 const title: CSSProperties = { font: "400 21px/1.12 var(--font-display)", textTransform: "uppercase", overflowWrap: "anywhere" };
 const soft: CSSProperties = { color: SOFT };
 const timer: CSSProperties = { font: "400 13px var(--font-display)", color: SOFT, marginTop: 6, textTransform: "uppercase" };
-const pill: CSSProperties = {
-  minHeight: 44,
-  padding: "0 18px",
-  display: "flex",
-  alignItems: "center",
-  boxSizing: "border-box",
-  borderRadius: 22,
-  font: "400 15px var(--font-display)",
-};
-
-function LensButtons({ yes, no }: { yes: string; no: string }) {
-  return (
-    <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-      <div style={{ ...pill, background: "var(--mint)", color: "var(--ink-deep)" }}>{yes}</div>
-      <div style={{ ...pill, border: "2px solid var(--mint)" }}>{no}</div>
-    </div>
-  );
+function Swatch({ color }: { color: PairColor }) {
+  return <span aria-hidden style={{ display: "inline-block", width: 22, height: 22, borderRadius: "50%", background: PAIR_COLOR_HEX[color], verticalAlign: "middle", marginRight: 8 }} />;
 }
 
 function content(card: LensCardValue): ReactNode {
   switch (card.kind) {
-    case "waiting":
+    case "link":
       return (
         <>
-          <div style={title}>{card.line}</div>
-          <div style={title}>{card.direction}</div>
-          <div style={soft}>Train in {card.trainIn}</div>
-          <div style={soft}>Quests on</div>
+          <div style={soft}>Enter on your phone</div>
+          <div style={{ font: "400 64px/1 var(--font-display)", letterSpacing: ".12em" }}>{card.code}</div>
         </>
       );
-    case "offer":
+    case "riding":
       return (
         <>
-          <div style={{ ...title, fontSize: card.why.length > 40 ? 18 : 21 }}>{card.why}</div>
-          <div style={soft}>{card.minutes}-min quest?</div>
-          <LensButtons yes="✓ YES" no="SKIP" />
+          <div style={title}>Ride Mode on</div>
+          <div style={soft}>
+            {card.nextStop} in {card.nextIn}
+          </div>
+          <div style={soft}>{card.riders} riders on this train</div>
         </>
       );
-    case "meet":
+    case "match":
       return (
         <>
-          <div style={title}>Meet {card.name}</div>
-          <div style={soft}>{card.badge}</div>
-          <div style={soft}>{card.spot}</div>
-          <div style={timer}>Train {card.train}</div>
-        </>
-      );
-    case "greeting":
-      return (
-        <>
-          <div style={title}>That's {card.name} ✓</div>
-          <div style={soft}>Say:</div>
-          <div style={{ font: "700 25px/1.1 var(--font-hand)" }}>“{card.opener}”</div>
-          <div style={timer}>Train {card.train}</div>
+          <div style={title}>
+            <Swatch color={card.color} />
+            {card.name}
+          </div>
+          <div style={{ ...title, fontSize: 18 }}>{card.where}</div>
+          <div style={soft}>{card.why}</div>
+          <div style={timer}>look for {card.color}</div>
         </>
       );
     case "mission":
@@ -71,23 +50,14 @@ function content(card: LensCardValue): ReactNode {
         <>
           <div style={{ ...title, fontSize: card.title.length > 44 ? 18 : 21 }}>{card.title}</div>
           <div style={soft}>{card.left}</div>
-          <div style={timer}>Train {card.train}</div>
+          <div style={timer}>{card.tapped === 0 ? "both tap the tag to stamp" : `${card.tapped} of 2 tapped`}</div>
         </>
       );
     case "stamp":
       return (
         <>
           <div style={title}>{card.station} stamp</div>
-          <div style={soft}>+1 with {card.name}</div>
-          {card.askPhoto && <div style={soft}>Snap a memory?</div>}
-          {card.askPhoto && <LensButtons yes="YES" no="NO" />}
-        </>
-      );
-    case "trainSoon":
-      return (
-        <>
-          <div style={title}>Train in {coarseTime(card.seconds).replace(" left", "")}</div>
-          <div style={soft}>Stamp saved</div>
+          <div style={soft}>with {card.name}</div>
         </>
       );
   }
@@ -96,13 +66,11 @@ function content(card: LensCardValue): ReactNode {
 /** Plain-text version for screen readers and the mirror's aria-label. */
 export function lensText(card: LensCardValue): string {
   switch (card.kind) {
-    case "waiting": return `${card.line} ${card.direction}. Train in ${card.trainIn}. Quests on.`;
-    case "offer": return `${card.why}. ${card.minutes}-min quest? Yes or skip.`;
-    case "meet": return `Meet ${card.name}. ${card.badge}. ${card.spot}. Train ${card.train}.`;
-    case "greeting": return `That's ${card.name}. Say: ${card.opener}. Train ${card.train}.`;
-    case "mission": return `${card.title}. ${card.left}. Train ${card.train}.`;
-    case "stamp": return `${card.station} stamp. Plus one with ${card.name}.${card.askPhoto ? " Snap a memory? Yes or no." : ""}`;
-    case "trainSoon": return `Train in ${coarseTime(card.seconds).replace(" left", "")}. Stamp saved.`;
+    case "link": return `Link code ${card.code}. Enter it on your phone.`;
+    case "riding": return `Ride Mode on. ${card.nextStop} in ${card.nextIn}. ${card.riders} riders on this train.`;
+    case "match": return `${card.name}. ${card.where}. ${card.why}. Look for ${card.color}.`;
+    case "mission": return `${card.title}. ${card.left}. ${card.tapped} of 2 tapped.`;
+    case "stamp": return `${card.station} stamp with ${card.name}.`;
   }
 }
 

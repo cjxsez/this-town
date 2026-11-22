@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from "react";
-import { BADGE_COLORS } from "../../shared/catalog";
-import type { Badge } from "../../shared/types";
+import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
+import type { PairColor } from "../../shared/types";
 
 /**
  * Placeholder for illustration the art team hasn't delivered yet (the hi-fi
@@ -40,22 +40,29 @@ export function ArtSlot({
   );
 }
 
-const LIGHT = new Set(["yellow", "blue"]);
+const LIGHT = new Set<PairColor>(["yellow", "green", "orange"]);
 
-/** The colour-animal token: what a rider looks for on the other person's badge. */
-export function AnimalToken({ badge, size = 56, style }: { badge: Badge; size?: number; style?: CSSProperties }) {
+/**
+ * The pair color, with the person's initial: the same color the kiosk LEDs, kiosk screen
+ * and glasses show for this match. It's how you recognize each other's kiosk.
+ */
+export function PairToken({ color, name, size = 56, style }: { color: PairColor; name?: string; size?: number; style?: CSSProperties }) {
   return (
     <div
-      className={`q-animal${LIGHT.has(badge.color) ? " q-animal--light" : ""}`}
-      style={{ width: size, height: size, background: BADGE_COLORS[badge.color], fontSize: Math.max(9, size / 6), ...style }}
-      aria-label={`${badge.color} ${badge.animal}`}
+      className={`q-animal${LIGHT.has(color) ? " q-animal--light" : ""}`}
+      style={{
+        width: size,
+        height: size,
+        background: PAIR_COLOR_HEX[color],
+        fontSize: Math.max(12, size / 2.4),
+        display: "grid",
+        placeItems: "center",
+        fontFamily: "var(--font-display)",
+        ...style,
+      }}
+      aria-label={name ? `${name}, ${color}` : color}
     >
-      <ArtSlot
-        id={`animal-${badge.color}-${badge.animal}`}
-        placeholder={badge.animal}
-        round
-        style={{ position: "absolute", inset: 0, border: 0, background: "transparent", fontSize: "inherit", color: "inherit", fontFamily: "var(--font-display)", textTransform: "uppercase" }}
-      />
+      {name ? name.slice(0, 1).toUpperCase() : null}
     </div>
   );
 }

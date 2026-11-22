@@ -1,7 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { ArtSlot, BackLink } from "../../ui";
-import type { Memory, Station } from "../../../shared/types";
+import { BackLink } from "../../ui";
+import type { Station } from "../../../shared/types";
 import "./collection.css";
 
 /** The kit's BackLink in the paper-button dress the hi-fi uses on H3/H5. */
@@ -72,29 +72,6 @@ export function EmptyTicket({ station }: { station: Station }) {
       <span aria-hidden>
         <TicketName short={station.short} />
       </span>
-    </div>
-  );
-}
-
-/** A memory photo: the real image once the backend sends one, else the art placeholder. */
-export function MemoryPhoto({
-  memory,
-  name,
-  style,
-  placeholder,
-}: {
-  memory: Memory;
-  name: string;
-  style?: CSSProperties;
-  placeholder?: string;
-}) {
-  return (
-    <div className="cl-photo" style={style}>
-      {memory.imageUrl ? (
-        <img src={memory.imageUrl} alt={`Photo of you and ${name}`} />
-      ) : (
-        <ArtSlot id={`memory-${memory.id}`} placeholder={placeholder ?? `photo: you + ${name}`} style={{ width: "100%", height: "100%" }} />
-      )}
     </div>
   );
 }
