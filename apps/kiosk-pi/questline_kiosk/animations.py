@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from collections.abc import Coroutine
 from typing import Any
 
@@ -37,6 +38,11 @@ def scale(rgb: RGB, factor: float) -> RGB:
     """Multiply a color by 0..1."""
     f = max(0.0, min(1.0, factor))
     return (int(rgb[0] * f), int(rgb[1] * f), int(rgb[2] * f))
+
+
+def _breath_level(t: float, period_s: float, low: float, high: float) -> float:
+    """Sine envelope between low and high over period_s."""
+    return low + (high - low) * (0.5 - 0.5 * math.cos(2 * math.pi * t / period_s))
 
 
 def wheel(pos: int) -> RGB:
@@ -63,14 +69,18 @@ async def off(strip: LedStrip) -> None:
 
 
 async def idle(strip: LedStrip, rgb: RGB, period_s: float = 6.0, low: float = 0.02, high: float = 0.12) -> None:
-    """Dim breathing loop, forever. Low enough that it doesn't compete with a pair color.
-
-    TODO:
-    - t = 0; loop: level = low + (high - low) * (0.5 - 0.5 * cos(2*pi*t/period_s))
-    - strip.fill(scale(rgb, level)); strip.show(); await asyncio.sleep(FRAME_S); t += FRAME_S
-    - optional: slow comet of one slightly brighter pixel to show the kiosk is alive
-    """
-    raise NotImplementedError
+    """Dim breathing loop, forever. Low enough that it doesn't compete with a pair color."""
+    t = 0.0
+    n = max(1, strip.count)
+    while True:
+        level = _breath_level(t, period_s, low, high)
+        strip.fill(scale(rgb, level))
+        # One slightly brighter pixel drifts along so the strip still looks alive.
+        comet = int((t / period_s) * n) % n
+        strip.set_pixel(comet, scale(rgb, min(1.0, level * 2.5 + 0.05)))
+        strip.show()
+        await asyncio.sleep(FRAME_S)
+        t += FRAME_S
 
 
 async def pulse(strip: LedStrip, rgb: RGB, period_s: float = 2.5, low: float = 0.2, high: float = 1.0) -> None:
