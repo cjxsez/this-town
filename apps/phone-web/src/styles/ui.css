@@ -6,7 +6,10 @@
   isolation: isolate;
   display: flex; flex-direction: column;
   background: var(--sea); color: var(--onsea);
+  /* clip, not just hide: the foam blobs reach past the edges, and a hidden overflow can
+     still be scrolled (focusing a chip did it), which slid the whole screen sideways */
   overflow: hidden;
+  overflow: clip;
 }
 .q-screen__body {
   flex: 1; min-height: 0;
@@ -99,7 +102,10 @@
 .q-pill--dark { background: var(--ink); color: var(--paper); border-radius: var(--r2); font-size: 14px; }
 .q-pill--warn { background: var(--yellow); }
 .q-pill__dot { flex: none; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink); }
-.q-topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+/* Wraps rather than overflowing: a long next stop ("GOVERNMENT CTR 3:58") drops its pill to
+   a second row, right-aligned, instead of running off the screen. */
+.q-topbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 8px; }
+.q-topbar > :last-child { margin-left: auto; }
 
 /* ---------- inputs ---------- */
 .q-field {
