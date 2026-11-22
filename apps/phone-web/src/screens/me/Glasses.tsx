@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
+import { glassesShowsBlurb } from "../../lib/rideModeCopy";
+import { useGamesOnly } from "../../lib/useWorkerMode";
 import { useApp } from "../../state/store";
 import { ArtSlot, BackLink, Body, Button, Card, Hint, Screen, TileTitle } from "../../ui";
 import LinkGlasses from "./LinkGlasses";
@@ -38,6 +40,7 @@ export const GlassesTag = () => (
 export default function Glasses() {
   const { state } = useApp();
   const navigate = useNavigate();
+  const gamesOnly = useGamesOnly();
   const linked = !!state.profile?.glassesLinked;
   const [relink, setRelink] = useState(false);
 
@@ -71,7 +74,7 @@ export default function Glasses() {
           <div className="q-title--sm">Meta Ray-Ban Display</div>
           <StatusPill>LINKED</StatusPill>
         </div>
-        <Body style={{ margin: 0 }}>Open In This Town on your glasses and keep it open while you ride. It shows your match, where to meet, the mission and your stamp.</Body>
+        <Body style={{ margin: 0 }}>{glassesShowsBlurb(gamesOnly)}</Body>
       </Card>
       <Card style={{ gap: 6 }}>
         <Body style={{ margin: 0 }}>Nothing to press. If the side of the frame works for you, swipe to move and tap to pick.</Body>
