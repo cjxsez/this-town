@@ -1,11 +1,16 @@
 // Ghost riders: seeded users riding the demo train so the kiosks and matching look alive,
 // and so one person can demo a full match + mission + stamp alone.
-// Usage: pnpm seed && pnpm ghosts [--count 3] [--car 1413] [--dest gov-ctr] [--auto]
+// Usage: pnpm seed && pnpm ghosts [--count 3] [--car 1413] [--dest <stop id>] [--auto]
+//   --dest   defaults to the trip's last stop (works for either DEMO_LINE)
 //   --auto   ghosts walk to the meeting kiosk and tap for the stamp on their own. Stamping
 //            only works on a static-tag kiosk: a ghost can't read the fresh nonce off a real tag.
 //   Ctrl+C   ends every ghost's ride
 //
-// Ghosts are ordinary riders using their seeded tokens. WORKER_URL defaults to http://localhost:8787.
+// Ghosts are ordinary riders using their seeded tokens, so matching treats them like anyone
+// else: the closest rider who shares an interest wins, and a ghost can take a real rider's
+// match. The seeded ghosts share no interests with each other, so they never pair off on
+// their own. Don't run them while two real riders need to match each other (filming, the
+// stage demo's match step); stop them with Ctrl+C first. WORKER_URL defaults to http://localhost:8787.
 import { readFileSync } from "node:fs";
 import type { ServerToRider, TapRes } from "@questline/protocol";
 
@@ -20,7 +25,7 @@ function arg(name: string): string | undefined {
 }
 const COUNT = Number(arg("count") ?? 3);
 const CAR = arg("car") ?? "1413";
-const DEST = arg("dest") ?? "gov-ctr";
+const DEST = arg("dest");
 const AUTO = process.argv.includes("--auto");
 
 interface Ghost {
@@ -92,7 +97,13 @@ async function main(): Promise<void> {
   }
   const ghosts: Ghost[] = seeded.slice(0, COUNT).map((s) => ({ ...s, car: CAR }));
   for (const g of ghosts) {
-    const r = await tap(g, { car: g.car, destinationStop: DEST, rideMode: true });
+    let dest = DEST;
+    if (!dest) {
+      // Ask the trip for its stops (a tap with no destination checks nobody in) and ride to the end.
+      const first = await tap(g, { car: g.car });
+      if (first.result === "need-destination") dest = first.stops.at(-1)?.id;
+    }
+    const r = await tap(g, { car: g.car, ...(dest && { destinationStop: dest }), rideMode: true });
     log(g, `boarded car ${g.car}: ${r.result}${r.result === "error" ? ` (${r.message})` : ""}`);
     if (r.result === "checked-in" || r.result === "moved-car") connect(g);
   }

@@ -14,7 +14,9 @@ import type { Profile, ServerToKiosk, ServerToRider, TapRes } from "@questline/p
 const BASE = (process.env.WORKER_URL ?? "http://localhost:8787").replace(/\/+$/, "");
 const WS_BASE = BASE.replace(/^http/, "ws");
 const KIOSK_KEY = process.env.KIOSK_KEY ?? devVar("KIOSK_KEY");
-const DEST = "gov-ctr";
+/** The trip's last stop and the stop two ahead, read from the first tap so either DEMO_LINE works. */
+let DEST = "";
+let TWO_STOPS_ON = "";
 
 function devVar(name: string): string {
   try {
@@ -133,7 +135,10 @@ async function main() {
   // Andres boards car 1412.
   const first = await api<TapRes>("POST", "/api/taps", { car: "1412" }, andres.token);
   if (first.result !== "need-destination") fail(`first tap should ask for a destination, got ${first.result}`);
-  if (!first.stops.some((s) => s.id === DEST)) fail(`destinations missing ${DEST}: ${JSON.stringify(first.stops)}`);
+  if (first.stops.length < 3) fail(`expected the demo trip's stops, got ${JSON.stringify(first.stops)}`);
+  DEST = first.stops.at(-1)!.id;
+  TWO_STOPS_ON = first.stops[1]!.id;
+  ok(`demo trip on ${first.line}: riding to ${first.stops.at(-1)!.name}`);
   // Ride Mode is the consent: a destination alone must not check anyone in.
   const noConsent = await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: DEST }, andres.token);
   if (noConsent.result !== "need-destination") fail(`check-in without rideMode should be refused, got ${noConsent.result}`);
@@ -294,8 +299,8 @@ async function main() {
   if (!GAMES_ONLY && !(await demo("delay", { seconds: 240 })).ok) fail("demo delay failed");
   const ana = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Ana", ["rowing", "trivia", "comics"]));
   const ben = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Ben", ["rowing", "trivia", "museums"]));
-  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: "copley", rideMode: true }, ana.token);
-  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: "copley", rideMode: true }, ben.token);
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: TWO_STOPS_ON, rideMode: true }, ana.token);
+  await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: TWO_STOPS_ON, rideMode: true }, ben.token);
   const anaSock = new Sock<ServerToRider>(`${WS_BASE}/ws/rider?token=${ana.token}`, { type: "rider.hello", client: "phone" }, "Ana phone");
   await anaSock.wait("ride.snapshot");
   if (!GAMES_ONLY) {
@@ -305,7 +310,7 @@ async function main() {
     ok(`late-train bonus: "${bonus.mission.title}"`);
   }
 
-  // Advance the demo train two stops to Copley, Ana and Ben's stop. With missions they get
+  // Advance the demo train two stops to Ana and Ben's stop. With missions they get
   // checked out there; games-only (D26) keeps a pair playing whatever stops they picked.
   await demo("advance");
   await demo("advance");
@@ -316,7 +321,7 @@ async function main() {
     await api("POST", "/api/ride/end", undefined, ben.token);
     ok("games only: passing a rider's stop doesn't end their game");
   } else {
-    if (gone.state.status !== "off") fail(`Ana should be off at Copley, got ${gone.state.status}`);
+    if (gone.state.status !== "off") fail(`Ana should be off at her stop, got ${gone.state.status}`);
     ok("riders are checked out at their stop");
   }
 
