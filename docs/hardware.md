@@ -103,12 +103,14 @@ From `docs/demo-script.md`: two kiosks on the table, labeled **car 1412** and **
 
 ## Pre-event checklist
 
+Software already verified on a laptop (`--fake`, pytest for NDEF / LED event mapping / NFC writers / browser helpers). Everything below still needs a real Pi + strip + tag.
+
 Night before:
 - [ ] Both SD cards flashed, `setup.sh` run, `config.toml` filled in (car 1412 / 1413, domain, kiosk_key).
 - [ ] `python -m questline_kiosk urls` shows the right domain and car on each Pi.
 - [ ] `i2cdetect -y 1` sees the NFC chip on each Pi.
-- [ ] `scripts/led_test.py` runs clean on each strip (all pixels light, colors right, no flicker).
-- [ ] Tag reads from an iPhone and an Android phone through the enclosure, screen locked, background read banner opens the right URL.
+- [ ] `scripts/led_test.py` runs clean on each strip (all pixels light, colors right, no flicker). Real WS281x / SPI drivers are implemented; this is the first hardware proof.
+- [ ] Tag reads from an iPhone and an Android phone through the enclosure, screen locked, background read banner opens the right URL. Dynamic writers verify read-back over I2C; phone RF read is still a hardware check.
 - [ ] Static NTAG215 stickers written for both cars and tested (fallback).
 - [ ] Power banks charged, plus spares. Cables and pigtails packed.
 - [ ] Hotspot SSID/password saved on both Pis, with a backup hotspot.
