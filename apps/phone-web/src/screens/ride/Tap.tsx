@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams, useSearchParams } from "react-router"
 import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
 import { backend } from "../../api";
 import { errorMessage, type TapResult } from "../../lib/api";
+import { playTapSound } from "../../lib/sound";
 import { useApp } from "../../state/store";
 import { Body, Button, Card, Eyebrow, Hint, Screen, TextLink, Title } from "../../ui";
 
@@ -63,6 +64,9 @@ export default function Tap() {
   const [view, setView] = useState<View>({ step: "working" });
   const partner = useRef(state.ride.match?.firstName);
   partner.current = state.ride.match?.firstName ?? partner.current;
+
+  // Chime as soon as the tag link opens, signed in or not.
+  useEffect(() => playTapSound(), []);
 
   const send = useCallback(
     (destinationStop?: string, rideMode?: true) => {
