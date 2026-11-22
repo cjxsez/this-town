@@ -66,7 +66,11 @@ Each web app builds with Vite using its own `base` (`/`, `/g/`, `/kiosk/`). `scr
 
 ## Car to trip mapping
 
-MBTA V3 `vehicles` includes `carriages[]` (per-car `label`, order in the train) for the Orange Line and new Red Line cars. The Worker maps a car label to its current `trip_id`. For the demo, `DEMO_CAR_TRIPS` in `wrangler.toml` hardcodes the mapping and a fake trip with scripted stops.
+MBTA V3 `vehicles` includes `carriages[]` (per-car `label`, order in the train) for the Orange Line and new Red Line cars. The Worker (`apps/worker/src/mbta/vehicles.ts`) GETs `/vehicles?filter[route]=Orange,Red&include=trip`, indexes every carriage label to a `TripInfo` for ~10 s, and resolves a tap to that trip's `TrainRoom`. `carOrder` keeps MBTA's carriage order and treats it as front-of-train first in the direction of travel (unverified against `direction_id` on a real train). No matching vehicle returns null and the tap gets the existing no-trip error.
+
+Live stop lists come from `/predictions` (and a one-time `/schedules` seed) in `mbta/predictions.ts`, with stop ids mapped through the `packages/t-map` station catalog so they match the phone. The alarm polls while anyone is checked in; two empty polls end the trip and close kiosk sockets with `WS_CLOSE.tripChanged` so they reconnect into the new room. Live `delaySec` drives the late-train bonus the same way the demo clock does.
+
+For the demo, `DEMO_CAR_TRIPS` in `wrangler.toml` hardcodes the mapping and a fake trip with scripted stops (`mbta/demo.ts`); that path is unchanged.
 
 ## TrainRoom Durable Object
 
