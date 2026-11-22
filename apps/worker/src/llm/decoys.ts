@@ -42,9 +42,6 @@ export function decoyRequestBody(question: string, answer: string): Record<strin
   return {
     model: DECOY_MODEL,
     max_tokens: 300,
-    // A short classification: no thinking, so it fits inside the timeout.
-    thinking: { type: "disabled" },
-    output_config: { effort: "low" },
     system: SYSTEM,
     messages: [{ role: "user", content: JSON.stringify({ question, correctAnswer: answer }) }],
   };
