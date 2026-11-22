@@ -72,24 +72,30 @@ jobs:
       # dir is enough (same as `mkdir -p` in apps/worker/README.md for a fresh clone).
       - name: Ensure worker public/ exists
         run: mkdir -p apps/worker/public
+      # Missions smoke uses 8788 so a lingering games-only workerd on 8787 cannot answer
+      # /api/health with gamesOnly:true (wrangler's child often outlives the shell PID).
       - name: Smoke games-only (default)
         run: |
           set -euo pipefail
           LOG=/tmp/worker-games-only.log
+          PORT=8787
           (
             cd apps/worker
-            npx wrangler dev --port 8787 --ip 127.0.0.1
+            npx wrangler dev --port "$PORT" --ip 127.0.0.1
           ) >"$LOG" 2>&1 &
           WORKER_PID=$!
           cleanup() {
             kill "$WORKER_PID" 2>/dev/null || true
-            # Also kill any child wrangler/workerd still holding the port.
-            pkill -f "wrangler dev --port 8787" 2>/dev/null || true
+            pkill -f "wrangler dev --port ${PORT}" 2>/dev/null || true
+            # workerd keeps the port after wrangler exits; free it explicitly.
+            if command -v fuser >/dev/null 2>&1; then
+              fuser -k "${PORT}/tcp" 2>/dev/null || true
+            fi
             wait "$WORKER_PID" 2>/dev/null || true
           }
           trap cleanup EXIT
           for i in $(seq 1 90); do
-            if curl -sf http://127.0.0.1:8787/api/health >/dev/null; then
+            if curl -sf "http://127.0.0.1:${PORT}/api/health" >/dev/null; then
               echo "worker healthy after ${i}s"
               break
             fi
@@ -110,34 +116,29 @@ jobs:
             cat "$LOG" || true
             exit 1
           fi
-          cleanup
-          trap - EXIT
-          # Wait for the port to free before the missions run.
-          for i in $(seq 1 30); do
-            if ! curl -sf http://127.0.0.1:8787/api/health >/dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-          done
       - name: Smoke missions (GAMES_ONLY:false)
         run: |
           set -euo pipefail
           LOG=/tmp/worker-missions.log
+          PORT=8788
           (
             cd apps/worker
-            npx wrangler dev --port 8787 --ip 127.0.0.1 --var GAMES_ONLY:false
+            npx wrangler dev --port "$PORT" --ip 127.0.0.1 --var GAMES_ONLY:false
           ) >"$LOG" 2>&1 &
           WORKER_PID=$!
           cleanup() {
             kill "$WORKER_PID" 2>/dev/null || true
-            pkill -f "wrangler dev --port 8787" 2>/dev/null || true
+            pkill -f "wrangler dev --port ${PORT}" 2>/dev/null || true
+            if command -v fuser >/dev/null 2>&1; then
+              fuser -k "${PORT}/tcp" 2>/dev/null || true
+            fi
             wait "$WORKER_PID" 2>/dev/null || true
           }
           trap cleanup EXIT
           for i in $(seq 1 90); do
-            if curl -sf http://127.0.0.1:8787/api/health >/dev/null; then
+            if curl -sf "http://127.0.0.1:${PORT}/api/health" >/dev/null; then
               echo "worker healthy after ${i}s"
-              HEALTH=$(curl -sf http://127.0.0.1:8787/api/health)
+              HEALTH=$(curl -sf "http://127.0.0.1:${PORT}/api/health")
               echo "$HEALTH"
               echo "$HEALTH" | grep -q '"gamesOnly":false' || {
                 echo "expected gamesOnly false"
@@ -158,7 +159,7 @@ jobs:
               exit 1
             fi
           done
-          if ! pnpm smoke; then
+          if ! WORKER_URL="http://127.0.0.1:${PORT}" pnpm smoke; then
             echo "---- worker log (missions) ----"
             cat "$LOG" || true
             exit 1
