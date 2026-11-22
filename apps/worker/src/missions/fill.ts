@@ -10,10 +10,6 @@
  *   (kiosk), with endsAt = next stop ETA minus 30 s.
  *
  * Protocol types: Mission, PairColor.
- *
- * TODO:
- * - slotValuesFor(): pick names from state.stops using currentStopIdx / nextStopIdx; fall
- *   back to "the next stop" / "here" when unknown.
  */
 import type { Mission, PairColor } from "@questline/protocol";
 import type { RoomState } from "../rooms/state";

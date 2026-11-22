@@ -23,7 +23,6 @@
  *
  * TODO:
  * - Grow to ~10 per category before the demo so anti-repeat never runs dry.
- * - Add a unit test that every {slot} used here is in SLOT_NAMES.
  */
 import type { MissionCategory } from "@questline/protocol";
 
