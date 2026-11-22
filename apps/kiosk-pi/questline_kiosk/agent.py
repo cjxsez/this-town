@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import signal
 from collections.abc import Iterator
 
 from . import animations as anim
@@ -312,15 +313,24 @@ class KioskAgent:
 
 
 async def run_agent(cfg: Config) -> None:
-    """Build hardware from config and run the agent until cancelled.
-
-    TODO:
-    - install SIGTERM/SIGINT handlers (loop.add_signal_handler) that call agent.stop()
-      so systemd stop turns the LEDs off cleanly
-    """
+    """Build hardware from config and run the agent until cancelled."""
     leds = make_strip(cfg.leds)
     tag = make_tag(cfg.nfc)
     agent = KioskAgent(cfg, leds, tag)
+
+    loop = asyncio.get_running_loop()
+
+    def _on_signal(signame: str) -> None:
+        log.info("received %s, shutting down", signame)
+        asyncio.create_task(agent.stop())
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, _on_signal, sig.name)
+        except (NotImplementedError, RuntimeError):
+            # Windows / embedded loops may not support add_signal_handler.
+            pass
+
     try:
         await agent.run()
     finally:
