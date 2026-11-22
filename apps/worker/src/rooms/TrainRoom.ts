@@ -92,6 +92,7 @@ import {
   insertMatch,
   insertMissionSession,
   insertStamps,
+  metCountsFor,
   metSince,
   recentTemplatesForUser,
   recordMet,
@@ -296,10 +297,12 @@ export class TrainRoom extends DurableObject<Env> {
     if (destIdx <= s.currentStopIdx) return { result: "error", message: "That stop is behind us." };
 
     const ignoreMet = this.cfg.demoMode;
-    const [met, blocked, recent] = await Promise.all([
+    const others = Object.keys(s.riders);
+    const [met, blocked, recent, metCounts] = await Promise.all([
       ignoreMet ? Promise.resolve([]) : metSince(this.env.DB, input.userId, now - MET_RECENTLY_WINDOW_MS),
       blockedEither(this.env.DB, input.userId),
       recentTemplatesForUser(this.env.DB, input.userId),
+      metCountsFor(this.env.DB, input.userId, others),
     ]);
     const boarded = s.stops[Math.max(0, s.currentStopIdx)]?.stopId ?? input.destinationStop;
     const checkinId = newId("chk");
@@ -313,6 +316,13 @@ export class TrainRoom extends DurableObject<Env> {
       destinationStop: input.destinationStop,
       checkedInAt: now,
     });
+    // Mirror counts onto riders already in the room so novelty is symmetric.
+    for (const otherId of others) {
+      const other = s.riders[otherId];
+      if (!other) continue;
+      const n = metCounts[otherId] ?? 0;
+      other.metCounts = { ...(other.metCounts ?? {}), [input.userId]: n };
+    }
     s.riders[input.userId] = {
       userId: input.userId,
       car: input.car,
@@ -329,6 +339,7 @@ export class TrainRoom extends DurableObject<Env> {
         socialBattery: user.profile.socialBattery,
       },
       metRecently: met,
+      metCounts,
       blocked,
       recentTemplates: recent,
       eligibleFromStopIdx: 0,
@@ -730,6 +741,13 @@ export class TrainRoom extends DurableObject<Env> {
       s.pairs[matchId] = pair;
       p.a.pairId = matchId;
       p.b.pairId = matchId;
+      // Bump in-room lifetime counts so novelty updates before the next match round.
+      const aCounts = { ...(p.a.metCounts ?? {}) };
+      const bCounts = { ...(p.b.metCounts ?? {}) };
+      aCounts[p.b.userId] = (aCounts[p.b.userId] ?? 0) + 1;
+      bCounts[p.a.userId] = (bCounts[p.a.userId] ?? 0) + 1;
+      p.a.metCounts = aCounts;
+      p.b.metCounts = bCounts;
       await insertMatch(this.env.DB, {
         id: matchId,
         tripId: s.trip.tripId,
