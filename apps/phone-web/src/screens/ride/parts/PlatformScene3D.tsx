@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { BADGE_COLORS } from "../../../../shared/catalog";
 import type { LineColor } from "../../../../shared/types";
 import { useApp } from "../../../state/store";
 
@@ -43,8 +42,6 @@ export function PlatformScene3D({
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const { state } = useApp();
   const { timeOfDay, motion } = state.settings;
-  const badge = state.profile?.badge;
-  const riderColor = badge ? BADGE_COLORS[badge.color] : undefined;
 
   useEffect(() => {
     let gone = false;
@@ -56,7 +53,6 @@ export function PlatformScene3D({
           line,
           mode,
           arriveAt: due.current,
-          riderColor,
           timeOfDay,
           // Me > Motion off parks the train; otherwise the system setting decides.
           reducedMotion: motion ? undefined : true,
@@ -74,7 +70,7 @@ export function PlatformScene3D({
       scene.current?.dispose();
       scene.current = null;
     };
-  }, [line, mode, riderColor, timeOfDay, motion]);
+  }, [line, mode, timeOfDay, motion]);
 
   // The train's time changes as predictions update; tell the scene without rebuilding it.
   useEffect(() => {

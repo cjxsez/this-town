@@ -1,6 +1,7 @@
 // The seam between the UI and the backend. The UI only calls these methods;
 // api/index.ts picks the simulator (mock/) or the worker (backend/).
-import type { CheckIn, Profile, ReportReason, SocialBattery, StayInTouch } from "../../shared/types";
+import type { Person, Profile, ReportReason, SocialBattery, Stamp } from "../../shared/types";
+import type { TapBody, TapResult } from "../lib/api";
 import type { ServerEvent } from "../state/ride";
 
 export interface RideContext {
@@ -9,40 +10,41 @@ export interface RideContext {
   ghost: boolean;
 }
 
-/** Realtime ride channel. Production: a WebSocket to the station's Durable Object. */
+/**
+ * Realtime ride channel. Production: REST taps + a WebSocket to the train's room.
+ * Everything that starts a ride, moves you between cars or stamps a mission comes from a
+ * kiosk tag tap (`tapKiosk`), which the phone sends from /k/:car.
+ */
 export interface RideChannel {
   subscribe(fn: (e: ServerEvent) => void): () => void;
-  checkIn(c: CheckIn, ctx: RideContext): void;
+  /**
+   * A tap on a kiosk tag. The first tap of a ride answers need-destination; the phone then
+   * shows the destination picker and the Ride Mode confirmation, and taps again with
+   * `destinationStop` and `rideMode: true`. Later taps move cars or stamp.
+   */
+  tapKiosk(body: TapBody, ctx: RideContext): Promise<TapResult>;
+  /** Turn Ride Mode off. */
   checkOut(): void;
   setMood(mood: SocialBattery): void;
   setGhost(ghost: boolean): void;
-  respondOffer(yes: boolean): void;
-  /** "Never mind" (D2) and "Call it off" (E2). The other side just sees D3. */
-  withdraw(): void;
-  atSpot(): void;
-  met(): void;
-  startQuest(): void;
-  newPrompt(): void;
-  missionDone(): void;
-  bump(): void;
-  photoVote(yes: boolean): void;
-  takePhoto(): void;
-  keepVote(keep: boolean): void;
-  /** F3 "I'm boarding": end now, stamp is held for the bump window. */
-  board(): void;
-  /** C4 "Keep on for the next station": ends the old ride, checks in at the next stop. */
-  keepOnNextStation(): void;
-  /** After the recap: re-announce a ride the server still has running. The simulator's rides end there. */
-  resync?(): void;
+  /** Drop the current match (10 min cooldown, the other rider gets rematched). */
+  notNow(): void;
+  /** "I'm here" at the meeting kiosk. Tapping its tag does the same. */
+  arrived(): void;
 }
 
 export interface QuestlineApi {
+  /** Create the rider (first call) or save edits. */
   saveProfile(p: Profile): Promise<void>;
   deleteMyData(): Promise<void>;
-  setStayInTouch(personId: string, on: boolean): Promise<StayInTouch>;
+  /** The 4-digit code shown on the glasses. Rejects when the code is wrong or expired. */
+  linkGlasses(code: string): Promise<void>;
+  /** Stamps from the server, newest first. null when there's no server (mock). */
+  loadPassport(): Promise<Stamp[] | null>;
+  /** People you've been matched with, newest first. null when there's no server (mock). */
+  loadPeople(): Promise<Person[] | null>;
   report(personId: string, reason: ReportReason, alsoBlock: boolean): Promise<void>;
   block(personId: string): Promise<void>;
   unblock(personId: string): Promise<void>;
-  voteMemory(memoryId: string, keep: boolean): Promise<void>;
   ride: RideChannel;
 }

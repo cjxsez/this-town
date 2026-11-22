@@ -1,23 +1,9 @@
 import { Link } from "react-router";
-import { AnimalToken, Body, Button, Card, Screen, TileTitle } from "../../ui";
+import { Body, Button, Card, PairToken, Screen, TileTitle } from "../../ui";
 import { useApp } from "../../state/store";
 import { shortDate } from "../../state/format";
 import { stationById } from "../../../shared/catalog";
-import type { Person } from "../../../shared/types";
 import "./collection.css";
-
-function Status({ p }: { p: Person }) {
-  if (p.stayInTouch === "waiting") return <span className="q-pill" style={{ background: "var(--yellow)" }}>WAITING</span>;
-  if (p.stayInTouch === "connected") {
-    const h = p.handles?.instagram ?? p.handles?.snapchat;
-    if (h) return <span className="cl-person__handle">@{h}</span>;
-  }
-  return (
-    <span className="cl-person__handle" style={{ fontSize: 22, color: "var(--ink-soft)" }} aria-label="not in touch">
-      —
-    </span>
-  );
-}
 
 export default function People() {
   const { state } = useApp();
@@ -39,21 +25,23 @@ export default function People() {
               {people.map((p) => (
                 <li key={p.id}>
                   <Link to={`/people/${p.id}`} className="cl-person">
-                    <AnimalToken badge={p.badge} size={54} />
+                    <PairToken color={p.color} name={p.firstName} size={54} />
                     <span className="cl-person__text">
                       <span className="cl-person__name">{p.firstName}</span>
                       <span className="cl-person__where">
                         {stationById(p.metAtStationId)?.name ?? "the T"} · {shortDate(p.metAt)}
                       </span>
                     </span>
-                    <Status p={p} />
+                    <span className="cl-person__handle" style={{ fontSize: 18 }}>
+                      {p.quests > 0 ? `${p.quests} stamp${p.quests === 1 ? "" : "s"}` : ""}
+                    </span>
                   </Link>
                 </li>
               ))}
             </ul>
           </Card>
           <p className="q-body" style={{ margin: 0 }}>
-            Handles appear only when you both turned on Stay in touch. "Waiting" means you did; we don't tell you if they haven't.
+            First names only, same as on the train. Tap someone to report or block them.
           </p>
         </>
       )}

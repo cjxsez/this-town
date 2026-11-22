@@ -4,7 +4,7 @@ import { INTERESTS } from "../../../shared/catalog";
 import type { SocialBattery, TimeOfDay } from "../../../shared/types";
 import { sim } from "../../api";
 import { useApp } from "../../state/store";
-import { AnimalToken, Button, ButtonRow, Card, Chip, Hint, Screen, Segmented, TextField, Toggle, TileTitle } from "../../ui";
+import { Button, ButtonRow, Card, Chip, Hint, PairToken, Screen, Segmented, TextField, Toggle, TileTitle } from "../../ui";
 
 const BATTERY: { value: SocialBattery; label: string }[] = [
   { value: "nod", label: "Nod" },
@@ -85,7 +85,7 @@ export default function Me() {
           <div className="q-title--md">Ghost mode</div>
           <Toggle large checked={settings.ghost} onChange={(ghost) => actions.setSettings({ ghost })} label="Ghost mode" />
         </div>
-        <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }}>You're invisible to matching. Badge still works as a badge.</div>
+        <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }}>Ride Mode stays on, but nobody is matched with you. Turn it off when you're up for it again.</div>
       </Card>
 
       <Card style={{ gap: 0, padding: "2px 16px" }}>
@@ -95,7 +95,7 @@ export default function Me() {
             {blocked.length === 0 && <Hint>Nobody blocked.</Hint>}
             {blocked.map((p) => (
               <div key={p.id} style={subRow}>
-                <AnimalToken badge={p.badge} size={36} />
+                <PairToken color={p.color} name={p.firstName} size={36} />
                 <span style={{ flex: 1 }}>{p.firstName}</span>
                 <Button variant="secondary" style={smallBtn} onClick={() => actions.unblock(p.id)} aria-label={`Unblock ${p.firstName}`}>
                   Unblock
@@ -116,7 +116,7 @@ export default function Me() {
             )}
             {reportable.map((p) => (
               <Link key={p.id} to={`/people/${p.id}/report`} style={subRow}>
-                <AnimalToken badge={p.badge} size={36} />
+                <PairToken color={p.color} name={p.firstName} size={36} />
                 <span style={{ flex: 1 }}>{p.firstName}</span>
                 <span aria-hidden>›</span>
               </Link>
@@ -130,14 +130,14 @@ export default function Me() {
         <Link to="/me/glasses" className="q-row">
           <span>Glasses</span>
           <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            {state.glasses.connected && <span style={{ fontSize: 18, color: "var(--ink-soft)" }}>connected</span>}
+            <span style={{ fontSize: 18, color: "var(--ink-soft)" }}>{profile?.glassesLinked ? "linked" : "not linked"}</span>
             <Chevron />
           </span>
         </Link>
       </Card>
 
       <div style={{ background: "var(--ink)", color: "var(--paper)", borderRadius: "var(--r4)", padding: "14px 16px", fontSize: 19, lineHeight: 1.2 }}>
-        We never store camera frames, video, audio, faces, last names, or where you've been.
+        No camera, no microphone, no GPS. We only know which kiosk you tapped, and only while Ride Mode is on. First names only.
       </div>
 
       {!confirmDelete ? (
@@ -151,7 +151,7 @@ export default function Me() {
           <div role="alert" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <div className="q-title--sm">Delete everything?</div>
             <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }}>
-              Your profile, stamps, people and memories go, here and on our server. This can't be undone.
+              Ride Mode turns off, every device is signed out, and your profile, stamps and people go, here and on our server. This can't be undone.
             </div>
           </div>
           <ButtonRow>

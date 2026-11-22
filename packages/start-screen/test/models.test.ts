@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { BufferGeometry } from "three";
 import { CONFIG } from "../src/config";
 import { hexToRgb, IdAllocator } from "../src/scene/builder";
-import { ANIMALS, animalGeometry, figureGeometry, glassesGeometry, SPOTS, spotGeometry } from "../src/studio/models";
+import { figureGeometry, glassesGeometry } from "../src/studio/models";
 import { SHOTS } from "../src/studio/shots";
 
 const C = CONFIG.colors;
@@ -20,21 +20,6 @@ const hasColor = (g: BufferGeometry, hex: string) => {
   return false;
 };
 
-test("there is a badge animal for each of the app's eight", () => {
-  assert.deepEqual([...ANIMALS].sort(), ["bear", "cat", "deer", "duck", "fox", "frog", "owl", "rabbit"]);
-});
-
-for (const animal of ANIMALS) {
-  test(`${animal}: a paper-white head with ink eyes, about one unit across`, () => {
-    const g = animalGeometry(animal, C, new IdAllocator());
-    const { min, max } = box(g);
-    assert.ok(g.getAttribute("position").count > 300);
-    assert.ok(max.x - min.x > 0.8 && max.x - min.x < 2.2, `width ${max.x - min.x}`);
-    assert.ok(Math.abs(max.x + min.x) < 0.05, "symmetrical left to right");
-    assert.ok(hasColor(g, C.paper) && hasColor(g, C.ink));
-  });
-}
-
 test("a rider figure stands one unit tall on the ground, in its shirt and badge colours", () => {
   const g = figureGeometry({ shirt: C.orange, hair: C.inkSoft, badge: C.yellow }, C, new IdAllocator());
   const { min, max } = box(g);
@@ -50,29 +35,18 @@ test("the glasses are wider than tall and have dark frames", () => {
   assert.ok(hasColor(g, C.inkDeep));
 });
 
-test("each meeting spot is a small scene standing on a platform", () => {
-  assert.deepEqual([...SPOTS], ["system-map", "third-bench", "comm-ave-stairs"]);
-  for (const spot of SPOTS) {
-    const g = spotGeometry(spot, CONFIG, new IdAllocator());
-    const { min, max } = box(g);
-    assert.ok(min.y >= -1e-6 && max.y > 1.5, spot);
-    assert.ok(hasColor(g, C.yellow), `${spot} has the yellow platform edge`);
-  }
-});
-
-test("the shot list covers every art slot in the phone app, once each", () => {
+test("the shot list covers every picture the phone app uses, once each", () => {
   const ids = SHOTS.map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length);
+  // ArtSlot ids (landing, riding, glasses) and the sprites the flat fallback scenes use.
   const wanted = [
     "hero-art",
     "ride-rider",
     "glasses-art",
-    "memory-photo",
-    "memory-m-jo",
-    "memory-m-dev",
-    "memory-m-ravi",
-    ...SPOTS.map((s) => `meet-spot-kenmore-${s}`),
-    ...ANIMALS.map((a) => `animal-${a}`),
+    "sprite-tree",
+    "sprite-house-pink",
+    "sprite-house-red",
+    ...["green", "red", "orange", "blue"].map((line) => `sprite-trolley-${line}`),
   ];
   for (const id of wanted) assert.ok(ids.includes(id), id);
   for (const shot of SHOTS) assert.ok(shot.width > 0 && shot.height > 0 && shot.scale >= 2, shot.id);

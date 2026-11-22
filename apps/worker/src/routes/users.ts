@@ -14,10 +14,11 @@
  * - PUT /api/me to edit the profile, if phone-web needs it (not in the protocol yet).
  */
 import { Hono } from "hono";
-import { CreateUserReq } from "@questline/protocol";
+import { CreateUserReq, Profile, UpdateProfileReq } from "@questline/protocol";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
-import { createSession, createUser, getUser, hasGlassesSession } from "../db/queries";
+import { activeCheckin, createSession, createUser, getUser, hasGlassesSession, scrubUser, updateUser } from "../db/queries";
+import { roomFor } from "../rooms/stub";
 import type { CreateUserResT, MeResT } from "../lib/api";
 import { readJson } from "../lib/http";
 
@@ -39,4 +40,27 @@ usersRoutes.get("/me", requireRider, async (c) => {
   if (!user) return c.json({ error: "not found" }, 404);
   const res: MeResT = { userId, profile: user.profile, glassesLinked: await hasGlassesSession(c.env.DB, userId) };
   return c.json(res);
+});
+
+usersRoutes.patch("/me", requireRider, async (c) => {
+  const body = await readJson(c.req.raw, UpdateProfileReq);
+  if (!body.ok) return c.json({ error: body.error, issues: body.issues }, 400);
+  const userId = c.get("userId");
+  const user = await getUser(c.env.DB, userId);
+  if (!user) return c.json({ error: "not found" }, 404);
+  const next = Profile.safeParse({ ...user.profile, ...body.data });
+  if (!next.success) return c.json({ error: "invalid profile", issues: next.error.issues }, 400);
+  await updateUser(c.env.DB, userId, next.data);
+  const active = await activeCheckin(c.env.DB, userId);
+  if (active) await roomFor(c.env, active.tripId).updateRiderProfile(userId, next.data);
+  const res: MeResT = { userId, profile: next.data, glassesLinked: await hasGlassesSession(c.env.DB, userId) };
+  return c.json(res);
+});
+
+usersRoutes.delete("/me", requireRider, async (c) => {
+  const userId = c.get("userId");
+  const active = await activeCheckin(c.env.DB, userId);
+  if (active) await roomFor(c.env, active.tripId).checkOut(userId, "ride-end");
+  await scrubUser(c.env.DB, userId);
+  return c.json({ ok: true as const });
 });

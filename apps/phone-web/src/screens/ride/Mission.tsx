@@ -1,4 +1,6 @@
-import { Button, Card, Eyebrow, Screen } from "../../ui";
+import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
+import { sim } from "../../api";
+import { Card, Eyebrow, Screen, TextLink } from "../../ui";
 import { useRide } from "../../state/store";
 import { useNow } from "../../state/useNow";
 import { secondsUntil } from "../../state/format";
@@ -103,8 +105,11 @@ function MissionRenameArt({ station, note, onNote }: { station: string; note: st
   );
 }
 
-// F1: glanceable from waist height, so two people look at each other, not the
-// phone. Done goes to G1. At 30 seconds F3 takes over.
+/**
+ * F1: the mission. The kiosk screen is the main surface; the phone mirrors it so it reads
+ * from waist height. The stamp is both riders tapping the kiosk tag, so the footer is that
+ * instruction and the 1-of-2 progress. It always ends 30 s before the next stop.
+ */
 export default function Mission() {
   const { ride, act } = useRide();
   const now = useNow();
@@ -115,31 +120,39 @@ export default function Mission() {
   const left = secondsUntil(m.endsAt, now);
   const total = Math.max(1, (m.endsAt - m.startedAt) / 1000);
   const up = left <= 0;
+  const hex = match ? PAIR_COLOR_HEX[match.color] : "var(--leaf)";
+  const name = match?.firstName ?? "your match";
+  const tapLine =
+    ride.taps === 0
+      ? "When you're done, both tap the kiosk tag for your stamp."
+      : ride.youTapped
+        ? `1 of 2 tapped. Waiting for ${name}.`
+        : `${name} tapped. Your turn: tap the kiosk tag.`;
 
   return (
     <Screen
       label="F1"
       blobs="a"
       footer={
-        <>
-          <Button onClick={act.missionDone}>
-            Done
-          </Button>
-          <button
-            type="button"
-            className="q-link mission-swap"
-            onClick={act.newPrompt}
-            disabled={m.swapped}
-            aria-label={m.swapped ? "New prompt already used this quest" : "New prompt (one per quest)"}
-          >
-            {m.swapped ? "New prompt used" : "New prompt (one per quest)"}
-          </button>
-        </>
+        <Card style={{ gap: 8 }}>
+          <Eyebrow>Stamp</Eyebrow>
+          <div style={{ font: "700 22px/1.1 var(--font-hand)" }}>{tapLine}</div>
+          <div aria-hidden style={{ display: "flex", gap: 6 }}>
+            {[0, 1].map((i) => (
+              <div key={i} style={{ flex: 1, height: 14, borderRadius: 7, border: "var(--ol) solid var(--ink)", background: i < ride.taps ? hex : "var(--paper-hi)" }} />
+            ))}
+          </div>
+          {sim && ride.meet && !ride.youTapped && (
+            <TextLink small to={`/k/${ride.meet.car}`}>
+              demo: tap the kiosk tag →
+            </TextLink>
+          )}
+        </Card>
       }
     >
       <MeetTopBar partner={match} />
 
-      {mission.id === "rename-station" && (
+      {(mission.id === "rename-station" || mission.id === "create-rename-station") && (
         <MissionRenameArt station={station} note={ride.note ?? ""} onNote={act.setNote} />
       )}
 
@@ -148,7 +161,7 @@ export default function Mission() {
           {MISSION_GROUP_LABEL[mission.group].split(" · ")[0]} · {mission.rarity}
         </Eyebrow>
         <h1 className="q-title">
-          {missionText(mission.title, { station, name: match?.firstName })}
+          {missionText(mission.title, { station, name: match?.firstName, color: match?.color })}
         </h1>
         <p style={{ fontSize: 21, lineHeight: 1.2, textWrap: "pretty" }}>{mission.body}</p>
       </Card>
@@ -157,7 +170,7 @@ export default function Mission() {
         <MissionRing left={left} total={total} />
         {up && (
           <p role="status" style={{ font: "700 21px/1.1 var(--font-hand)", textAlign: "center" }}>
-            Time's up, wrap it up. Tap Done when you're ready.
+            Time's up. Tap the tag now if you want the stamp.
           </p>
         )}
       </div>

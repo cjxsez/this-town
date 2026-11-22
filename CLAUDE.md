@@ -1,6 +1,6 @@
 # In This Town (repo: this-town)
 
-Hackathon project. Renamed from Questline (D15): players see "In This Town"; code identifiers (`@questline/*`, the `questline` database, `questline.page`) keep the old name. MBTA riders turn on Ride Mode and get matched with the closest rider on their train who shares their interests. Each train car has a kiosk (Pi + screen + LEDs + NFC tag). Meta Ray-Ban Display glasses show who your match is and where to go. The kiosk runs a short mission and hands out stamps.
+Hackathon project. Renamed from Questline (D16): players see "In This Town"; code identifiers (`@questline/*`, the `questline` database, `questline.page`) keep the old name. MBTA riders turn on Ride Mode and get matched with the closest rider on their train who shares their interests. Each train car has a kiosk (Pi + screen + LEDs + NFC tag). Meta Ray-Ban Display glasses show who your match is and where to go. The kiosk runs a short mission and hands out stamps.
 
 ## Read first
 

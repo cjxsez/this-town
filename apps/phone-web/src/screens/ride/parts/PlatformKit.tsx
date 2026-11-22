@@ -1,31 +1,28 @@
-// Shared pieces for the check-in, waiting and offer screens (C1–D4).
+// Shared pieces for the ride screens: top bar, Ride Mode switch, scenery.
 import type { CSSProperties, ReactNode } from "react";
-import { DIRECTIONS, LINES, STATIONS, stationById } from "../../../../shared/catalog";
-import type { CheckIn, LineColor, Station } from "../../../../shared/types";
+import { LINES, STATIONS, stationById } from "../../../../shared/catalog";
+import type { CheckIn, LineColor } from "../../../../shared/types";
 import { clock, secondsUntil } from "../../../state/format";
 import { useNow } from "../../../state/useNow";
 import type { RideState } from "../../../state/ride";
 import { LinePill, TrainPill } from "../../../ui";
 
-/** "GREEN B" for a check-in. */
+/** "GREEN D" for a check-in. */
 export function lineName(c: Pick<CheckIn, "line" | "branch"> | undefined): string {
   if (!c) return "";
   return `${LINES[c.line].label}${c.line === "green" && c.branch ? ` ${c.branch}` : ""}`;
 }
 
-export const directionOf = (c: CheckIn | undefined) =>
-  c ? DIRECTIONS[c.line].find((d) => d.id === c.direction) ?? DIRECTIONS[c.line][0] : undefined;
-
-/** "GREEN B · WESTBOUND" */
+/** "GREEN D · CAR 1412" */
 export function lineLabel(c: CheckIn | undefined): string {
-  const dir = directionOf(c);
-  return [lineName(c), dir?.label].filter(Boolean).join(" · ").toUpperCase();
+  if (!c) return "";
+  return [lineName(c), c.car ? `CAR ${c.car}` : ""].filter(Boolean).join(" · ").toUpperCase();
 }
 
-/** Live "m:ss" until the train. */
-export function useTrainClock(ride: RideState): string {
+/** Live "m:ss" until the next stop. */
+export function useNextStopClock(ride: RideState): string {
   const now = useNow();
-  return clock(secondsUntil(ride.trainAt, now));
+  return clock(secondsUntil(ride.nextStopAt, now));
 }
 
 /** Live "m:ss" until an epoch-ms deadline. */
@@ -35,36 +32,41 @@ export function useCountdown(at: number | undefined): string {
 }
 
 /**
- * The top row on every ride screen: line + direction on the left, the train
- * countdown on the right. The train always wins, so it's always visible.
+ * The top row on every ride screen: line and car on the left, the next stop countdown on
+ * the right. Missions always end 30 s before that stop, so it's always visible.
  */
 export function PlatformTopBar({ ride, estimated }: { ride: RideState; estimated?: boolean }) {
-  const t = useTrainClock(ride);
+  const t = useNextStopClock(ride);
   const c = ride.checkIn;
+  const stop = (c?.nextStationName ?? "NEXT").toUpperCase();
   return (
     <div className="q-topbar">
       {c ? <LinePill line={c.line}>{lineLabel(c)}</LinePill> : <span />}
-      {estimated ? (
+      {!ride.nextStopAt ? (
+        <span />
+      ) : estimated ? (
         <TrainPill>
-          <span aria-label={`Train in about ${t}, estimated`}>~{t}</span>
+          <span aria-label={`${stop} in about ${t}, estimated`}>~{t}</span>
         </TrainPill>
       ) : ride.delayed ? (
         <TrainPill warn>DELAYED {t}</TrainPill>
       ) : (
-        <TrainPill>TRAIN {t}</TrainPill>
+        <TrainPill>
+          {stop} {t}
+        </TrainPill>
       )}
     </div>
   );
 }
 
-/** The big pill switch: "QUESTS OFF" (C1) / "QUESTS ON" (C2). */
+/** The big pill switch: "RIDE MODE OFF" / "RIDE MODE ON". */
 export function PlatformQuestsToggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; label?: string }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label={label ?? "Quests"}
+      aria-label={label ?? "Ride Mode"}
       onClick={onToggle}
       style={{
         minHeight: 58,
@@ -83,7 +85,7 @@ export function PlatformQuestsToggle({ on, onToggle, label }: { on: boolean; onT
         textAlign: "left",
       }}
     >
-      <span aria-hidden>{on ? "QUESTS ON" : "QUESTS OFF"}</span>
+      <span aria-hidden>{on ? "RIDE MODE ON" : "RIDE MODE OFF"}</span>
       <span
         aria-hidden
         style={{ flex: "none", width: 44, height: 44, borderRadius: "50%", background: "var(--paper)", border: "var(--ol) solid var(--ink)" }}
@@ -201,27 +203,15 @@ export function PlatformTear() {
   );
 }
 
-// ---- line geography for the platform scene ----
+export const stationFor = (id: string | undefined) => (id && stationById(id)) || STATIONS[0]!;
 
-/** Stations in travel order for each line's first DIRECTIONS entry. */
-const ROUTE: Record<LineColor, string[]> = {
-  green: ["gov-ctr", "park-st", "arlington", "copley", "hynes", "kenmore", "blandford", "bu-east", "bu-central", "amory", "babcock"],
-  red: ["downtown-crossing", "park-st", "harvard"],
-  orange: ["downtown-crossing"],
-  blue: ["gov-ctr", "aquarium"],
-};
-
-/** The next two stops ahead of the rider, nearest first (only ones in the catalog). */
-export function nextStops(c: CheckIn | undefined): Station[] {
-  if (!c) return [];
-  let order = ROUTE[c.line]
-    .map((id) => stationById(id))
-    .filter((s): s is Station => !!s)
-    .filter((s) => c.line !== "green" || !c.branch || !s.branches || s.branches.includes(c.branch));
-  if (DIRECTIONS[c.line][0]?.id !== c.direction) order = [...order].reverse();
-  const i = order.findIndex((s) => s.id === c.stationId);
-  if (i < 0) return [];
-  return order.slice(i + 1, i + 3);
+/** The trolley, drawn by the start screen's renderer (public/art/sprite-trolley-<line>.webp). */
+export function TrolleySprite({ line = "green", width = 560 }: { line?: LineColor; width?: number }) {
+  return (
+    <img
+      src={`/art/sprite-trolley-${line}.webp`}
+      alt=""
+      style={{ display: "block", flex: "none", width, maxWidth: "none", height: "auto", marginBottom: -width * 0.03 }}
+    />
+  );
 }
-
-export const stationFor = (id: string | undefined) => (id && stationById(id)) || STATIONS[0];

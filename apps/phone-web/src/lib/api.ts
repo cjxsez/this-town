@@ -31,9 +31,12 @@ import {
   GlassesLinkRes,
   MeRes,
   PassportRes,
+  RecentMatchesRes,
   RideStateRes,
   TapRes,
   type Profile,
+  type SocialBattery,
+  type UpdateProfileReq,
 } from "@questline/protocol";
 import type { GhostReq, GlassesLinkReq, ReportReq, TapReq } from "@questline/protocol";
 import { getToken } from "./auth";
@@ -70,7 +73,7 @@ interface RequestOpts<T> {
 }
 
 async function request<T = void>(
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   { body, schema, auth = true }: RequestOpts<T> = {},
 ): Promise<T> {
@@ -101,7 +104,9 @@ async function request<T = void>(
     const message =
       typeof json === "object" && json !== null && "message" in json && typeof json.message === "string"
         ? json.message
-        : `${method} ${path} failed (${res.status})`;
+        : typeof json === "object" && json !== null && "error" in json && typeof json.error === "string"
+          ? json.error
+          : `${method} ${path} failed (${res.status})`;
     throw new ApiError(res.status, message, json);
   }
 
@@ -118,6 +123,14 @@ export const api = {
     request("POST", "/api/users", { body: profile, schema: CreateUserRes, auth: false }),
 
   getMe: () => request("GET", "/api/me", { schema: MeRes }),
+
+  updateMe: (patch: UpdateProfileReq) => request("PATCH", "/api/me", { body: patch, schema: MeRes }),
+
+  deleteMe: () => request("DELETE", "/api/me"),
+
+  setMood: (mood: SocialBattery) => request("POST", "/api/ride/mood", { body: { mood } }),
+
+  getRecentMatches: () => request("GET", "/api/matches/recent", { schema: RecentMatchesRes }),
 
   linkGlasses: (code: string) => {
     const body: GlassesLinkBody = { code };

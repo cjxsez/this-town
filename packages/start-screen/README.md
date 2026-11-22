@@ -76,11 +76,11 @@ scene.dispose();
 
 The camera, the rider, the timing and the sun are in `config.ts` under `platformScene`. Preview it at http://localhost:5180/platform.html (`?line=red`, `?mode=arrive&in=6`, `?clock=-1.5` to freeze, `?w=&h=`).
 
-The phone app uses it through `apps/phone-web/src/screens/ride/parts/PlatformScene3D.tsx`, on the waiting, no-match and train-arriving screens.
+The phone app uses it through `apps/phone-web/src/screens/ride/parts/PlatformScene3D.tsx`, on Riding (C2, trolleys keep coming) and Ride Mode off (C4/C5, one pulls in at your stop).
 
 ## Artwork for the rest of the app
 
-The same renderer draws every picture the phone app uses, so the whole app shares the start screen's look: the island on the landing page, the rider, the eight badge animals, the Kenmore meeting spots, the glasses, the trolley, trees and houses in the platform scenes, and stand-in snapshots for memories.
+The same renderer draws every picture the phone app uses, so the whole app shares the start screen's look: the island on the landing page, the rider, the glasses, and the trolley (one per line colour), trees and houses for the flat fallback scenes.
 
 ```bash
 pnpm art                 # from the repo root: render everything
@@ -92,8 +92,8 @@ To review the buildings up close from four sides, open http://localhost:5180/stu
 It opens `studio.html` in headless Chrome (set `CHROME_PATH` if Chrome is not in the usual macOS place) and writes `apps/phone-web/public/art/<id>.webp`. The files are committed, so this only needs running after a change. To look at the shots without saving, open http://localhost:5180/studio.html while `pnpm dev:start` runs.
 
 - `src/studio/shots.ts`: the list of pictures: what is in each, its size, where the camera stands. The id is the app's `ArtSlot` id.
-- `src/studio/models.ts`: the extra models (animals, rider, glasses, meeting spots).
-- Cut-out pictures have a transparent background, so they sit on any time-of-day sea. Snapshots keep the daytime sea, like photos.
+- `src/studio/models.ts`: the extra models (rider, glasses).
+- Pictures have a transparent background, so they sit on any time-of-day sea.
 
 ## Change how it looks and moves
 

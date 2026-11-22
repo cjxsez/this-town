@@ -23,10 +23,10 @@
  * - Poll cadence guidance for glasses-web (2 s while matched, 5 s otherwise).
  */
 import { Hono } from "hono";
-import { GhostReq } from "@questline/protocol";
+import { GhostReq, MoodReq } from "@questline/protocol";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
-import { activeCheckin, getUser, setUserGhost } from "../db/queries";
+import { activeCheckin, getUser, setUserBattery, setUserGhost } from "../db/queries";
 import type { OkRes, RidePollRes } from "../lib/api";
 import { readJson } from "../lib/http";
 import { roomFor } from "../rooms/stub";
@@ -66,6 +66,17 @@ rideRoutes.post("/ride/arrived", requireRider, async (c) => {
   const active = await activeCheckin(c.env.DB, userId);
   if (!active) return c.json({ error: "not riding" }, 409);
   await roomFor(c.env, active.tripId).markArrived(userId, Date.now());
+  const res: OkRes = { ok: true };
+  return c.json(res);
+});
+
+rideRoutes.post("/ride/mood", requireRider, async (c) => {
+  const body = await readJson(c.req.raw, MoodReq);
+  if (!body.ok) return c.json({ error: body.error, issues: body.issues }, 400);
+  const userId = c.get("userId");
+  await setUserBattery(c.env.DB, userId, body.data.mood);
+  const active = await activeCheckin(c.env.DB, userId);
+  if (active) await roomFor(c.env, active.tripId).setMood(userId, body.data.mood);
   const res: OkRes = { ok: true };
   return c.json(res);
 });

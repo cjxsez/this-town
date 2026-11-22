@@ -21,7 +21,7 @@ export interface ScreenProps {
   children: ReactNode;
   /** Bottom actions pinned below the scrolling body (thumb zone). */
   footer?: ReactNode;
-  /** Show the Ride / Passport / People / Memories / Me bar. */
+  /** Show the Ride / Passport / People / Me bar. */
   tabs?: boolean;
   blobs?: keyof typeof BLOBS | false;
   /** Override the sea colour, e.g. the dark train-coming takeover. */

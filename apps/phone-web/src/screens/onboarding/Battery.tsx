@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { Button, ButtonRow, Card, Hint, Radio, Screen, Toggle } from "../../ui";
+import { Button, ButtonRow, Card, Hint, Radio, Screen } from "../../ui";
 import { useApp } from "../../state/store";
 import type { SocialBattery } from "../../../shared/types";
 import { JoinSteps, JoinTitle } from "./parts";
@@ -10,12 +10,11 @@ const LEVELS: { value: SocialBattery; label: string; detail: string }[] = [
   { value: "talk", label: "Talk", detail: "happy to go deep" },
 ];
 
-/** B5 Social battery + AI. AI matching is off by default. */
+/** B5 Social battery. Matching prefers riders with a similar battery. */
 export default function Battery() {
   const navigate = useNavigate();
   const { state, actions } = useApp();
   const battery = state.draft.battery ?? "chat";
-  const useAi = state.draft.useAi === true;
 
   return (
     <Screen
@@ -25,8 +24,8 @@ export default function Battery() {
         <ButtonRow>
           <Button
             onClick={() => {
-              actions.updateDraft({ battery, useAi });
-              navigate("/join/handles");
+              actions.updateDraft({ battery });
+              navigate("/join/ride-mode");
             }}
           >
             Next
@@ -47,18 +46,7 @@ export default function Battery() {
             </Radio>
           ))}
         </div>
-        <Hint>You can change this every ride.</Hint>
-      </Card>
-      <Card style={{ borderRadius: "var(--r1)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ font: "700 24px/1.08 var(--font-hand)" }}>
-            Use AI to match me
-          </div>
-          <Toggle label="Use AI to match me" checked={useAi} onChange={(v) => actions.updateDraft({ useAi: v })} />
-        </div>
-        <Hint>
-          Sends your interests, spots and "ask me about" to Gemini once, now. Never your handles, badge or location.
-        </Hint>
+        <Hint>You can change this any time while riding.</Hint>
       </Card>
     </Screen>
   );

@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { useParams } from "react-router";
-import { STATIONS, stationById } from "../../../shared/catalog";
 import { encodeQr, qrPath } from "./qr";
 
 /**
- * A1 QR poster, printed for the platform. Renders outside the phone shell at
- * US Letter portrait. Everything is sized in --u (a tenth of an inch on
- * paper), so the on-screen preview is the same sheet scaled to the window.
+ * A1 kiosk sign, printed and stuck on the kiosk next to the NFC tag (/print/tag/:car).
+ * "Tap here" points at the tag; the QR is the fallback for phones without NFC and opens
+ * the same /k/<car> page the tag does. Renders outside the phone shell at US Letter
+ * portrait, sized in --u (a tenth of an inch on paper).
  */
 const CSS = `
 .ql-poster-page {
@@ -57,34 +57,34 @@ const CSS = `
 `;
 
 export default function Poster() {
-  const { stationId = "kenmore" } = useParams();
-  const station = stationById(stationId.toLowerCase()) ?? STATIONS[0];
-  const short = `questline.page/${station.id}`;
+  const { car = "1412" } = useParams();
+  const url = `${location.origin}/k/${encodeURIComponent(car)}`;
+  const short = `${location.host}/k/${car}`;
   const path = useMemo(() => {
-    const m = encodeQr(`https://${short}`);
+    const m = encodeQr(url);
     return { d: qrPath(m, 4), size: m.length + 8 }; // 4-module quiet zone
-  }, [short]);
+  }, [url]);
 
   return (
     <div className="ql-poster-page">
       <style>{CSS}</style>
       <div className="ql-print-bar ql-no-print">
         <button type="button" className="q-btn" onClick={() => window.print()}>
-          Print this poster
+          Print this sign
         </button>
       </div>
 
-      <article className="ql-poster" aria-label={`In This Town poster for ${station.name}`}>
+      <article className="ql-poster" aria-label={`In This Town kiosk sign for car ${car}`}>
         <header className="ql-poster__head">
-          <h1 className="ql-poster__title">SIDE QUESTS WHILE YOU WAIT FOR THE T</h1>
+          <h1 className="ql-poster__title">TAP HERE TO TURN ON RIDE MODE</h1>
         </header>
         <div className="ql-poster__body">
           <p className="ql-poster__pitch">
-            Meet one person.
+            Hold your phone to the tag.
             <br />
-            Play 2 minutes.
+            Meet one rider who likes what you like.
             <br />
-            Get a stamp.
+            Get a stamp before your stop.
           </p>
           <div className="ql-poster__qr">
             <svg
@@ -98,14 +98,10 @@ export default function Poster() {
             </svg>
           </div>
           <div>
-            <div className="ql-poster__eyebrow">SCAN, OR TYPE</div>
-            <div className="ql-poster__url">
-              questline.page/
-              <br />
-              {station.id}
-            </div>
+            <div className="ql-poster__eyebrow">NO NFC? SCAN, OR TYPE</div>
+            <div className="ql-poster__url">{short}</div>
           </div>
-          <div className="ql-poster__foot">Badges at the In This Town table</div>
+          <div className="ql-poster__foot">Car {car} · 18+ · first names only</div>
         </div>
       </article>
     </div>

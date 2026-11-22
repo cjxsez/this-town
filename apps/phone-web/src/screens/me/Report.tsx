@@ -7,8 +7,7 @@ import { Body, Button, Card, Checkbox, Radio, Screen, TextField, Title } from ".
 
 const REASONS: { id: ReportReason; label: string }[] = [
   { id: "uncomfortable", label: "Made me uncomfortable" },
-  { id: "didntStop", label: "Didn't stop when I left" },
-  { id: "photoWithoutAsking", label: "Took a photo without asking" },
+  { id: "didntStop", label: "Didn't stop when I said stop" },
   { id: "other", label: "Something else" },
 ];
 
@@ -43,7 +42,7 @@ export default function Report() {
   const m = state.ride.match;
   const person = state.people.find((p) => p.id === personId) ?? (m?.id === personId ? m : undefined);
   const name = person?.firstName ?? "this rider";
-  const p = pron(person?.pronoun ?? "they");
+  const p = pron("they");
 
   const back = () => (window.history.length > 1 ? navigate(-1) : navigate("/me"));
 
@@ -124,7 +123,7 @@ function EmergencyCard() {
       }}
     >
       <div style={{ font: "400 11px var(--font-display)", letterSpacing: ".06em", color: "var(--yellow)" }}>IN DANGER RIGHT NOW?</div>
-      <div>Use the blue emergency call boxes on the platform or call Transit Police.</div>
+      <div>Use the intercom in the train car, the blue call boxes on the platform, or call Transit Police.</div>
       <a
         href="tel:+16172221212"
         aria-label="Call MBTA Transit Police, 617-222-1212"

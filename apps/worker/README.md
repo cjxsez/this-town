@@ -16,7 +16,9 @@ Contract: `packages/protocol`. Architecture: `docs/architecture.md`.
 The happy path works on the demo trip and is covered by `pnpm smoke` (see "Run locally"):
 
 - onboarding (`POST /api/users`, `GET /api/me`) and the 4-digit glasses link with a poll secret
-- check-in from a kiosk tap, destination picker, moving cars, ending the ride, ghost mode
+- check-in from a kiosk tap: destination picker, then `rideMode: true` is required to turn Ride Mode on (D15); moving cars, ending the ride, ghost mode, mood (`POST /api/ride/mood`)
+- profile edits and delete: `PATCH /api/me`, `DELETE /api/me` (checks out, then scrubs the rider; partners' stamps say "Someone")
+- People: `GET /api/matches/recent`
 - matching with no accept step: same trip, shared interests, closest car first, one pair per kiosk
 - arrival (tap on the meeting kiosk, `rider.arrived`, `POST /api/ride/arrived`, or 20 s autostart)
 - missions from the deck that fit before the next stop, late-train bonus after a delay
@@ -27,7 +29,7 @@ The happy path works on the demo trip and is covered by `pnpm smoke` (see "Run l
 Not done yet:
 
 - **Live MBTA.** `resolveLiveCarTrip` and live predictions are still stubs, so only cars in `DEMO_CAR_TRIPS` work. Fine for the demo.
-- `GET /api/matches/recent`, block/unblock without a report, deleting a rider, "stay in touch".
+- Block/unblock without a report.
 
 ## File map
 

@@ -1,14 +1,13 @@
 import type { CSSProperties, ReactNode } from "react";
 import { LINES } from "../../../../shared/catalog";
-import type { CheckIn, LineColor } from "../../../../shared/types";
+import type { LineColor } from "../../../../shared/types";
 
 /** "GREEN B · WEST" for the ticket header. */
-export function stampLineLabel(line: LineColor, branch?: string, direction?: CheckIn["direction"]) {
-  const dir = direction ? ` · ${direction.replace(/bound$/, "").toUpperCase()}` : "";
-  return `${LINES[line].label.toUpperCase()}${branch ? ` ${branch}` : ""}${dir}`;
+export function stampLineLabel(line: LineColor, branch?: string, car?: string) {
+  const c = car ? ` · CAR ${car}` : "";
+  return `${line.toUpperCase()}${branch ? ` ${branch}` : ""}${c}`;
 }
 
-/** "21 Nov 2026" */
 export function stampDate(iso: string) {
   const d = new Date(iso);
   return `${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })} ${d.getFullYear()}`;

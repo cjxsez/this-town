@@ -1,38 +1,36 @@
-// Plays the server for the ride flow so the whole app can be demoed with no
-// backend. Timings follow the wireframe: 25 s offer window, 20 s bump window,
-// train countdown from "live MBTA data", one offer at a time.
-import {
-  DIRECTIONS,
-  MEET_SPOTS,
-  MISSIONS,
-  PASSPORT_LAYOUT,
-  badgeFor,
-  interestById,
-  stationById,
-} from "../../../shared/catalog";
-import type { CheckIn, Match, Mission, Offer, SocialBattery, Stamp } from "../../../shared/types";
+// Plays the server for the ride flow so the whole app can be demoed with no backend.
+// Same rules as the worker (apps/worker/src/rooms/TrainRoom.ts) on its demo trip:
+// - the first tap of a ride needs a destination and Ride Mode confirmed (rideMode: true)
+// - a match has no accept step: it goes straight to "go to the kiosk"
+// - tapping the meeting kiosk's tag is arriving, which starts the mission
+// - both riders tap the tag for the stamp; the mission ends 30 s before the next stop
+// - you're checked out at your stop
+import type { Line, RideState as WireRide, Stamp as WireStamp, TapRes } from "@questline/protocol";
+import { DEMO_TRIP, MISSIONS, interestById, missionText } from "../../../shared/catalog";
+import type { Match, Meet, Mission, PairColor, SocialBattery } from "../../../shared/types";
+import type { TapBody } from "../../lib/api";
 import type { ServerEvent } from "../../state/ride";
 import type { RideChannel, RideContext } from "../types";
 
-const OFFER_WINDOW = 25_000;
-const BUMP_WINDOW = 20_000;
-const FIRST_TRAIN = 250_000;
+const SEGMENT_MS = 4 * 60_000;
+const MATCH_AFTER_MS = 6_000;
+const PARTNER_TAP_AFTER_MS = 4_000;
+const MISSION_BUFFER_MS = 30_000;
+const WIRE_LINE: Line = "Green-D";
+const [FRONT_CAR, BACK_CAR] = DEMO_TRIP.cars as [string, string];
 
 type Listener = (e: ServerEvent) => void;
 
 export interface DemoControls {
-  /** Auto-play: an offer arrives a few seconds after checking in, partner says yes. */
+  /** Auto-play: a match a few seconds after check-in, the partner taps for the stamp. */
   autoplay: boolean;
-  forceOffer(rare?: boolean): void;
-  partnerYes(): void;
-  fallThrough(): void;
-  partnerAtSpot(): void;
-  verifyBadge(): void;
+  matchNow(): void;
+  partnerLeaves(): void;
+  partnerTaps(): void;
+  timeUp(): void;
+  nextStop(): void;
   setDelayed(delayed: boolean): void;
   setOnline(online: boolean): void;
-  trainIn(seconds: number): void;
-  departTrain(): void;
-  partnerHasGlasses: boolean;
   /** Current sim flags, for the demo panel. */
   readonly delayed: boolean;
   readonly online: boolean;
@@ -42,56 +40,43 @@ export class RideSim implements RideChannel {
   private listeners = new Set<Listener>();
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private ctx?: RideContext;
-  private checkInData?: CheckIn;
-  private trainAt = 0;
+  private riding = false;
+  private car = BACK_CAR;
+  private destIdx = DEMO_TRIP.stops.length - 1;
+  private stopIdx = 0;
+  private nextStopAt = 0;
   private delayed = false;
   private online = true;
   private ghost = false;
-  private mood: SocialBattery = "chat";
-  private phase: "idle" | "waiting" | "offer" | "yes" | "matched" | "met" | "mission" | "bump" | "stamp" = "idle";
-  private offer?: Offer;
+  private lastDest: string | null = null;
   private match?: Match;
-  private mission?: Mission;
-  private swapped = false;
-  private recentMissions: string[] = [];
-  private partnerBumpedFlag = false;
-  private stampGiven = false;
-  private trainSoonSent = false;
-  private trainTimer?: ReturnType<typeof setTimeout>;
-  private trainSoonTimer?: ReturnType<typeof setTimeout>;
+  private meet?: Meet;
+  private notNowUntil = 0;
+  private mission?: { mission: Mission; endsAt: number; sessionId: string };
+  private taps = new Set<"you" | "partner">();
+  private stamped = false;
+  private stopTimer?: ReturnType<typeof setTimeout>;
+  private recent: string[] = [];
 
   demo: DemoControls;
 
   constructor() {
-    // Arrow functions keep `this` bound when the demo panel calls them loose.
     const sim = this;
     this.demo = {
       autoplay: true,
-      partnerHasGlasses: true,
-      forceOffer: (rare) => this.sendOffer(rare ?? this.delayed),
-      partnerYes: () => this.partnerAccepts(),
-      fallThrough: () => this.cancel(),
-      partnerAtSpot: () => this.emit({ type: "partnerAtSpot", at: Date.now() }),
-      verifyBadge: () => {
-        if (this.phase === "matched") {
-          this.phase = "met";
-          this.emit({ type: "badgeVerified" });
-        }
-      },
+      matchNow: () => this.makeMatch(),
+      partnerLeaves: () => this.clearMatch("partner"),
+      partnerTaps: () => this.tapStamp("partner"),
+      timeUp: () => this.endMission(),
+      nextStop: () => this.arriveAtStop(),
       setDelayed: (d) => {
         this.delayed = d;
-        if (this.checkInData) {
-          // A delay pushes the train out; that is when rare quests appear.
-          this.setTrain(d ? Math.max(this.trainAt, Date.now() + 9 * 60_000) : Date.now() + 4 * 60_000);
-        }
+        if (this.riding) this.setNextStop(d ? Math.max(this.nextStopAt, Date.now() + 9 * 60_000) : Date.now() + SEGMENT_MS);
       },
       setOnline: (o) => {
         this.online = o;
-        if (!o && (this.phase === "offer" || this.phase === "yes")) this.phase = "waiting";
         this.emit({ type: "connection", online: o });
       },
-      trainIn: (s) => this.setTrain(Date.now() + s * 1000),
-      departTrain: () => this.trainArrives(),
       get delayed() {
         return sim.delayed;
       },
@@ -126,271 +111,259 @@ export class RideSim implements RideChannel {
   private clearAll() {
     this.timers.forEach(clearTimeout);
     this.timers.clear();
-    this.trainTimer = undefined;
-    this.trainSoonTimer = undefined;
+    this.stopTimer = undefined;
   }
 
-  private setTrain(at: number) {
-    this.trainAt = at;
-    this.trainSoonSent = false;
-    if (this.trainTimer) clearTimeout(this.trainTimer);
-    if (this.trainSoonTimer) clearTimeout(this.trainSoonTimer);
-    this.emit({ type: "trainEta", trainAt: at, delayed: this.delayed, delayMinutes: this.delayed ? 7 : undefined });
-    const left = at - Date.now();
-    this.trainSoonTimer = this.later(Math.max(0, left - 30_000), () => {
-      this.trainSoonSent = true;
-      this.emit({ type: "trainSoon" });
+  // ---- the train ----
+
+  private stops() {
+    return DEMO_TRIP.stops;
+  }
+
+  private nextIdx() {
+    return Math.min(this.stopIdx + 1, this.stops().length - 1);
+  }
+
+  private wireState(): WireRide {
+    const next = this.stops()[this.nextIdx()]!;
+    const dest = this.stops()[this.destIdx]!;
+    return {
+      status: !this.match ? "riding" : this.mission ? "in-mission" : "matched",
+      tripId: "demo-trip-1",
+      line: WIRE_LINE,
+      car: this.car,
+      destinationStop: dest.name,
+      destinationStopId: dest.id,
+      nextStop: next.name,
+      nextStopId: next.id,
+      nextStopEtaSec: Math.max(0, Math.round((this.nextStopAt - Date.now()) / 1000)),
+      ridersOnTrain: 4,
+      ghost: this.ghost,
+    };
+  }
+
+  private checkIn() {
+    const next = this.stops()[this.nextIdx()]!;
+    const dest = this.stops()[this.destIdx]!;
+    return {
+      car: this.car,
+      line: DEMO_TRIP.line,
+      branch: DEMO_TRIP.branch,
+      nextStationId: next.id,
+      nextStationName: next.name,
+      destinationId: dest.id,
+      destinationName: dest.name,
+    };
+  }
+
+  private status() {
+    this.emit({
+      type: "rideStatus",
+      checkIn: this.checkIn(),
+      nextStopAt: this.nextStopAt,
+      ridersOnTrain: 4,
+      delayed: this.delayed,
+      delayMinutes: this.delayed ? 7 : undefined,
     });
-    this.trainTimer = this.later(Math.max(0, left), () => this.trainArrives());
   }
 
-  // ---- ride ----
+  private setNextStop(at: number) {
+    this.nextStopAt = at;
+    if (this.stopTimer) clearTimeout(this.stopTimer);
+    this.stopTimer = this.later(Math.max(0, at - Date.now()), () => this.arriveAtStop());
+    if (this.mission && this.mission.endsAt > at - MISSION_BUFFER_MS) {
+      this.later(Math.max(0, at - MISSION_BUFFER_MS - Date.now()), () => this.endMission());
+    }
+    this.status();
+  }
 
-  checkIn(c: CheckIn, ctx: RideContext) {
+  private arriveAtStop() {
+    if (!this.riding) return;
+    this.stopIdx = this.nextIdx();
+    if (this.mission && !this.stamped) this.endMission();
+    if (this.stopIdx >= this.destIdx) {
+      this.end("stop");
+      return;
+    }
+    this.setNextStop(Date.now() + SEGMENT_MS);
+    if (this.demo.autoplay && !this.match) this.later(MATCH_AFTER_MS, () => this.makeMatch());
+  }
+
+  private end(reason: "stop" | "tripEnded") {
     this.clearAll();
+    this.riding = false;
+    this.match = this.meet = this.mission = undefined;
+    this.emit({ type: "rideEnded", reason });
+  }
+
+  // ---- matching ----
+
+  private makeMatch() {
+    if (!this.riding || this.match || this.ghost || Date.now() < this.notNowUntil || !this.ctx) return;
+    const mine = this.ctx.profile.interests;
+    const shared = mine.slice(0, 2);
+    const labels = shared.map((id) => interestById(id)?.label ?? id);
+    const youWalk = this.car !== FRONT_CAR;
+    this.match = {
+      id: `mat-${Date.now().toString(36)}`,
+      firstName: "Maya",
+      color: "orange" as PairColor,
+      shared,
+      why: labels.length ? `You both like ${labels.join(" and ")}` : "You're riding the same train",
+    };
+    this.meet = { car: FRONT_CAR, carDelta: youWalk ? 1 : 0, youWalk };
+    this.taps.clear();
+    this.stamped = false;
+    this.emit({ type: "matched", match: this.match, meet: this.meet });
+    // Same car: nobody walks, the mission starts on its own soon.
+    if (!youWalk) this.later(8_000, () => this.startMission());
+  }
+
+  private clearMatch(reason: "you" | "partner") {
+    if (!this.match) return;
+    this.match = this.meet = this.mission = undefined;
+    this.emit({ type: "cancelled", reason });
+    if (reason === "partner" && this.demo.autoplay) this.later(MATCH_AFTER_MS * 2, () => this.makeMatch());
+  }
+
+  private startMission() {
+    if (!this.match || this.mission) return;
+    const pool = MISSIONS.filter((m) => !!m.delayOnly === this.delayed && !this.recent.includes(m.id));
+    const pick = pool[Math.floor(Math.random() * pool.length)] ?? MISSIONS[0]!;
+    this.recent = [pick.id, ...this.recent].slice(0, 10);
+    const station = this.stops()[this.nextIdx()]!.name;
+    const mission: Mission = {
+      ...pick,
+      title: missionText(pick.title, { station, name: this.match.firstName, color: this.match.color }),
+      body: missionText(pick.body, { station, name: this.match.firstName, color: this.match.color }),
+    };
+    const endsAt = Math.min(Date.now() + pick.seconds * 1000, this.nextStopAt - MISSION_BUFFER_MS);
+    this.mission = { mission, endsAt, sessionId: `ses-${Date.now().toString(36)}` };
+    this.emit({ type: "missionAssigned", mission, startedAt: Date.now(), endsAt });
+    this.later(Math.max(1000, endsAt - Date.now()), () => this.endMission());
+    if (this.demo.autoplay) this.later(Math.min(20_000, Math.max(2000, endsAt - Date.now() - 10_000)), () => this.tapStamp("partner"));
+  }
+
+  private endMission() {
+    if (!this.mission || this.stamped) return;
+    this.mission = undefined;
+    this.match = this.meet = undefined;
+    this.emit({ type: "missionEnded" });
+  }
+
+  private tapStamp(who: "you" | "partner"): WireStamp | null {
+    if (!this.mission || this.stamped) return null;
+    this.taps.add(who);
+    if (this.taps.size < 2) {
+      this.emit({ type: "stampProgress", taps: 1, you: who === "you" });
+      if (who === "you" && this.demo.autoplay) this.later(PARTNER_TAP_AFTER_MS, () => this.tapStamp("partner"));
+      return null;
+    }
+    this.stamped = true;
+    const station = this.stops()[this.nextIdx()]!;
+    const wire: WireStamp = {
+      id: `stp-${Date.now().toString(36)}`,
+      stationId: station.id,
+      station: station.name,
+      line: WIRE_LINE,
+      partnerFirstName: this.match?.firstName ?? "",
+      rare: this.mission.mission.rarity === "rare",
+      awardedAt: Date.now(),
+    };
+    this.emit({
+      type: "stampAwarded",
+      stamp: {
+        id: wire.id,
+        stationId: station.id,
+        stationName: station.name,
+        line: DEMO_TRIP.line,
+        branch: DEMO_TRIP.branch,
+        earnedAt: new Date(wire.awardedAt).toISOString(),
+        rare: wire.rare,
+        delayNote: this.delayed ? "train was 7 min late" : undefined,
+        missionId: this.mission.mission.id,
+        withPersonId: this.match?.id ?? "",
+        withFirstName: wire.partnerFirstName,
+      },
+    });
+    this.mission = undefined;
+    this.match = this.meet = undefined;
+    return wire;
+  }
+
+  // ---- RideChannel ----
+
+  async tapKiosk(body: TapBody, ctx: RideContext): Promise<TapRes> {
     this.ctx = ctx;
-    this.checkInData = c;
-    this.mood = ctx.mood;
     this.ghost = ctx.ghost;
-    this.phase = "waiting";
-    this.recentMissions = [];
-    this.trainAt = Date.now() + (this.delayed ? 9 * 60_000 : FIRST_TRAIN);
-    this.emit({ type: "checkedIn", checkIn: c, trainAt: this.trainAt, delayed: this.delayed, delayMinutes: this.delayed ? 7 : undefined });
-    this.setTrain(this.trainAt);
-    this.scheduleAutoOffer();
+    if (!(body.car === FRONT_CAR || body.car === BACK_CAR)) {
+      return { result: "error", message: `Car ${body.car} isn't on a live trip right now.` };
+    }
+
+    if (!this.riding) {
+      const stops = this.stops().slice(this.nextIdx()).map((s) => ({ id: s.id, name: s.name }));
+      const destIdx = this.stops().findIndex((s) => s.id === body.destinationStop);
+      if (!body.rideMode || destIdx <= this.stopIdx) {
+        return {
+          result: "need-destination",
+          line: WIRE_LINE,
+          car: body.car,
+          stops,
+          suggestedStop: this.lastDest && stops.some((s) => s.id === this.lastDest) ? this.lastDest : null,
+        };
+      }
+      this.riding = true;
+      this.car = body.car;
+      this.destIdx = destIdx;
+      this.lastDest = body.destinationStop ?? null;
+      this.nextStopAt = Date.now() + SEGMENT_MS;
+      this.emit({ type: "checkedIn", checkIn: this.checkIn(), nextStopAt: this.nextStopAt, ridersOnTrain: 4 });
+      this.setNextStop(this.nextStopAt);
+      if (this.demo.autoplay) this.later(MATCH_AFTER_MS, () => this.makeMatch());
+      return { result: "checked-in", state: this.wireState() };
+    }
+
+    // A tap on the meeting kiosk during a mission is a stamp tap.
+    if (this.mission && body.car === this.meet?.car) {
+      const stamp = this.tapStamp("you");
+      return stamp ? { result: "stamp-awarded", stamp } : { result: "stamp-pending" };
+    }
+
+    const moved = body.car !== this.car;
+    this.car = body.car;
+    // Tapping the meeting kiosk before the mission is arriving.
+    if (this.match && this.meet && body.car === this.meet.car) {
+      this.meet = { ...this.meet, carDelta: 0 };
+      this.emit({ type: "arrived" });
+      this.later(1500, () => this.startMission());
+    }
+    this.status();
+    return { result: moved ? "moved-car" : "checked-in", state: this.wireState() };
   }
 
   checkOut() {
     this.clearAll();
-    this.phase = "idle";
-    this.checkInData = undefined;
+    this.riding = false;
+    this.match = this.meet = this.mission = undefined;
+    this.stopIdx = 0;
   }
 
-  setMood(m: SocialBattery) {
-    this.mood = m;
+  setMood(_mood: SocialBattery) {}
+
+  setGhost(ghost: boolean) {
+    this.ghost = ghost;
+    if (ghost && this.match) this.clearMatch("you");
   }
 
-  setGhost(g: boolean) {
-    this.ghost = g;
-    if (!g) this.scheduleAutoOffer();
+  notNow() {
+    if (!this.match) return;
+    this.notNowUntil = Date.now() + 10 * 60_000;
+    this.clearMatch("you");
   }
 
-  private scheduleAutoOffer() {
-    if (!this.demo.autoplay) return;
-    this.later(9000, () => {
-      if (this.phase === "waiting" && !this.ghost) this.sendOffer(this.delayed);
-    });
-  }
-
-  private sendOffer(rare: boolean) {
-    if (this.phase !== "waiting" || !this.checkInData || this.ghost) return;
-    const interest = this.sharedInterest();
-    const why = rare
-      ? `Someone here is also stuck and also likes ${interest}.`
-      : `Someone here also loves ${interest}.`;
-    this.offer = { id: `o-${Date.now()}`, why, minutes: rare ? 5 : this.mood === "nod" ? 2 : 3, rare, expiresAt: Date.now() + OFFER_WINDOW };
-    this.phase = "offer";
-    this.emit({ type: "offer", offer: this.offer });
-    // Timing out looks identical to a skip from the other side.
-    this.later(OFFER_WINDOW, () => {
-      if (this.phase === "offer" || this.phase === "yes") this.cancel();
-    });
-  }
-
-  /** The "why" line is a template from a shared chip, never AI-written. */
-  private sharedInterest() {
-    const mine = this.ctx?.profile.interests ?? [];
-    const pick = mine.find((i) => i === "ramen") ?? mine[0] ?? "ramen";
-    return interestById(pick)?.label ?? pick;
-  }
-
-  respondOffer(yes: boolean) {
-    if (this.phase !== "offer") return;
-    if (!yes) return this.cancel();
-    this.phase = "yes";
-    if (this.demo.autoplay) this.later(2600, () => this.partnerAccepts());
-  }
-
-  private partnerAccepts() {
-    if (this.phase !== "yes" && this.phase !== "offer") return;
-    if (this.phase === "offer") return; // they can't match until you've said yes
-    const stationId = this.checkInData?.stationId ?? "kenmore";
-    const spots = MEET_SPOTS[stationId] ?? MEET_SPOTS.kenmore;
-    this.match = {
-      id: "p-maya",
-      firstName: "Maya",
-      badge: badgeFor(17),
-      pronoun: "she",
-      askMeAbout: "the best bowl in Allston",
-      hasGlasses: this.demo.partnerHasGlasses,
-    };
-    this.phase = "matched";
-    this.emit({
-      type: "matched",
-      match: this.match,
-      meetSpot: spots[0],
-      opener: { youFirst: true, say: "Is this the train to Narnia?", listenFor: "Only on Tuesdays." },
-    });
-    if (this.demo.autoplay) {
-      this.later(12_000, () => {
-        if (this.phase === "matched") this.emit({ type: "partnerAtSpot", at: Date.now() });
-      });
-      // A glasses wearer's camera spots the partner's badge tag on its own.
-      if (this.ctx?.profile.hasGlasses) this.later(6000, () => this.demo.verifyBadge());
-    }
-  }
-
-  private cancel() {
-    if (!["offer", "yes", "matched"].includes(this.phase)) return;
-    this.phase = "waiting";
-    this.offer = undefined;
-    this.match = undefined;
-    this.emit({ type: "cancelled" });
-  }
-
-  withdraw() {
-    this.cancel();
-  }
-
-  atSpot() {
-    // Sends the partner "<name> is at <spot>". Nothing else about location.
-    if (this.demo.autoplay) this.later(1500, () => this.emit({ type: "partnerAtSpot", at: Date.now() - 20_000 }));
-  }
-
-  met() {
-    if (this.phase === "matched") this.phase = "met";
-  }
-
-  private pickMission(): Mission {
-    const left = (this.trainAt - Date.now()) / 1000;
-    const pool = MISSIONS.filter((m) => {
-      if (this.recentMissions.includes(m.id)) return false;
-      if (m.delayOnly && !this.delayed) return false;
-      if (this.mood === "nod" && !m.nodFriendly) return false;
-      return m.seconds <= Math.max(45, left - 20);
-    });
-    const preferred = this.delayed
-      ? pool.find((m) => m.delayOnly)
-      : pool.find((m) => m.id === "rename-station") ?? pool.find((m) => m.group === "create");
-    return preferred ?? pool[0] ?? MISSIONS[12];
-  }
-
-  startQuest() {
-    if (this.phase !== "met" && this.phase !== "matched") return;
-    this.phase = "mission";
-    this.assignMission(false);
-  }
-
-  private assignMission(swapped: boolean) {
-    this.mission = this.pickMission();
-    this.recentMissions = [this.mission.id, ...this.recentMissions].slice(0, 10);
-    const startedAt = Date.now();
-    // The train always wins: never run past the train.
-    const endsAt = Math.min(startedAt + this.mission.seconds * 1000, this.trainAt);
-    this.swapped = swapped;
-    this.emit({ type: "missionAssigned", mission: this.mission, startedAt, endsAt, swapped });
-  }
-
-  newPrompt() {
-    if (this.phase !== "mission" || this.swapped) return; // one new prompt per quest
-    this.assignMission(true);
-  }
-
-  missionDone() {
-    this.phase = "bump";
-    this.partnerBumpedFlag = false;
-    this.stampGiven = false;
-    this.later(BUMP_WINDOW, () => {
-      // Both taps within 20 s or no stamp.
-      if (this.phase === "bump" && !this.stampGiven) this.emit({ type: "ended" });
-    });
-    // Glasses can skip the tap: the camera sees both tags.
-    if (this.ctx?.profile.hasGlasses && this.demo.autoplay) this.later(2500, () => this.bothBumped());
-  }
-
-  bump() {
-    if (this.phase !== "bump") return;
-    if (this.partnerBumpedFlag) return this.bothBumped();
-    if (this.demo.autoplay) {
-      this.later(1400, () => {
-        this.partnerBumpedFlag = true;
-        this.emit({ type: "partnerBumped" });
-        this.bothBumped();
-      });
-    }
-  }
-
-  private bothBumped() {
-    // Tapping twice never gives two stamps.
-    if (this.stampGiven || !this.checkInData) return;
-    this.stampGiven = true;
-    this.phase = "stamp";
-    this.emit({ type: "stampAwarded", stamp: this.makeStamp() });
-  }
-
-  private makeStamp(): Stamp {
-    const c = this.checkInData!;
-    return {
-      id: `s-${c.stationId}-${Date.now()}`,
-      stationId: c.stationId,
-      line: c.line,
-      branch: c.branch,
-      earnedAt: new Date().toISOString(),
-      rare: !!this.offer?.rare || !!this.mission?.delayOnly,
-      delayNote: this.delayed ? "train was 7 min late" : undefined,
-      missionId: this.mission?.id ?? "rename-station",
-      withPersonId: this.match?.id ?? "p-maya",
-    };
-  }
-
-  photoVote(yes: boolean) {
-    if (!yes) return; // "No thanks" is invisible to the other side.
-    if (this.demo.autoplay) this.later(1500, () => this.emit({ type: "photoVotes", partner: true }));
-  }
-
-  takePhoto() {
-    // Auto-deletes in 24 h unless both keep it.
-    this.later(900, () => this.emit({ type: "photoTaken", keepDeadline: Date.now() + 24 * 3600_000 - 60_000 }));
-  }
-
-  keepVote() {
-    // The partner's vote arrives later (Memories shows "waiting on Maya").
-  }
-
-  board() {
-    if (["met", "mission", "bump"].includes(this.phase) && !this.stampGiven && this.checkInData) {
-      // The stamp is held for the bump window even if one of them boards.
-      this.stampGiven = true;
-      this.emit({ type: "stampAwarded", stamp: this.makeStamp() });
-    }
-    this.phase = "stamp";
-    this.emit({ type: "ended" });
-  }
-
-  private trainArrives() {
-    if (this.trainTimer) clearTimeout(this.trainTimer);
-    if (["met", "mission", "bump"].includes(this.phase) && !this.stampGiven && this.checkInData) {
-      this.stampGiven = true;
-      this.emit({ type: "stampAwarded", stamp: this.makeStamp() });
-    }
-    if (!this.trainSoonSent) this.emit({ type: "trainSoon" });
-    this.emit({ type: "trainDeparted" });
-    if (this.phase === "waiting" || this.phase === "offer" || this.phase === "yes" || this.phase === "matched") {
-      this.phase = "waiting";
-    }
-    this.clearAll();
-  }
-
-  keepOnNextStation() {
-    const c = this.checkInData;
-    if (!c || !this.ctx) return;
-    // Re-check in at the next stop on the line; ends the old ride first.
-    const order = PASSPORT_LAYOUT[c.line].flatMap((g) => g.stationIds);
-    const i = order.indexOf(c.stationId);
-    const westish = c.direction === "westbound" || c.direction === "outbound" || c.direction === "southbound";
-    const nextId = order[i + (westish ? 1 : -1)] ?? order[0];
-    const next = stationById(nextId) ?? stationById("kenmore")!;
-    const dir = DIRECTIONS[c.line].find((d) => d.id === c.direction) ?? DIRECTIONS[c.line][0];
-    this.checkIn({ ...c, stationId: next.id, direction: dir.id, via: "list" }, this.ctx);
+  arrived() {
+    if (!this.match) return;
+    this.emit({ type: "arrived" });
+    this.later(1500, () => this.startMission());
   }
 }

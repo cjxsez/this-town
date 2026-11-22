@@ -17,8 +17,8 @@ import {
 } from "three";
 import type { Config } from "../config";
 import { GeoBuilder, type IdAllocator, place, placeTurned } from "../scene/builder";
-import { buildWorld, carGeometry, ringFrame, SHADOW_LAYER, wallQuad, type SceneMaterials } from "../scene/world";
-import { ANIMALS, animalGeometry, figureGeometry, glassesGeometry, SPOTS, spotGeometry, type FigureLook } from "./models";
+import { buildWorld, carGeometry, SHADOW_LAYER, wallQuad, type SceneMaterials } from "../scene/world";
+import { figureGeometry, glassesGeometry } from "./models";
 
 export interface StudioContext {
   config: Config;
@@ -45,8 +45,6 @@ export interface Shot {
   camera: { azimuthDeg: number; elevationDeg: number; fovDeg: number; /** 1 = subject just fits. */ fill: number };
   build(ctx: StudioContext): Subject;
 }
-
-const RAD = Math.PI / 180;
 
 function solid(geometry: BufferGeometry, ctx: StudioContext): Mesh {
   const mesh = new Mesh(geometry, ctx.materials.world);
@@ -99,21 +97,6 @@ const rider: Shot = {
   },
 };
 
-const animals: Shot[] = ANIMALS.map((animal) => ({
-  id: `animal-${animal}`,
-  width: 96,
-  height: 96,
-  scale: 3,
-  background: "clear" as const,
-  camera: { azimuthDeg: 12, elevationDeg: 4, fovDeg: 18, fill: 1 },
-  build(ctx) {
-    const geometry = animalGeometry(animal, ctx.config.colors, ctx.ids);
-    geometry.computeBoundingSphere();
-    const ball = geometry.boundingSphere!;
-    return { root: solid(geometry, ctx), center: ball.center.clone(), radius: ball.radius * 0.94 };
-  },
-}));
-
 const glasses: Shot = {
   id: "glasses-art",
   width: 340,
@@ -127,18 +110,6 @@ const glasses: Shot = {
     return { root: group(mesh, groundShadow(ctx, 1.5, 0.75, 0.25, -0.75)), center: new Vector3(0, 0.45, -0.5), radius: 1.75 };
   },
 };
-
-const spots: Shot[] = SPOTS.map((spot) => ({
-  id: `meet-spot-kenmore-${spot}`,
-  width: 330,
-  height: 170,
-  scale: 3,
-  background: "clear" as const,
-  camera: { azimuthDeg: spot === "comm-ave-stairs" ? 30 : 22, elevationDeg: 17, fovDeg: 26, fill: 1.5 },
-  build(ctx) {
-    return { root: solid(spotGeometry(spot, ctx.config, ctx.ids), ctx), center: new Vector3(0, 1.7, 0), radius: 5.4 };
-  },
-}));
 
 /** Side view of the trolley in a line's colour, for the app's train scenes. */
 const trolley = (line: string, hex: string): Shot => ({
@@ -201,68 +172,14 @@ const house = (id: string, roof: string): Shot => ({
   },
 });
 
-/** A snapshot of two riders on a platform, the trolley in behind them. */
-function snapshot(id: string, station: number, swing: number, looks: [FigureLook, FigureLook]): Shot {
-  return {
-    id,
-    width: 320,
-    height: 240,
-    scale: 3,
-    background: "sea",
-    camera: { azimuthDeg: 0, elevationDeg: 13, fovDeg: 34, fill: 0.92 },
-    build(ctx) {
-      // The island without its tiny waiting riders: the two in the photo are the people here.
-      const stations = { ...ctx.config.world.stations, riders: [[], [], []] };
-      const config = { ...ctx.config, world: { ...ctx.config.world, stations } } as unknown as Config;
-      const W = config.world;
-      const S = W.stations;
-      const T = config.train;
-      const world = buildWorld(config, config.seas.Day, ctx.ids, ctx.materials);
-      // Hold the train at this stop.
-      world.update(station * (T.legSeconds + T.dwellSeconds) + T.dwellSeconds / 2 - T.startSeconds);
-
-      const deg = S.anglesDeg[station]!;
-      const platformRadius = W.track.radius + W.track.width / 2 + S.platformGap + S.platformWidth / 2;
-      const platformTop = W.grass.top + S.platformHeight;
-      const frame = ringFrame(platformRadius, deg);
-      const tall = 2.5;
-      const standX = S.platformLength * 0.31;
-      const root = group(world.group, world.foam);
-      looks.forEach((look, i) => {
-        const side = i === 0 ? -1 : 1;
-        const figure = solid(figureGeometry(look, config.colors, ctx.ids), ctx);
-        figure.applyMatrix4(frame.clone().multiply(place(standX + side * 0.85, platformTop, 0.75, -side * 14 * RAD, tall)));
-        root.add(figure);
-      });
-      const center = new Vector3(standX, platformTop + tall * 0.62, 0.75).applyMatrix4(frame);
-      // Stand outside the loop, looking in at the platform.
-      this.camera.azimuthDeg = 90 - deg + swing;
-      return { root, center, radius: 3.1 };
-    },
-  };
-}
-
-export function snapshots(C: Config["colors"]): Shot[] {
-  const you: FigureLook = { shirt: C.orange, hair: C.inkSoft, badge: C.paper };
-  return [
-    snapshot("memory-photo", 0, 16, [you, { shirt: "#17736f", hair: C.brick, badge: C.paper }]),
-    snapshot("memory-m-jo", 1, -18, [you, { shirt: C.yellow, hair: C.inkDeep, badge: C.paper }]),
-    snapshot("memory-m-dev", 2, 20, [you, { shirt: C.blue, hair: C.inkSoft, badge: C.paper }]),
-    snapshot("memory-m-ravi", 0, -22, [you, { shirt: C.red, hair: C.inkDeep, badge: C.paper }]),
-  ];
-}
-
 import { CONFIG } from "../config";
 
 export const SHOTS: Shot[] = [
   hero,
   rider,
   glasses,
-  ...spots,
-  ...animals,
   ...["green", "red", "orange", "blue"].map((line, i) => trolley(line, CONFIG.lineColors[i]!)),
   tree,
   house("sprite-house-pink", "#c9a9a6"),
   house("sprite-house-red", "#d9604a"),
-  ...snapshots(CONFIG.colors),
 ];

@@ -6,13 +6,10 @@ Do not edit these by hand. Change a model, a shot or a colour in
 
 Each file is named after the `ArtSlot` id it fills:
 
-- hero-art.webp                 landing page: the island
-- ride-rider.webp               waiting screen: you, on the platform
-- animal-<animal>.webp          badge animals (cat bear frog owl rabbit fox duck deer);
-                                the badge colour is the disc drawn behind them
-- meet-spot-<station>-<spot>.webp   where two riders meet, e.g. meet-spot-kenmore-system-map
-- memory-<id>.webp, memory-photo.webp   stand-ins for the photos riders take
-- glasses-art.webp              the glasses
-- sprite-*.webp                 trolley, tree and houses for the platform scenes
+- hero-art.webp            landing page: the island (a small Boston University)
+- ride-rider.webp          Riding screen, flat fallback: you
+- glasses-art.webp         Glasses screen
+- sprite-*.webp            trolley (one per line colour), tree and houses for the flat
+                           fallback scenes, shown when the 3D platform view cannot run
 
 A slot with no file shows a dashed placeholder. Search the code for `<ArtSlot id=` for the full list.
