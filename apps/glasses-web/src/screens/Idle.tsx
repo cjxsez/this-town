@@ -3,12 +3,7 @@
  *
  * Driven by ride.state (RideState): nextStop, nextStopEtaSec (shown as a countdown),
  * ridersOnTrain, status, ghost. If Ride Mode is off, tells the rider to tap the kiosk tag.
- * No input handling yet.
- *
- * TODO:
- * - Show line + car ("Orange Line, car 1412") once we decide it is worth the space.
- * - Ghost mode indicator copy.
- * - Keep the HUD mostly empty here: it is on screen for most of the ride.
+ * Kept mostly empty: this screen is up for most of the ride.
  */
 import type { RideState } from "@questline/protocol";
 import { Countdown } from "../components/Countdown";
@@ -24,7 +19,7 @@ interface IdleProps {
 export function Idle({ ride, nextStopAt, status }: IdleProps) {
   if (!ride) {
     return (
-      <main className="hud hud-center">
+      <main className="hud hud-center" aria-live="polite">
         <div className="hud-body">{status === "connecting" ? "Connecting…" : "Waiting for your ride…"}</div>
       </main>
     );
@@ -32,7 +27,7 @@ export function Idle({ ride, nextStopAt, status }: IdleProps) {
 
   if (ride.status === "off") {
     return (
-      <main className="hud hud-center">
+      <main className="hud hud-center" aria-live="polite">
         <div className="hud-title">Ride Mode is off</div>
         <div className="hud-body">Tap the kiosk tag in your car to start</div>
       </main>

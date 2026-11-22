@@ -222,7 +222,11 @@ export function App() {
   if (state.status === "offline") return <Offline onRetry={onRetry} />;
 
   const { screen } = state;
-  const banner = state.sendError ? <div className="hud-send-error">{state.sendError}</div> : null;
+  const banner = state.sendError ? (
+    <div className="hud-send-error" role="status" aria-live="assertive">
+      {state.sendError}
+    </div>
+  ) : null;
   switch (screen.name) {
     case "idle":
       return (

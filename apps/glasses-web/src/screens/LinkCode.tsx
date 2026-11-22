@@ -52,7 +52,7 @@ export function LinkCode({ onLinked }: LinkCodeProps) {
 
   if (linkedAs !== null) {
     return (
-      <main className="hud hud-center">
+      <main className="hud hud-center" aria-live="polite">
         <div className="hud-title">Linked as {linkedAs}</div>
       </main>
     );
@@ -61,11 +61,15 @@ export function LinkCode({ onLinked }: LinkCodeProps) {
   return (
     <main className="hud hud-center">
       <div className="hud-dim">Link your glasses</div>
-      <div className="hud-code" aria-live="polite">
+      <div className="hud-code" aria-live="polite" aria-label={code ? `Code ${code.split("").join(" ")}` : "Waiting for code"}>
         {code ?? "····"}
       </div>
       <div className="hud-body">Enter this code in In This Town on your phone</div>
-      {error && <div className="hud-warn">Can't reach In This Town. Pinch to retry.</div>}
+      {error && (
+        <div className="hud-warn" role="alert">
+          Can't reach In This Town. Pinch to retry.
+        </div>
+      )}
     </main>
   );
 }

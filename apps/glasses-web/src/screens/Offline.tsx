@@ -4,9 +4,6 @@
  * Shown by App while lib/socket.ts reports status "offline" (backoff retry in progress).
  * Select retries immediately (RiderSocket.retryNow). The glasses have no offline support,
  * so there is nothing useful to show beyond this.
- *
- * TODO:
- * - Show "last updated" age and the last known next stop.
  */
 import { useInput } from "../lib/input";
 
@@ -20,7 +17,7 @@ export function Offline({ onRetry }: OfflineProps) {
   });
 
   return (
-    <main className="hud hud-center">
+    <main className="hud hud-center" aria-live="polite">
       <div className="hud-title">Reconnecting…</div>
       <div className="hud-body">Keep this open. Pinch to retry now.</div>
     </main>

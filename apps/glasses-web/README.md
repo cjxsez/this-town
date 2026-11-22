@@ -27,11 +27,14 @@ Served by the worker at `https://<domain>/g/` (Vite `base: "/g/"`).
 | "Not now" (back, or select on the button) | sends `rider.notNow`, `Idle` |
 | `match.cleared` (same `matchId`) | `Idle` |
 | `mission.start` | `Mission` |
+| `stamp.progress` (tapped: 1) | `Mission` shows "1 of 2 tapped" |
 | `mission.end` `time-up` / `cancelled` | `Idle` |
-| `mission.end` `stamped` | stays, waits for `stamp.awarded` |
+| `mission.end` `stamped` | stays, waits for `stamp.awarded` (falls back to `Idle` after 5 s) |
 | `stamp.awarded` | `Stamp`, auto-dismiss after 4 s to `Idle` |
+| `ride.snapshot` (reload / poll) | restores match or mission from the snapshot |
 | socket dropped, retrying | `Offline` |
-| socket auth failure | clear token, `LinkCode` |
+| socket auth failure (`WS_CLOSE.badAuth`) | clear token, `LinkCode` |
+| send failed (polling REST) | bottom line "Couldn't send" for 3 s |
 
 ## Games (the `/g/` root)
 
@@ -79,17 +82,20 @@ src/App.tsx             screen state machine driven by socket events
 src/styles.css          600x600 root, black background, big type, focus rings
 src/guess.css           all games: phone fonts and colors as outlines on black
 src/lib/input.ts        key -> action mapping, useInput hook (optional wheel and click)
-src/lib/link.ts         4-digit code linking, token in localStorage
-src/lib/socket.ts       /ws/rider socket, reconnect, polling fallback
-src/screens/LinkCode.tsx  big 4-digit code
+src/lib/link.ts         4-digit code linking, 429 backoff, token in localStorage
+src/lib/socket.ts       /ws/rider socket, WS_CLOSE handling, REST send fallback, pause when hidden
+src/lib/clock.ts        serverNow offset for countdowns
+src/lib/wakeLock.ts     screen wake lock while the ride HUD is open
+src/ErrorBoundary.tsx   black "Something broke. Swipe to reload." screen
+src/screens/LinkCode.tsx  big 4-digit code, then "Linked as <firstName>" for 2 s
 src/screens/Idle.tsx      next stop, countdown, riders on train
 src/screens/MatchCard.tsx partner name, color, why line, where to go, I'm here / Not now
-src/screens/Mission.tsx   compact title, prompt, countdown
+src/screens/Mission.tsx   compact title, prompt, countdown, tap progress
 src/screens/Stamp.tsx     brief celebration, auto-dismiss
 src/screens/Offline.tsx   reconnecting
 src/components/EndButtons.tsx  end of a game: Next game and Again
 src/components/Clock.tsx       m:ss pill for a game deadline in server time
-src/components/Countdown.tsx   m:ss to an epoch ms time
+src/components/Countdown.tsx   m:ss to an epoch ms time (server clock)
 src/components/ColorSwatch.tsx pair color from PAIR_COLOR_HEX
 ```
 

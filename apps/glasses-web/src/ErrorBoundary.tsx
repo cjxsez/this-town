@@ -34,6 +34,8 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <main
         className="hud hud-center"
+        role="alert"
+        aria-live="assertive"
         style={{
           width: 600,
           height: 600,
