@@ -31,17 +31,17 @@ test("a left trivia question says who left a question when the room knew the pai
   assert.equal(triviaFromLine(view), "Left for you by Maya and Sam");
 });
 
-test("a left trivia question has no name when the pair played without names", async () => {
+test("a left trivia question falls back to the demo names when the pair played without names", async () => {
   const shared = memoryStore();
   await saveLeft(shared, card, 1);
   const view = firstQuestion(await pickTrivia(shared, ctx.rand));
   assert.equal(view.from, "pair");
   assert.equal(view.by, null);
-  assert.equal(triviaFromLine(view), "Left by a pair before you");
+  assert.equal(triviaFromLine(view), "Left for you by Andres and Kenny");
 });
 
-test("a starter trivia question never carries a name", () => {
+test("a starter trivia question shows the demo names", () => {
   const view = firstQuestion({ questions: [{ ...card, left: false, by: "Maya and Sam" }] });
   assert.equal(view.by, null);
-  assert.equal(triviaFromLine(view), "From the starter deck");
+  assert.equal(triviaFromLine(view), "Left for you by Andres and Kenny");
 });

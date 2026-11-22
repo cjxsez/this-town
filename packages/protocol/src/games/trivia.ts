@@ -147,10 +147,12 @@ function toQuestion(card: TriviaCard, left: boolean, rand: () => number, by: unk
   return { q: card.q, choices, answer: choices.indexOf(card.a), left, by: (left && triviaClean(by, TRIVIA_MAX_BY)) || null };
 }
 
+/** For the demo: who a question is from when no names came with it (starters, and ones left before names were kept). */
+export const TRIVIA_DEFAULT_BY = "Andres and Kenny";
+
 /** The line under the question count: who this question is from. */
-export function triviaFromLine(view: { from: "pair" | "deck"; by: string | null }): string {
-  if (view.from === "deck") return "From the starter deck";
-  return view.by ? `Left for you by ${view.by}` : "Left by a pair before you";
+export function triviaFromLine(view: { by: string | null }): string {
+  return `Left for you by ${view.by ?? TRIVIA_DEFAULT_BY}`;
 }
 
 function pickQuestions(seed: unknown, rand: () => number): TriviaQuestion[] {
