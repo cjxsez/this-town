@@ -57,13 +57,38 @@ export interface FigureLook {
 }
 
 /** A toy rider one unit tall, feet on y = 0, facing +Z, wearing a badge. */
-export function figureGeometry(look: FigureLook, C: Colors, ids: IdAllocator): BufferGeometry {
+export interface FigurePose {
+  /**
+   * Each arm's angle out from hanging straight down, in degrees, for the figure's own
+   * left side (x < 0) and right side (x > 0): 0 = down, 90 = straight out, 180 = straight up.
+   */
+  arms: readonly [number, number];
+}
+
+const SHOULDER_Y = 0.62;
+const SHOULDER_X = 0.2;
+const ARM_LENGTH = 0.32;
+
+/** Where a hand ends up for an arm on `side` (-1 left, 1 right) raised `deg` degrees. */
+export function handPosition(side: -1 | 1, deg: number): { x: number; y: number } {
+  const a = deg * RAD;
+  return { x: side * (SHOULDER_X + ARM_LENGTH * Math.sin(a)), y: SHOULDER_Y - ARM_LENGTH * Math.cos(a) };
+}
+
+export function figureGeometry(look: FigureLook, C: Colors, ids: IdAllocator, pose: FigurePose = { arms: [12, 12] }): BufferGeometry {
   const b = new GeoBuilder();
   const id = ids.next();
-  // Legs, a bean-shaped body turned on a lathe, arms, head, hair.
-  for (const s of [-1, 1]) {
+  // Legs, a bean-shaped body turned on a lathe, arms with hands, head, hair.
+  for (const s of [-1, 1] as const) {
     b.add(new CylinderGeometry(0.065, 0.075, 0.22, 8), at(s * 0.09, 0.11, 0), C.inkSoft, id);
-    b.add(ball(1), placeTurned(s * 0.25, 0.47, 0, 0, 0, s * 10 * RAD).multiply(at(0, 0, 0, 0.06, 0.16, 0.06)), look.shirt, id);
+    const deg = pose.arms[s < 0 ? 0 : 1];
+    const mid = handPosition(s, deg);
+    const a = deg * RAD;
+    // The arm is an ellipsoid from shoulder to hand, turned to point along the arm.
+    const cx = s * SHOULDER_X + (mid.x - s * SHOULDER_X) / 2;
+    const cy = SHOULDER_Y + (mid.y - SHOULDER_Y) / 2;
+    b.add(ball(1), placeTurned(cx, cy, 0, 0, 0, s * a).multiply(at(0, 0, 0, 0.065, ARM_LENGTH / 2 + 0.02, 0.065)), look.shirt, id);
+    b.add(ball(0.06), at(mid.x, mid.y, 0), C.sand, id);
   }
   const profile = [
     [0.001, 0.2], [0.19, 0.2], [0.235, 0.32], [0.23, 0.48], [0.17, 0.62], [0.09, 0.69], [0.001, 0.7],

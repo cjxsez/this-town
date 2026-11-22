@@ -485,6 +485,17 @@ export const CONFIG = {
     doneAt: 1.4,
   },
 
+  /**
+   * With `revealAfterBegin`, the shut doors stay on top after onBegin() while the
+   * next page loads behind them, hold for a beat, then slide open onto it.
+   * Seconds from onBegin().
+   */
+  reveal: {
+    holdSeconds: 0.3,
+    openSeconds: 0.95,
+    ease: EASE.doors,
+  },
+
   // ---------------------------------------------------------------- touch and pointer
   interaction: {
     /** A hovered tile leans towards the pointer and lifts. */
@@ -534,4 +545,5 @@ export type CueName =
   | Config["cues"]["outro"][number]["name"]
   | "hover"
   | "flap"
-  | "roundel";
+  | "roundel"
+  | "doors-open";

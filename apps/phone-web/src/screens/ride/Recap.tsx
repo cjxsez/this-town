@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useNavigate } from "react-router";
 import { Button, Card, PairToken, Screen, TextLink } from "../../ui";
 import { useApp } from "../../state/store";
@@ -5,6 +6,7 @@ import { capitalize, shortDate, timeOfDay } from "../../state/format";
 import { missionText, stationById } from "../../../shared/catalog";
 import type { Mission } from "../../../shared/types";
 import { StampTicketSmall } from "./parts/StampTicket";
+import { friendColor } from "./parts/Celebrate";
 
 /** "Rename Kenmore together." → "Rename Kenmore": the short label the recap quotes. */
 function recapMissionLabel(m: Mission, station: string, name: string) {
@@ -38,15 +40,34 @@ export default function Recap() {
     navigate("/passport");
   };
 
+  const passport = state.stamps.length;
+  /** Rises in `ms` after the screen appears, keeping the element's own class and style. */
+  const enter = (ms: number, cls = "", style: CSSProperties = {}) => ({
+    className: `${cls} q-enter`.trim(),
+    style: { ...style, "--d": ms } as CSSProperties,
+  });
+
   return (
     <Screen label="H1" blobs="a" tabs>
-      <div className="q-eyebrow" style={{ color: "inherit" }}>
+      <div {...enter(0, "q-eyebrow", { color: "inherit" })}>
         {stamped ? "Quest complete" : "Time's up"}
         {station && ` · ${station}`} · {timeOfDay(at)}
       </div>
 
+      {/* You and your match meet in the middle for a high five, the trolley behind you. */}
+      <div className="h1-hero" aria-hidden>
+        <img className="h1-hero__backdrop" src="/art/recap-backdrop.webp" alt="" />
+        <img className="h1-hero__rider h1-hero__rider--you" src="/art/highfive-you.webp" alt="" />
+        <img className="h1-hero__rider h1-hero__rider--friend" src={`/art/highfive-friend-${friendColor(person?.color)}.webp`} alt="" />
+        <div className="h1-hero__clap">
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+            <span key={deg} style={{ rotate: `${deg}deg` }} />
+          ))}
+        </div>
+      </div>
+
       {person && (
-        <Card style={{ borderRadius: "var(--r2)" }}>
+        <Card {...enter(450, "", { borderRadius: "var(--r2)" })}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <PairToken color={person.color} name={person.firstName} size={64} />
             <div style={{ minWidth: 0 }}>
@@ -68,25 +89,31 @@ export default function Recap() {
       )}
 
       {stamped ? (
-        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+        <div {...enter(560, "h1-stats")}>
           <StampTicketSmall
             station={station}
             sub={`${capitalize(shortDate(stamp?.earnedAt ?? at))} · with ${person?.firstName ?? "them"}`}
             rare={!!stamp?.rare}
           />
+          <div className="h1-stats__list">
+            <span className="q-pill">+1 person met</span>
+            <span className="q-pill">
+              {passport} {passport === 1 ? "stamp" : "stamps"} in passport
+            </span>
+          </div>
         </div>
       ) : (
-        <Card>
+        <Card {...enter(560)}>
           <span style={{ font: "700 22px/1.1 var(--font-hand)" }}>No stamp this time: the tag needs both of you to tap it before the stop.</span>
         </Card>
       )}
 
-      <p className="q-hint">Ride Mode is still on{dest ? ` until ${dest}` : ""}. You can be matched again after the next stop.</p>
+      <p {...enter(640, "q-hint")}>
+        Ride Mode is still on{dest ? ` until ${dest}` : ""}. You can be matched again after the next stop.
+      </p>
 
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 4 }}>
-        <Button onClick={finish}>
-          Back to riding
-        </Button>
+      <div {...enter(720, "", { display: "flex", flexDirection: "column", alignItems: "stretch", gap: 4 })}>
+        <Button onClick={finish}>Back to riding</Button>
         <TextLink onClick={seePassport}>See passport</TextLink>
       </div>
     </Screen>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
 import { AppProvider, useApp } from "./state/store";
+import { setDoorsOpening } from "./state/doors";
 import { HandDrawnFx } from "./fx/HandDrawnFx";
 import { DemoPanel } from "./dev/DemoPanel";
 import { ScreenIndex, ScreenPreview } from "./dev/ScreenGallery";
@@ -50,37 +51,37 @@ const markStarted = () => {
   }
 };
 
-/** The 3D start screen, once per visit (tab session), then `children`. */
-function StartGate({ children }: { children: ReactNode }) {
-  const [started, setStarted] = useState(hasStarted);
-  if (started) return <>{children}</>;
-  return (
-    <Start
-      onBegin={() => {
-        markStarted();
-        setStarted(true);
-      }}
-    />
-  );
-}
-
-/** "/start" always shows the start screen (handy for demos), then goes home. */
-function StartAgain() {
-  const navigate = useNavigate();
-  return (
-    <Start
-      onBegin={() => {
-        markStarted();
-        navigate("/", { replace: true });
-      }}
-    />
-  );
-}
-
-/** "/" is the start screen, then the landing page for new riders and Ride Mode for returning ones. */
+/** "/" is the landing page for new riders and Ride Mode for returning ones (after the start screen, see Shell). */
 function Home() {
   const { state } = useApp();
-  return <StartGate>{state.profile ? <Navigate to="/ride" replace /> : <Landing />}</StartGate>;
+  return state.profile ? <Navigate to="/ride" replace /> : <Landing />;
+}
+
+type Gate = "start" | "reveal" | "done";
+
+/**
+ * The 3D start screen sits above the routes: once per visit (tab session) at "/",
+ * and every time at "/start". Nothing mounts behind it until BEGIN; then the page
+ * mounts behind the shut doors and they open onto it. Living here, not inside a
+ * route, it survives the redirect a returning rider gets to /ride.
+ */
+function useStartGate() {
+  const location = useLocation();
+  const [gate, setGate] = useState<Gate>(() =>
+    location.pathname === "/start" || (location.pathname === "/" && !hasStarted()) ? "start" : "done",
+  );
+  return {
+    gate,
+    begin() {
+      markStarted();
+      setDoorsOpening(true);
+      setGate("reveal");
+    },
+    revealed() {
+      setDoorsOpening(false);
+      setGate("done");
+    },
+  };
 }
 
 const guard = (el: ReactNode) => <RequireProfile>{el}</RequireProfile>;
@@ -102,13 +103,14 @@ function usePendingTap() {
 
 function Shell() {
   usePendingTap();
+  const start = useStartGate();
   return (
     <div className="app-shell">
-      <Routes>
+      {start.gate !== "start" && <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<SignInEmail />} />
         <Route path="/signin/code" element={<SignInCode />} />
-        <Route path="/start" element={<StartAgain />} />
+        <Route path="/start" element={<Navigate to="/" replace />} />
         <Route path="/join/name" element={<Name />} />
         <Route path="/join/interests" element={<Interests />} />
         <Route path="/join/about" element={<AskMeAbout />} />
@@ -131,7 +133,8 @@ function Shell() {
         <Route path="/screens" element={<ScreenIndex />} />
         <Route path="/screens/:id" element={<ScreenPreview />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      </Routes>}
+      {start.gate !== "done" && <Start revealing={start.gate === "reveal"} onBegin={start.begin} onRevealed={start.revealed} />}
       <DemoPanel />
     </div>
   );

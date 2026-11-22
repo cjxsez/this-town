@@ -115,3 +115,25 @@ test("the second roundel spins a little after the first", () => {
   assert.ok(roundelIdleTurn(t, restAt, 0, R) > 0);
   assert.equal(roundelIdleTurn(t, restAt, 1, R), 0);
 });
+
+import { revealCover } from "../src/core/timeline";
+
+const RV = CONFIG.reveal;
+
+test("reveal: the doors stay shut for a beat after BEGIN, then open fully", () => {
+  assert.equal(revealCover(0, RV), 1);
+  assert.equal(revealCover(RV.holdSeconds, RV), 1);
+  assert.equal(revealCover(RV.holdSeconds + RV.openSeconds, RV), 0);
+  assert.equal(revealCover(99, RV), 0);
+  const mid = revealCover(RV.holdSeconds + RV.openSeconds / 2, RV);
+  assert.ok(mid > 0.2 && mid < 0.8, `half way: ${mid}`);
+});
+
+test("reveal: the doors only ever open, never bounce back", () => {
+  let last = 1;
+  for (let t = 0; t <= RV.holdSeconds + RV.openSeconds + 0.1; t += 0.01) {
+    const cover = revealCover(t, RV);
+    assert.ok(cover <= last + 1e-9 && cover >= 0 && cover <= 1, `t=${t.toFixed(2)} cover=${cover}`);
+    last = cover;
+  }
+});

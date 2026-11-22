@@ -21,9 +21,18 @@ export interface StartScreenOptions {
   /** Called once, after the doors have closed. Wire this up to whatever comes next. */
   onBegin?: () => void;
   /**
+   * Keep the shut doors on screen after onBegin() and slide them open onto whatever
+   * the page now shows behind this element (its background turns transparent).
+   * Mount the next page in onBegin(); `onRevealed` fires once the doors are open,
+   * and is the time to dispose this screen.
+   */
+  revealAfterBegin?: boolean;
+  onRevealed?: () => void;
+  /**
    * Sound hook. Called with a cue name at each moment a sound belongs on:
    * "whoosh-doors", "whoosh-island", "letters", "button" (intro), "hover", "flap",
-   * "roundel" (pointer), "click", "doors-close" (after BEGIN). No audio ships yet.
+   * "roundel" (pointer), "click", "doors-close" (after BEGIN), "doors-open" (reveal).
+   * No audio ships yet.
    */
   onCue?: (cue: CueName) => void;
   /** The letters on the tiles. Defaults to TITLE in config.ts. */
@@ -72,6 +81,29 @@ export function mountStartScreen(container: HTMLElement, options: StartScreenOpt
 
   let runtime: Runtime | null = null;
   let disposed = false;
+  const reducedMotion = options.reducedMotion ?? window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+  const begun = () => {
+    if (disposed) return;
+    options.onBegin?.();
+    if (!options.revealAfterBegin || disposed) return;
+    // The doors carry the transition. The island's last frame fades out of the windows
+    // while they hold shut; once they start to part, the 3D scene is freed.
+    const freeScene = () => {
+      runtime?.dispose();
+      runtime = null;
+    };
+    if (reducedMotion) freeScene();
+    void overlay
+      .reveal(reducedMotion, () => {
+        freeScene();
+        options.onCue?.("doors-open");
+      })
+      .then(() => {
+        freeScene();
+        if (!disposed) options.onRevealed?.();
+      });
+  };
 
   const ready = loadFonts().then(() => {
     if (disposed) return;
@@ -81,15 +113,15 @@ export function mountStartScreen(container: HTMLElement, options: StartScreenOpt
         timeOfDay,
         freezeAt: options.freezeAt !== undefined ? options.freezeAt : debug.t,
         freezeOutroAt: options.freezeOutroAt !== undefined ? options.freezeOutroAt : debug.out,
-        reducedMotion: options.reducedMotion ?? window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
-        onBegin: options.onBegin,
+        reducedMotion,
+        onBegin: begun,
         onCue: options.onCue,
       });
     } catch (error) {
       // No WebGL2 (or it failed to start): the screen still works as plain HTML.
       console.warn("[start-screen] 3D scene unavailable, using the HTML fallback.", error);
       overlay.showFallback();
-      overlay.button.addEventListener("click", () => options.onBegin?.(), { once: true });
+      overlay.button.addEventListener("click", begun, { once: true });
     }
   });
 

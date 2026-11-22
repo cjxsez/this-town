@@ -43,20 +43,25 @@ Other scripts (here, or `pnpm --filter @questline/phone-web <script>`):
 
 This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: it is on TypeScript 7 and Vite 8, and the screens were not written for `noUncheckedIndexedAccess`.
 
+## Landing
+
+Landing (B1) has two ways in: **Sign in with email** (a one-time code; the code screens and accounts are PR #4, `feat/email-signin`; until it lands the button continues like the guest path) and **Just play today** (first name only). There is no Apple sign-in. Its pieces enter in order (island, name tile by tile, line, buttons), held back while the start screen's doors are opening onto it. Any other screen the doors open onto (Ride Mode, for a returning rider) does the same through `<Screen>`: its pieces stay hidden behind the shut doors and rise in as they part (`doorsEntrance`, on by default).
+
 ## Look
 
 Every screen follows the start screen:
 
 - **Headings are block letters** (Bungee): `.q-title` and its sizes. Short section names use `<TileTitle>`, one letter per paper tile; the name itself is `<Wordmark>`, tiles with the T of TOWN as a green roundel. Handwriting (Gaegu) is for sentences.
 - **Nothing is tilted.** Buttons, chips, cards and tickets sit level.
-- **Train scenes are live 3D.** Riding (C2) and Ride Mode off (C4/C5) show `<PlatformScene3D>`: your rider on the platform and the trolley coming round the bend and pulling in. Without WebGL the flat scenes show instead.
+- **Train scenes are live 3D, full-screen.** Riding (C2) and Ride Mode off (C4/C5) pass `<PlatformScene3D frameRef>` as the `<Screen backdrop>`: the scene runs edge to edge behind the page, the train pulls in inside the room the page leaves for it (`frameRef`), and it fades into the sea under the cards. Without WebGL the flat scene shows in that room instead.
+- **Celebrations have characters.** The stamp (G2): you and your match stand on the platform, arms up; the ticket drops into your hands, the stamp thunks down, confetti flies, a glint crosses the ticket, and your line's progress lights up. The quest recap (H1): the two of you slide in and high-five in front of the trolley. Your match wears their pair colour (`parts/Celebrate.tsx`, `parts/celebrate.css`).
 - **Artwork is rendered, not hand-drawn in CSS.** The files in `public/art/` come from the start screen's renderer (`pnpm art`, see `packages/start-screen/README.md`). `<ArtSlot id>` shows `public/art/<id>.webp`; `fit="contain"` is for cut-out art, the default `cover` for photos.
 
 ## Routes
 
 | Path | Screen |
 |---|---|
-| `/` | The 3D start screen once per visit (`packages/start-screen`), then Landing (B1), or Ride Mode once a profile exists |
+| `/` | The 3D start screen once per visit (`packages/start-screen`); BEGIN closes its train doors and they open onto Landing (B1), or Ride Mode once a profile exists |
 | `/start` | The start screen, every time (for demos). BEGIN goes to `/` |
 | `/signin`, `/signin/code` | Email sign-in S1 (email) and S2 (6-digit code). Known email: back to the parked tap or `/ride`. New email: onboarding, then an account |
 | `/join/name`, `/join/interests`, `/join/about`, `/join/battery`, `/join/ride-mode`, `/join/glasses` | Onboarding B2 to B7 |

@@ -51,11 +51,25 @@ screen.dispose();
 
 `element` needs a size; the screen fills it. All options are documented on `StartScreenOptions` in `src/index.ts`.
 
+### Opening the doors onto the next page
+
+With `revealAfterBegin: true` the doors don't just close: after `onBegin()` they stay shut on top while you mount the next page behind this element, hold for a beat, then slide open onto it. Everything else (the 3D scene, the title, the button) is gone by then and the element turns see-through. `onRevealed()` fires once they are open; dispose the screen then.
+
+```ts
+const screen = mountStartScreen(element, {
+  revealAfterBegin: true,
+  onBegin: () => showSignInPage(),      // mount it now, behind the shut doors
+  onRevealed: () => screen.dispose(),   // the doors are open
+});
+```
+
+While they hold shut, the island's last frame fades out of the door windows, which are tinted glass with a reflection, so the next page never shows crisp through them. The hold and the opening are `reveal` in `config.ts`; the `doors-open` cue fires as they start to part. With reduced motion they open at once.
+
 ### In the phone app
 
 `apps/phone-web/src/screens/onboarding/Start.tsx` mounts it. It loads the package with a dynamic `import()`, so three.js (about 160 kB gzipped) is a separate download and stays out of the app's first load; if that download fails, the rider is sent straight on. It passes the app's time of day and its Motion setting.
 
-`App.tsx` shows it once per visit (tab session) at `/` and `/:stationId`, then the landing page for new riders or Ride Mode for returning ones. `/start` always shows it.
+`App.tsx` shows it once per visit (tab session) at `/`, and every time at `/start`. It sits in the app shell above the routes, so after BEGIN the landing page (new riders) or Ride Mode (returning riders) mounts behind the shut doors and they open onto it, even across the redirect to `/ride`. The landing page's pieces rise in one after another as the doors part (`src/state/doors.ts` tells a page it is being revealed).
 
 ## The live platform scene (in the app's ride screens)
 
@@ -73,6 +87,7 @@ scene.dispose();
 - `mode: "arrive"`: one trolley, due at `arriveAt`. It waits out of sight, rolls in for the last seconds and stays.
 - `line` colours the trolley's stripe and the shelter roof; `riderColor` is your rider's shirt.
 - With reduced motion the trolley simply stands at the platform. `ready` resolves `false` without WebGL2, so the caller can show something else.
+- `setFrame({ top, height })` composes the scene for one band of the element and lets it extend above and below, so it can fill a whole screen while the train pulls in where the page leaves room.
 
 The camera, the rider, the timing and the sun are in `config.ts` under `platformScene`. Preview it at http://localhost:5180/platform.html (`?line=red`, `?mode=arrive&in=6`, `?clock=-1.5` to freeze, `?w=&h=`).
 
@@ -92,7 +107,7 @@ To review the buildings up close from four sides, open http://localhost:5180/stu
 It opens `studio.html` in headless Chrome (set `CHROME_PATH` if Chrome is not in the usual macOS place) and writes `apps/phone-web/public/art/<id>.webp`. The files are committed, so this only needs running after a change. To look at the shots without saving, open http://localhost:5180/studio.html while `pnpm dev:start` runs.
 
 - `src/studio/shots.ts`: the list of pictures: what is in each, its size, where the camera stands. The id is the app's `ArtSlot` id.
-- `src/studio/models.ts`: the extra models (rider, glasses).
+- `src/studio/models.ts`: the extra models (rider, glasses). Riders take a pose: each arm's angle out from the side, so they can cheer or high-five (the stamp and recap screens).
 - Pictures have a transparent background, so they sit on any time-of-day sea.
 
 ## Change how it looks and moves

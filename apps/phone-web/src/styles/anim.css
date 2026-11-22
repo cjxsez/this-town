@@ -57,6 +57,18 @@
 }
 @keyframes q-sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes q-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* Entrance: rise into place with a little settle. Delay with --d (ms). */
+@keyframes q-enter {
+  from { opacity: 0; transform: translateY(22px) scale(.97); }
+  60% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+/* A letter tile drops onto the page and settles. */
+@keyframes q-tile-in {
+  0% { opacity: 0; transform: translateY(-16px) scale(.6) rotateX(70deg); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
 
 .anim-float { animation: q-float 2.4s ease-in-out infinite alternate; }
 .anim-bob { animation: q-bob 2.2s ease-in-out infinite alternate; }
@@ -83,3 +95,32 @@
 .anim-fadeIn { animation: q-fadeIn .25s both; }
 
 :root.no-motion [class*="anim-"] { animation-play-state: paused !important; }
+
+/* Entrances (not "anim-" classes, so Motion off skips them instead of freezing them invisible). */
+.q-enter { animation: q-enter .62s cubic-bezier(.2,.9,.3,1.15) both; animation-delay: calc(var(--d, 0) * 1ms); }
+.q-enter-tile { animation: q-tile-in .5s cubic-bezier(.2,.9,.3,1.3) both; animation-delay: calc(var(--d, 0) * 1ms); }
+:root.no-motion .q-enter, :root.no-motion .q-enter-tile { animation: none; }
+
+/* A screen the start screen's doors open onto: everything waits behind the doors, then
+   rises in one piece after another as they part (the first after DOORS_ENTER_DELAY_MS). */
+.q-screen--doors .q-screen__body > *,
+.q-screen--doors .q-screen__foot > *,
+.q-screen--doors > .q-tabs { animation: q-enter .62s cubic-bezier(.2,.9,.3,1.15) both; animation-delay: calc(var(--d, 380) * 1ms); }
+.q-screen--doors .q-screen__body > :nth-child(1) { --d: 380; }
+.q-screen--doors .q-screen__body > :nth-child(2) { --d: 450; }
+.q-screen--doors .q-screen__body > :nth-child(3) { --d: 520; }
+.q-screen--doors .q-screen__body > :nth-child(4) { --d: 590; }
+.q-screen--doors .q-screen__body > :nth-child(5) { --d: 660; }
+.q-screen--doors .q-screen__body > :nth-child(6) { --d: 730; }
+.q-screen--doors .q-screen__body > :nth-child(7) { --d: 800; }
+.q-screen--doors .q-screen__body > :nth-child(8) { --d: 870; }
+.q-screen--doors .q-screen__body > :nth-child(9) { --d: 940; }
+.q-screen--doors .q-screen__body > :nth-child(10) { --d: 1010; }
+.q-screen--doors .q-screen__body > :nth-child(n+11) { --d: 1080; }
+.q-screen--doors .q-screen__foot > * { --d: calc(560 + var(--foot-d, 0)); }
+.q-screen--doors .q-screen__foot > :nth-child(2) { --foot-d: 70; }
+.q-screen--doors .q-screen__foot > :nth-child(3) { --foot-d: 140; }
+.q-screen--doors > .q-tabs { --d: 700; }
+:root.no-motion .q-screen--doors .q-screen__body > *,
+:root.no-motion .q-screen--doors .q-screen__foot > *,
+:root.no-motion .q-screen--doors > .q-tabs { animation: none; }
