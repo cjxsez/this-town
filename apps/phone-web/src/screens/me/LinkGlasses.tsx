@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Body, Button, ButtonRow, Card, Hint, Screen, TextField } from "../../ui";
-import { errorMessage } from "../../lib/api";
+import { linkGlassesErrorMessage } from "../../lib/linkGlassesError";
 import { useApp } from "../../state/store";
 import { JoinTitle } from "../onboarding/parts";
 
@@ -22,7 +22,7 @@ export default function LinkGlasses({ onBack, onLinked }: { onBack: () => void; 
       await actions.linkGlasses(code);
       onLinked();
     } catch (e) {
-      setError(errorMessage(e));
+      setError(linkGlassesErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -55,9 +55,7 @@ export default function LinkGlasses({ onBack, onLinked }: { onBack: () => void; 
           inputMode="numeric"
         />
         {error && (
-          <Hint style={{ color: "var(--brick)" }}>
-            {error.includes("expired") || error.includes("404") ? "That code didn't work. Codes last 5 minutes; check the lens for a fresh one." : error}
-          </Hint>
+          <Hint style={{ color: "var(--brick)" }}>{error}</Hint>
         )}
         <Hint>No glasses? You don't need them: your phone shows everything the glasses would.</Hint>
       </Card>
