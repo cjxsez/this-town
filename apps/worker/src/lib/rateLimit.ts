@@ -32,6 +32,8 @@ export const LIMITS = {
   gameCreateIp: { limit: 30, windowMs: 10 * MINUTE },
   /** Join / move-to-glasses attempts from one IP (`POST /game/rooms/:code/join|lens`). */
   gameJoinIp: { limit: 60, windowMs: 10 * MINUTE },
+  /** Failed bearer-token lookups from one IP (valid tokens are never counted). */
+  tokenFailIp: { limit: 60, windowMs: 10 * MINUTE },
 } as const;
 
 export type LimitName = keyof typeof LIMITS;

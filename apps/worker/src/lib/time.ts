@@ -36,6 +36,17 @@ export const LOGIN_CODE_RESEND_MS = 30 * SECOND;
 export const LOGIN_CODE_MAX_ATTEMPTS = 5;
 /** A verified new email has this long to finish onboarding. */
 export const SIGNUP_TICKET_TTL_MS = 30 * MINUTE;
+/** How often a successful bearer lookup may write sessions.last_seen_at. */
+export const LAST_SEEN_TOUCH_MS = 10 * MINUTE;
+
+/** True when last_seen_at is missing or older than the touch window. */
+export function shouldTouchLastSeen(
+  lastSeenAt: number | null | undefined,
+  now: number,
+  windowMs: number = LAST_SEEN_TOUCH_MS,
+): boolean {
+  return lastSeenAt == null || now - lastSeenAt >= windowMs;
+}
 
 export function secondsUntil(deadlineMs: number, nowMs: number = Date.now()): number {
   return Math.max(0, Math.round((deadlineMs - nowMs) / SECOND));

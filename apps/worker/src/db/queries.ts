@@ -38,6 +38,7 @@ import {
   LOGIN_CODE_RESEND_MS,
   LOGIN_CODE_TTL_MS,
   SIGNUP_TICKET_TTL_MS,
+  shouldTouchLastSeen,
 } from "../lib/time";
 
 // ---------- row types (snake_case, exactly as stored) ----------
@@ -361,13 +362,21 @@ export async function createSession(
   return token;
 }
 
-/** Hashes the token and looks it up (revoked_at IS NULL). */
-export async function userIdForToken(db: D1Database, token: string): Promise<string | null> {
+/**
+ * Hashes the token and looks it up (revoked_at IS NULL).
+ * Touches sessions.last_seen_at at most once per LAST_SEEN_TOUCH_MS.
+ */
+export async function userIdForToken(db: D1Database, token: string, now = Date.now()): Promise<string | null> {
+  const hash = await sha256Hex(token);
   const row = await db
-    .prepare("SELECT user_id FROM sessions WHERE token_hash = ? AND revoked_at IS NULL")
-    .bind(await sha256Hex(token))
-    .first<{ user_id: string }>();
-  return row?.user_id ?? null;
+    .prepare("SELECT user_id, last_seen_at FROM sessions WHERE token_hash = ? AND revoked_at IS NULL")
+    .bind(hash)
+    .first<{ user_id: string; last_seen_at: number | null }>();
+  if (!row) return null;
+  if (shouldTouchLastSeen(row.last_seen_at, now)) {
+    await db.prepare("UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?").bind(now, hash).run();
+  }
+  return row.user_id;
 }
 
 export async function hasGlassesSession(db: D1Database, userId: string): Promise<boolean> {
