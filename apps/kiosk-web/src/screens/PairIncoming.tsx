@@ -22,7 +22,7 @@ export function PairIncoming({ color, firstNames, arrived }: PairIncomingProps) 
   return (
     <Screen label="Pair incoming" blobs="b" className="k-pair" style={{ background: PAIR_COLOR_HEX[color] }}>
       <section className="k-card k-pair__card k-in" style={{ borderRadius: "var(--r1)" }}>
-        <div className="k-eyebrow">{arrived > 0 ? `${arrived} of 2 here` : "Heading here now"}</div>
+        <div className="k-eyebrow">{arrived > 0 ? `${arrived} of 2 here` : "New match"}</div>
         <div className="k-pair__tokens">
           <PairToken color={color} name={a} size={108} style={{ borderWidth: 4 }} />
           <span className="k-pair__amp" aria-hidden>&amp;</span>
@@ -31,7 +31,9 @@ export function PairIncoming({ color, firstNames, arrived }: PairIncomingProps) 
         <h1 className="k-display" style={{ fontSize: 54 }}>
           {a} &amp; {b}
         </h1>
-        <p className="k-body" style={{ fontSize: 30 }}>Meet here. This kiosk is glowing {color}.</p>
+        <p className="k-body" style={{ fontSize: 30 }}>
+          {arrived > 0 ? "One more tap on the tag starts your mission." : "Tap the tag when you're both here."}
+        </p>
       </section>
     </Screen>
   );
