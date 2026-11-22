@@ -1,0 +1,178 @@
+{
+  "data": [
+    {
+      "type": "prediction",
+      "id": "p1",
+      "attributes": {
+        "arrival_time": "2099-01-01T11:50:00-05:00",
+        "departure_time": "2099-01-01T11:50:00-05:00",
+        "stop_sequence": 1,
+        "schedule_relationship": null,
+        "status": null
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70036",
+            "type": "stop"
+          }
+        },
+        "schedule": {
+          "data": {
+            "id": "sch1",
+            "type": "schedule"
+          }
+        }
+      }
+    },
+    {
+      "type": "prediction",
+      "id": "p2",
+      "attributes": {
+        "arrival_time": "2099-01-01T12:10:00-05:00",
+        "departure_time": "2099-01-01T12:10:00-05:00",
+        "stop_sequence": 2,
+        "schedule_relationship": null,
+        "status": null
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70034",
+            "type": "stop"
+          }
+        },
+        "schedule": {
+          "data": {
+            "id": "sch2",
+            "type": "schedule"
+          }
+        }
+      }
+    },
+    {
+      "type": "prediction",
+      "id": "p3",
+      "attributes": {
+        "arrival_time": "2099-01-01T12:20:00-05:00",
+        "departure_time": null,
+        "stop_sequence": 3,
+        "schedule_relationship": "SKIPPED",
+        "status": null
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70032",
+            "type": "stop"
+          }
+        },
+        "schedule": {
+          "data": null
+        }
+      }
+    },
+    {
+      "type": "prediction",
+      "id": "p4",
+      "attributes": {
+        "arrival_time": "2099-01-01T12:30:00-05:00",
+        "departure_time": null,
+        "stop_sequence": 4,
+        "schedule_relationship": null,
+        "status": null
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70030",
+            "type": "stop"
+          }
+        },
+        "schedule": {
+          "data": null
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "type": "stop",
+      "id": "70036",
+      "attributes": {
+        "name": "Oak Grove"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-ogmnl",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70034",
+      "attributes": {
+        "name": "Malden Center"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-mlmnl",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70032",
+      "attributes": {
+        "name": "Wellington"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-welln",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70030",
+      "attributes": {
+        "name": "Assembly"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-astao",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "sch1",
+      "attributes": {
+        "arrival_time": "2099-01-01T11:48:00-05:00",
+        "departure_time": "2099-01-01T11:48:00-05:00",
+        "stop_sequence": 1
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "sch2",
+      "attributes": {
+        "arrival_time": "2099-01-01T12:08:00-05:00",
+        "departure_time": "2099-01-01T12:08:00-05:00",
+        "stop_sequence": 2
+      }
+    }
+  ]
+}

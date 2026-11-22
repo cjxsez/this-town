@@ -1,0 +1,326 @@
+{
+  "data": [
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70001-1",
+      "attributes": {
+        "arrival_time": null,
+        "departure_time": "2026-11-21T23:37:00-05:00",
+        "stop_sequence": 1
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70001",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70003-10",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:38:00-05:00",
+        "departure_time": "2026-11-21T23:38:00-05:00",
+        "stop_sequence": 10
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70003",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70005-20",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:40:00-05:00",
+        "departure_time": "2026-11-21T23:40:00-05:00",
+        "stop_sequence": 20
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70005",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70007-30",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:42:00-05:00",
+        "departure_time": "2026-11-21T23:42:00-05:00",
+        "stop_sequence": 30
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70007",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70009-40",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:44:00-05:00",
+        "departure_time": "2026-11-21T23:44:00-05:00",
+        "stop_sequence": 40
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70009",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70011-50",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:45:00-05:00",
+        "departure_time": "2026-11-21T23:45:00-05:00",
+        "stop_sequence": 50
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70011",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70013-60",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:46:00-05:00",
+        "departure_time": "2026-11-21T23:46:00-05:00",
+        "stop_sequence": 60
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70013",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70015-70",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:48:00-05:00",
+        "departure_time": "2026-11-21T23:48:00-05:00",
+        "stop_sequence": 70
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70015",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70017-80",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:50:00-05:00",
+        "departure_time": "2026-11-21T23:50:00-05:00",
+        "stop_sequence": 80
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70017",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "schedule",
+      "id": "schedule-79808057-70019-90",
+      "attributes": {
+        "arrival_time": "2026-11-21T23:51:00-05:00",
+        "departure_time": "2026-11-21T23:51:00-05:00",
+        "stop_sequence": 90
+      },
+      "relationships": {
+        "stop": {
+          "data": {
+            "id": "70019",
+            "type": "stop"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "type": "stop",
+      "id": "70001",
+      "attributes": {
+        "name": "Forest Hills"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-forhl",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70003",
+      "attributes": {
+        "name": "Green Street"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-grnst",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70005",
+      "attributes": {
+        "name": "Stony Brook"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-sbmnl",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70007",
+      "attributes": {
+        "name": "Jackson Square"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-jaksn",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70009",
+      "attributes": {
+        "name": "Roxbury Crossing"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-rcmnl",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70011",
+      "attributes": {
+        "name": "Ruggles"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-rugg",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70013",
+      "attributes": {
+        "name": "Massachusetts Avenue"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-masta",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70015",
+      "attributes": {
+        "name": "Back Bay"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-bbsta",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70017",
+      "attributes": {
+        "name": "Tufts Medical Center"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-tumnl",
+            "type": "stop"
+          }
+        }
+      }
+    },
+    {
+      "type": "stop",
+      "id": "70019",
+      "attributes": {
+        "name": "Chinatown"
+      },
+      "relationships": {
+        "parent_station": {
+          "data": {
+            "id": "place-chncl",
+            "type": "stop"
+          }
+        }
+      }
+    }
+  ]
+}

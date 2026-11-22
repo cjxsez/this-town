@@ -1,0 +1,142 @@
+{
+  "data": [
+    {
+      "type": "vehicle",
+      "id": "O-548CC850",
+      "attributes": {
+        "label": "1446",
+        "direction_id": 1,
+        "current_status": "INCOMING_AT",
+        "carriages": [
+          {
+            "label": "1446",
+            "occupancy_status": "FEW_SEATS_AVAILABLE",
+            "occupancy_percentage": 12
+          },
+          {
+            "label": "1447",
+            "occupancy_status": "MANY_SEATS_AVAILABLE",
+            "occupancy_percentage": 6
+          },
+          {
+            "label": "1482",
+            "occupancy_status": "MANY_SEATS_AVAILABLE",
+            "occupancy_percentage": 3
+          },
+          {
+            "label": "1483",
+            "occupancy_status": "MANY_SEATS_AVAILABLE",
+            "occupancy_percentage": 1
+          },
+          {
+            "label": "1431",
+            "occupancy_status": "MANY_SEATS_AVAILABLE",
+            "occupancy_percentage": 4
+          },
+          {
+            "label": "1430",
+            "occupancy_status": "FEW_SEATS_AVAILABLE",
+            "occupancy_percentage": 8
+          }
+        ]
+      },
+      "relationships": {
+        "route": {
+          "data": {
+            "id": "Orange",
+            "type": "route"
+          }
+        },
+        "trip": {
+          "data": {
+            "id": "79808057",
+            "type": "trip"
+          }
+        }
+      }
+    },
+    {
+      "type": "vehicle",
+      "id": "O-548CC84A",
+      "attributes": {
+        "label": "1416",
+        "direction_id": 1,
+        "current_status": "INCOMING_AT",
+        "carriages": [
+          {
+            "label": "1416",
+            "occupancy_status": "MANY_SEATS_AVAILABLE",
+            "occupancy_percentage": 6
+          },
+          {
+            "label": "1417",
+            "occupancy_status": "FEW_SEATS_AVAILABLE",
+            "occupancy_percentage": 17
+          },
+          {
+            "label": "1408",
+            "occupancy_status": "NO_DATA_AVAILABLE",
+            "occupancy_percentage": null
+          },
+          {
+            "label": "1409",
+            "occupancy_status": "FEW_SEATS_AVAILABLE",
+            "occupancy_percentage": 9
+          },
+          {
+            "label": "1513",
+            "occupancy_status": "MANY_SEATS_AVAILABLE",
+            "occupancy_percentage": 3
+          },
+          {
+            "label": "1512",
+            "occupancy_status": "FEW_SEATS_AVAILABLE",
+            "occupancy_percentage": 15
+          }
+        ]
+      },
+      "relationships": {
+        "route": {
+          "data": {
+            "id": "Orange",
+            "type": "route"
+          }
+        },
+        "trip": {
+          "data": {
+            "id": "79808054",
+            "type": "trip"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "type": "trip",
+      "id": "79808054",
+      "attributes": {},
+      "relationships": {
+        "route": {
+          "data": {
+            "id": "Orange",
+            "type": "route"
+          }
+        }
+      }
+    },
+    {
+      "type": "trip",
+      "id": "79808057",
+      "attributes": {},
+      "relationships": {
+        "route": {
+          "data": {
+            "id": "Orange",
+            "type": "route"
+          }
+        }
+      }
+    }
+  ]
+}
