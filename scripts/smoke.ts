@@ -191,7 +191,7 @@ async function main() {
 
     // D28: play all three games to the end through both seats. Finishing the last one stamps
     // both riders, celebrates on the kiosk and frees it, then rests them before a rematch.
-    type View = { gameId: string | null; done: boolean; game: Record<string, unknown> & { phase?: string } };
+    type View = { gameId: string | null; done: boolean; last: boolean; finished: boolean; game: Record<string, unknown> & { phase?: string } };
     const seats = [room.seat, mayaGame.seat] as const;
     const act = (seat: string, action: object) => api<View>("POST", `/api/game/rooms/${room.code}/act`, { seat, action });
     const look = (seat: string) => api<View>("GET", `/api/game/rooms/${room.code}?seat=${seat}`);
@@ -246,8 +246,17 @@ async function main() {
     }
     await until("trivia asks to leave a question", (v) => v.game.phase === "leave");
     await act(room.seat, { type: "skip" });
-    await until("trivia finishes", (v) => v.done);
+    const end = await until("trivia finishes", (v) => v.done);
+    if (!end.last || end.finished) fail(`games: Left for you should be the last game and wait for Finish, got ${JSON.stringify(end)}`);
     ok("games only: the pair played Tall tale, First impressions and Left for you to the end");
+    // The last game ends with Finish (it would also finish by itself after 20 s). Then nothing restarts it.
+    const over = await act(mayaGame.seat, { type: "room.finish" });
+    if (!over.finished) fail(`games: Finish did not end the room: ${JSON.stringify(over)}`);
+    for (const type of ["room.next", "room.again"]) {
+      const still = await act(room.seat, { type });
+      if (!still.finished || still.gameId !== "trivia") fail(`games: ${type} restarted a finished room: ${JSON.stringify(still)}`);
+    }
+    ok("games only: Finish ends the room, and Next game / Again can't restart it");
 
     const andresStamp = await phone.wait("stamp.awarded", 10_000);
     await mayaSock.wait("stamp.awarded", 10_000);

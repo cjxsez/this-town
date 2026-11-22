@@ -116,6 +116,23 @@ test("mission.show then celebrate then pair.cleared returns to idle", () => {
   assert.equal(s.pairs.m1, undefined);
 });
 
+test("games only (D28): the pair screen goes straight to celebrate when they finish, then idle", () => {
+  let s = onKioskEvent(initialKioskState, {
+    type: "pair.incoming",
+    matchId: "m1",
+    color: "orange",
+    firstNames: ["Ada", "Bo"],
+    arrived: 2,
+  }, AT);
+  assert.equal(s.screen.name, "pair");
+  s = onKioskEvent(s, { type: "celebrate", matchId: "m1", color: "orange", rare: false }, AT);
+  assert.equal(s.screen.name, "celebrate");
+  s = onKioskEvent(s, { type: "pair.cleared", matchId: "m1" }, AT);
+  s = reduceKiosk(s, { type: "celebrateDone", matchId: "m1" });
+  assert.equal(s.screen.name, "idle");
+  assert.equal(s.pairs.m1, undefined);
+});
+
 test("clock offset from serverNow is serverNow - clientNow", () => {
   const event = idleEvent({ serverNow: AT + 400 });
   assert.equal(clockOffsetMs(event.serverNow, AT), 400);
