@@ -118,3 +118,20 @@ test("a 401 without a token (sign-in screens) doesn't sign anyone out", async ()
   off();
   assert.equal(told, 0);
 });
+
+test("adding an email posts the code with the guest's token and returns their profile", async () => {
+  setToken("guest-tok");
+  const me = { userId: "usr_1", profile: { firstName: "Gus", interests: ["chess"], askMeAbout: "", socialBattery: "chat", status: "student", languages: [], is18Plus: true }, glassesLinked: false, email: "gus@example.test" };
+  fakeFetch(() => json(200, me));
+  const res = await api.attachEmail("gus@example.test", "123456");
+  assert.equal(res.email, "gus@example.test");
+  assert.equal(calls[0]!.url, "/api/me/email");
+  assert.deepEqual(JSON.parse(String(calls[0]!.init.body)), { email: "gus@example.test", code: "123456" });
+  assert.equal((calls[0]!.init.headers as Record<string, string>).Authorization, "Bearer guest-tok");
+});
+
+test("an email another account uses comes back as code email-taken", async () => {
+  setToken("guest-tok");
+  fakeFetch(() => json(409, { error: "That email already has an account.", code: "email-taken" }));
+  await assert.rejects(api.attachEmail("taken@example.test", "123456"), (e: unknown) => e instanceof ApiError && e.code === "email-taken");
+});
