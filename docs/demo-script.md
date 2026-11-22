@@ -4,6 +4,13 @@ The demo trip is the Green Line D branch inbound: Kenmore, Hynes, Copley, Arling
 
 Setup: two kiosks on the table labeled **car 1412** and **car 1413**. 1413 is where you meet Maya, so it needs the full kiosk (screen, LEDs, dynamic tag). 1412 can be just a tag + LED strip. Two riders: one wearing the glasses, one teammate as "Maya". `pnpm seed && pnpm ghosts --car 1412` so the kiosks show a few riders on the train. Start from a fresh trip with `POST /api/demo/reset` (header `x-kiosk-key`).
 
+> **Which flow is live.** `GAMES_ONLY = "true"` in `apps/worker/wrangler.toml` (D26) is the
+> default: arriving at the kiosk starts no mission, and the pair plays Tall tale, First
+> impressions and Left for you from the match screen (`/m`; "Play on my glasses" moves a
+> seat to the lens). Steps 4 to 6 below are the kiosk-mission demo; for it, run the worker
+> with `--var GAMES_ONLY:false`. `curl <worker>/api/health` shows which one is running, and
+> `pnpm smoke` checks that one.
+
 1. **Onboarding (20 s).** Show the quick phone screens. Link glasses: the lens shows a 4-digit code, type it on the phone.
 2. **Board (20 s).** Tap the car 1412 tag. Banner pops, tap it, pick destination "Government Ctr" so the ride lasts the whole demo. Kiosk idle screen ticks up the riders in this car.
 3. **Match (30 s).** Maya taps in on car 1413. No accept step. Glasses: "Maya, kiosk 1 car forward, look for orange" and the why line. Car 1413's LEDs glow orange. Maya boarded last, so she stays put and you walk.
