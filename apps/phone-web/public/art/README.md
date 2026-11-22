@@ -9,6 +9,8 @@ Each file is named after the `ArtSlot` id it fills:
 - hero-art.webp            landing page: the island (a small Boston University)
 - ride-rider.webp          Riding screen, flat fallback: you
 - glasses-art.webp         Glasses screen
+- portrait-<color>.webp    each person's avatar (PairToken): their rider, head and shoulders,
+                           one per pair colour
 - sprite-*.webp            trolley (one per line colour), tree and houses for the flat
                            fallback scenes, shown when the 3D platform view cannot run
 

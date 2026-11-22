@@ -62,7 +62,9 @@ export function Confetti({ delay = 0, style }: { delay?: number; style?: CSSProp
  * newest one popping in last.
  */
 export function LineProgress({ label, got, total, color, delay = 0 }: { label: string; got: number; total: number; color: string; delay?: number }) {
-  const dots = total <= 24;
+  // One dot per stop for any line up to 30 stops; past 22 they shrink to fit.
+  const dots = total <= 30;
+  const dense = total > 22;
   return (
     <div className="q-line-progress" style={{ "--line": color } as CSSProperties}>
       <div className="q-line-progress__label">
@@ -72,7 +74,7 @@ export function LineProgress({ label, got, total, color, delay = 0 }: { label: s
         </span>
       </div>
       {dots ? (
-        <div className="q-line-progress__dots" aria-hidden>
+        <div className={`q-line-progress__dots${dense ? " q-line-progress__dots--dense" : ""}`} aria-hidden>
           {Array.from({ length: total }, (_, i) => (
             <span
               key={i}

@@ -112,6 +112,7 @@ export interface Person {
   color: PairColor;
   metAtStationId: string;
   metAt: string;
+  /** Stamps earned together (a quest that ran out of time adds none). */
   quests: number;
   blocked?: boolean;
 }

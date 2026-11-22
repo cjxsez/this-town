@@ -45,26 +45,39 @@ export function ArtSlot({
 const LIGHT = new Set<PairColor>(["yellow", "green", "orange"]);
 
 /**
- * The pair color, with the person's initial: the same color the kiosk LEDs, kiosk screen
- * and glasses show for this match. It's how you recognize each other's kiosk.
+ * The person's rider (public/art/portrait-<color>.webp, `pnpm art`) on a disc tinted with
+ * their pair color: the same color the kiosk LEDs, kiosk screen and glasses show for this
+ * match. It's how you recognize each other's kiosk. Shows the initial if the art is missing.
  */
 export function PairToken({ color, name, size = 56, style }: { color: PairColor; name?: string; size?: number; style?: CSSProperties }) {
+  const [art, setArt] = useState(true);
   return (
     <div
-      className={`q-animal${LIGHT.has(color) ? " q-animal--light" : ""}`}
+      className={`q-animal${art || LIGHT.has(color) ? " q-animal--light" : ""}`}
       style={{
         width: size,
         height: size,
-        background: PAIR_COLOR_HEX[color],
+        background: art ? `color-mix(in srgb, ${PAIR_COLOR_HEX[color]} 38%, var(--paper))` : PAIR_COLOR_HEX[color],
         fontSize: Math.max(12, size / 2.4),
         display: "grid",
         placeItems: "center",
         fontFamily: "var(--font-display)",
         ...style,
       }}
+      role="img"
       aria-label={name ? `${name}, ${color}` : color}
     >
-      {name ? name.slice(0, 1).toUpperCase() : null}
+      {art ? (
+        <img
+          src={`/art/portrait-${color}.webp`}
+          alt=""
+          draggable={false}
+          onError={() => setArt(false)}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 20%" }}
+        />
+      ) : name ? (
+        name.slice(0, 1).toUpperCase()
+      ) : null}
     </div>
   );
 }
