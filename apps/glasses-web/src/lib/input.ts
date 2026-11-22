@@ -48,7 +48,11 @@
  * - Verify on device whether Escape reaches the page or is consumed by the system (it may
  *   close the Web App). If it closes the app, drop "back = Not now" and rely on the button.
  * - Decide whether back during a Mission should send rider.notNow (cancel) or do nothing.
- * - Hidden "unlink glasses" gesture (e.g. hold back on Idle for 3 s) that clears the token.
+ *
+ * Hidden unlink (hold back on Idle for 3 s) is skipped until on-device testing confirms
+ * Escape reaches the page. If the system consumes Back and closes the Web App, a hold
+ * gesture would never fire — and clearing the token without a confirmed input path is worse
+ * than asking the rider to clear site data. Revisit after `?debug=keys` on the glasses.
  */
 import { useEffect, useRef } from "react";
 
