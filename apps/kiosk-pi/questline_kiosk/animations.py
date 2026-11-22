@@ -23,6 +23,7 @@ import asyncio
 import logging
 import math
 from collections.abc import Coroutine
+from inspect import CORO_CREATED, getcoroutinestate
 from typing import Any
 
 from .leds import OFF, RGB, LedStrip
@@ -182,8 +183,27 @@ class AnimationPlayer:
         """Cancel the running animation (if any) and start ``coro``."""
         self._cancel()
         self.current = name
-        self._task = asyncio.create_task(self._guard(name, coro), name=f"anim:{name}")
-        return self._task
+
+        async def runner() -> None:
+            # A broken animation must never take down the socket loop.
+            try:
+                await coro
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                log.exception("animation %s failed", name)
+
+        task = asyncio.create_task(runner(), name=f"anim:{name}")
+
+        def _cleanup(t: asyncio.Task[None]) -> None:
+            # If the task was cancelled before runner awaited coro, close it
+            # so asyncio does not warn "coroutine was never awaited".
+            if t.cancelled() and getcoroutinestate(coro) == CORO_CREATED:
+                coro.close()
+
+        task.add_done_callback(_cleanup)
+        self._task = task
+        return task
 
     async def stop(self) -> None:
         """Cancel the running animation and wait for it to finish."""
@@ -200,12 +220,3 @@ class AnimationPlayer:
             self._task.cancel()
         self._task = None
         self.current = None
-
-    async def _guard(self, name: str, coro: Coroutine[Any, Any, None]) -> None:
-        # A broken animation must never take down the socket loop.
-        try:
-            await coro
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            log.exception("animation %s failed", name)
