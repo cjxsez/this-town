@@ -106,7 +106,7 @@ export function connectRiderSocket(token: string, handlers: RiderSocketHandlers)
       const parsed = ServerToRider.safeParse(raw);
       if (parsed.success) {
         handlers.onEvent(parsed.data);
-      } else if (import.meta.env.DEV) {
+      } else if (import.meta.env?.DEV) {
         console.warn("[socket] dropped unknown message", raw, parsed.error.issues);
       }
     };
