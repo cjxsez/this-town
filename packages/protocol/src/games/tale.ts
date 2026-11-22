@@ -18,9 +18,13 @@ import { otherSeat, type Actor, type GameCtx, type GameModule, type Seat } from 
 export const TALE_THINK_MS = 25_000;
 export const TALE_TELL_MS = 60_000;
 export const TALE_VERDICT_MS = 20_000;
-/** A press this soon after a screen appears is taken as a leftover tap from the screen before. */
-const TALE_TELL_GUARD_MS = 3000;
-const TALE_CALL_GUARD_MS = 1000;
+/**
+ * A press this soon after a screen appears is taken as a leftover tap from the screen before
+ * (a double tap on "I'm ready" would otherwise land on "Done"). The views carry `opensAt` so
+ * the screens show the button as not ready yet instead of eating the tap without a word.
+ */
+export const TALE_TELL_GUARD_MS = 3000;
+export const TALE_CALL_GUARD_MS = 1000;
 
 export type TaleCard = "truth" | "fake";
 export type TalePhase = "intro" | "think" | "tell" | "verdict" | "reveal";
@@ -63,11 +67,20 @@ export type TaleView =
       /** 0 for the first story, 1 for the second. Sent back with "done". */
       turn: 0 | 1;
       telling: boolean;
+      /** Server ms from which "done" is taken (TALE_TELL_GUARD_MS into the turn). */
+      opensAt: number;
       /** Your own card and spark, only while you are the one telling. */
       card: TaleCard | null;
       spark: string | null;
     }
-  | { phase: "verdict"; deadline: number; yourCall: TaleCard | null; theyCalled: boolean }
+  | {
+      phase: "verdict";
+      deadline: number;
+      /** Server ms from which a call is taken (TALE_CALL_GUARD_MS into the verdict). */
+      opensAt: number;
+      yourCall: TaleCard | null;
+      theyCalled: boolean;
+    }
   | {
       phase: "reveal";
       /** Your story and your partner's call on it. */
@@ -242,6 +255,7 @@ export const taleGame: GameModule<TaleState, TaleView> = {
           deadline: state.deadline ?? state.since,
           turn: state.turn,
           telling,
+          opensAt: state.since + TALE_TELL_GUARD_MS,
           card: telling ? state.cards[seat] : null,
           spark: telling ? state.sparks[seat] : null,
         };
@@ -250,6 +264,7 @@ export const taleGame: GameModule<TaleState, TaleView> = {
         return {
           phase: "verdict",
           deadline: state.deadline ?? state.since,
+          opensAt: state.since + TALE_CALL_GUARD_MS,
           yourCall: state.calls[seat],
           theyCalled: state.calls[other] !== null,
         };

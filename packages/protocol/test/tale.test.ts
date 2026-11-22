@@ -4,6 +4,8 @@ import {
   taleGame,
   talePoints,
   taleSummary,
+  TALE_CALL_GUARD_MS,
+  TALE_TELL_GUARD_MS,
   TALE_THINK_MS,
   TALE_TELL_MS,
   TALE_VERDICT_MS,
@@ -72,6 +74,21 @@ test("only the current teller can say done, and not in the first moments of the 
   const next = taleGame.reduce(s, "a", { type: "done", turn: 0 }, ctxAt(10_000));
   assert.equal(next.turn, 1);
   assert.equal(next.deadline, 10_000 + TALE_TELL_MS);
+});
+
+test("the tell and verdict views say when Done and the calls start counting, so screens can hold the buttons", () => {
+  let s = toTell(started(), 0);
+  const tell = taleGame.view(s, "a") as { phase: string; opensAt: number };
+  assert.equal(tell.phase, "tell");
+  assert.equal(tell.opensAt, s.since + TALE_TELL_GUARD_MS);
+  // A done exactly at opensAt is taken.
+  assert.equal(taleGame.reduce(s, "a", { type: "done", turn: 0 }, ctxAt(tell.opensAt)).turn, 1);
+  s = taleGame.tick(taleGame.tick(s, ctxAt(TALE_TELL_MS)), ctxAt(2 * TALE_TELL_MS));
+  const verdict = taleGame.view(s, "b") as { phase: string; opensAt: number };
+  assert.equal(verdict.phase, "verdict");
+  assert.equal(verdict.opensAt, s.since + TALE_CALL_GUARD_MS);
+  const called = taleGame.reduce(s, "b", { type: "call", call: "truth" }, ctxAt(verdict.opensAt));
+  assert.equal((taleGame.view(called, "b") as { yourCall: string | null }).yourCall, "truth");
 });
 
 test("each seat only sees its own card, and only while it is telling", () => {

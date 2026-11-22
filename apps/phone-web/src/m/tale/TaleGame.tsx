@@ -3,6 +3,7 @@ import type { GameProps, TaleCard, TaleResult, TaleView } from "@questline/proto
 import { Body, Button, ButtonRow, Card, Eyebrow, Hint, Screen, Title } from "../../ui";
 import { Clock } from "../Clock";
 import { EndButtons } from "../EndButtons";
+import { useOpensAt } from "../room";
 import "./tale.css";
 
 /**
@@ -18,6 +19,8 @@ const CARD_WORD: Record<TaleCard, string> = { truth: "True", fake: "Made up" };
 const SPARK_LEAD: Record<TaleCard, string> = { truth: "Think of", fake: "Try" };
 
 export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameProps<TaleView>) {
+  // Done and the calls only count after the leftover-tap guard; until then the buttons are off.
+  const open = useOpensAt(view.phase === "tell" || view.phase === "verdict" ? view.opensAt : null, serverNow);
   const [peeked, setPeeked] = useState(false);
 
   if (view.phase === "intro") {
@@ -78,7 +81,11 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameP
       <Screen
         label="M-tale-tell"
         blobs="b"
-        footer={<Button onClick={() => send({ type: "done", turn: view.turn })}>Done</Button>}
+        footer={
+          <Button disabled={!open} onClick={() => send({ type: "done", turn: view.turn })}>
+            Done
+          </Button>
+        }
       >
         <div className="tale-top">
           <Eyebrow>Your turn</Eyebrow>
@@ -100,10 +107,10 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameP
         footer={
           called ? undefined : (
             <ButtonRow>
-              <Button huge variant="leaf" onClick={() => send({ type: "call", call: "truth" })}>
+              <Button huge variant="leaf" disabled={!open} onClick={() => send({ type: "call", call: "truth" })}>
                 True
               </Button>
-              <Button huge onClick={() => send({ type: "call", call: "fake" })}>
+              <Button huge disabled={!open} onClick={() => send({ type: "call", call: "fake" })}>
                 Made up
               </Button>
             </ButtonRow>

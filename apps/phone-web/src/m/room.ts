@@ -94,3 +94,18 @@ export function useSecondsLeft(deadline: number | null | undefined, serverNow: (
   if (deadline == null) return null;
   return Math.max(0, Math.ceil((deadline - serverNow()) / 1000));
 }
+
+/**
+ * True once server time reaches `opensAt` (null/undefined: always open). Re-renders at that
+ * moment, so a button held back for the leftover-tap guard turns on by itself.
+ */
+export function useOpensAt(opensAt: number | null | undefined, serverNow: () => number): boolean {
+  const [, tick] = useState(0);
+  const open = opensAt == null || serverNow() >= opensAt;
+  useEffect(() => {
+    if (open || opensAt == null) return;
+    const id = window.setTimeout(() => tick((n) => n + 1), Math.max(0, opensAt - serverNow()) + 20);
+    return () => window.clearTimeout(id);
+  }, [open, opensAt, serverNow]);
+  return open;
+}

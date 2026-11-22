@@ -16,6 +16,7 @@ import { Clock } from "../../components/Clock";
 import { EndButtons } from "../../components/EndButtons";
 import { Wobble } from "../../components/Wobble";
 import { useInput } from "../../lib/input";
+import { useOpensAt } from "../../lib/room";
 import "./tale.css";
 
 const CARD_TITLE: Record<TaleCard, string> = { truth: "Tell the truth", fake: "Make it up" };
@@ -26,15 +27,19 @@ const CALLS: TaleCard[] = ["truth", "fake"];
 export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameProps<TaleView>) {
   /** Focused verdict button: 0 "True", 1 "Made up". */
   const [focus, setFocus] = useState(0);
+  // Done and the calls only count after the leftover-tap guard; until then they look held.
+  const open = useOpensAt(view.phase === "tell" || view.phase === "verdict" ? view.opensAt : null, serverNow);
 
   useInput(
     (action) => {
       if (view.phase === "intro" || view.phase === "think") {
         if (action === "select" && !view.youReady) send({ type: "ready", phase: view.phase });
       } else if (view.phase === "tell") {
-        if (action === "select" && view.telling) send({ type: "done", turn: view.turn });
+        if (action === "select" && view.telling && open) send({ type: "done", turn: view.turn });
       } else if (view.phase === "verdict" && view.yourCall === null) {
-        if (action === "select") send({ type: "call", call: CALLS[focus] });
+        if (action === "select") {
+          if (open) send({ type: "call", call: CALLS[focus] });
+        }
         else if (action === "left" || action === "up") setFocus(0);
         else if (action === "right" || action === "down") setFocus(1);
       }
@@ -114,7 +119,7 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameP
           </div>
         )}
         <div className="guess-row tale-row">
-          <div className="hud-btn guess-btn is-focused" role="button">
+          <div className="hud-btn guess-btn is-focused" role="button" aria-disabled={!open} style={open ? undefined : { opacity: 0.4 }}>
             Done
           </div>
         </div>
@@ -135,7 +140,14 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain, last }: GameP
           <>
             <div className="guess-row">
               {CALLS.map((call, i) => (
-                <div key={call} className={`hud-btn guess-btn tale-call ${focus === i ? "is-focused" : ""}`} role="button" aria-pressed={focus === i}>
+                <div
+                  key={call}
+                  className={`hud-btn guess-btn tale-call ${focus === i ? "is-focused" : ""}`}
+                  role="button"
+                  aria-pressed={focus === i}
+                  aria-disabled={!open}
+                  style={open ? undefined : { opacity: 0.4 }}
+                >
                   {CARD_WORD[call]}
                 </div>
               ))}
