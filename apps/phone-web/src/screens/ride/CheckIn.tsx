@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { DEMO_TRIP } from "../../../shared/catalog";
 import { sim } from "../../api";
+import { checkInEndsHint, checkInPlayStep } from "../../lib/rideModeCopy";
+import { useGamesOnly } from "../../lib/useWorkerMode";
 import { useRide } from "../../state/store";
 import { Body, Button, Card, Eyebrow, Hint, Screen, Title } from "../../ui";
 import { PlatformBlobs, PlatformQuestsToggle } from "./parts/PlatformKit";
@@ -16,6 +18,7 @@ const DEMO_CAR: string | undefined = sim ? DEMO_TRIP.cars[1] : import.meta.env.V
 export default function CheckIn() {
   const { ride } = useRide();
   const navigate = useNavigate();
+  const gamesOnly = useGamesOnly();
   const [explain, setExplain] = useState(false);
 
   return (
@@ -29,8 +32,8 @@ export default function CheckIn() {
         <Step n={1}>Tap the tag and pick your stop.</Step>
         <Step n={2}>Turn on Ride Mode. That's your yes to being matched on this train.</Step>
         <Step n={3}>We match you with the closest rider who shares your interests. Your glasses and the kiosk show who and where.</Step>
-        <Step n={4}>Meet at the kiosk, play a quick mission, both tap the tag for a stamp.</Step>
-        <Hint>Ride Mode turns off at your stop. "Not now" and ghost mode are always one tap away.</Hint>
+        <Step n={4}>{checkInPlayStep(gamesOnly)}</Step>
+        <Hint>{checkInEndsHint(gamesOnly)}</Hint>
       </Card>
 
       <PlatformQuestsToggle on={false} onToggle={() => setExplain(true)} label="Ride Mode" />
