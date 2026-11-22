@@ -76,6 +76,7 @@ export class ApiError extends Error {
 
 /** How long a request may hang before it fails with ApiError status 0, code "timeout". */
 const TIMEOUT_MS = 8_000;
+const RETRY_DELAY_MS = 600;
 
 interface RequestOpts<T> {
   body?: unknown;
@@ -83,11 +84,24 @@ interface RequestOpts<T> {
   auth?: boolean;
 }
 
-async function request<T = void>(
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-  path: string,
-  { body, schema, auth = true }: RequestOpts<T> = {},
-): Promise<T> {
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+/**
+ * Reads are safe to repeat, so a GET that timed out, lost the network or hit a 5xx gets one
+ * more try after a short pause. Writes are never retried (a tap must not count twice).
+ */
+async function request<T = void>(method: Method, path: string, opts: RequestOpts<T> = {}): Promise<T> {
+  try {
+    return await requestOnce(method, path, opts);
+  } catch (e) {
+    const transient = e instanceof ApiError && (e.status === 0 || e.status >= 500);
+    if (method !== "GET" || !transient) throw e;
+    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    return requestOnce(method, path, opts);
+  }
+}
+
+async function requestOnce<T>(method: Method, path: string, { body, schema, auth = true }: RequestOpts<T>): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (auth) {
