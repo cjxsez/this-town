@@ -10,6 +10,7 @@
  */
 import type { GameId } from "@questline/protocol/games";
 import type { Env } from "../env";
+import { triviaHooks } from "./trivia";
 
 /** Small JSON values kept across rooms (one Durable Object holds them all). */
 export interface SharedStore {
@@ -22,4 +23,4 @@ export interface GameHooks {
   effect?(env: Env, shared: SharedStore, prev: unknown, next: unknown): Promise<unknown> | null;
 }
 
-export const HOOKS: Partial<Record<GameId, GameHooks>> = {};
+export const HOOKS: Partial<Record<GameId, GameHooks>> = { trivia: triviaHooks };
