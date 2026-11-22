@@ -4,17 +4,16 @@
  * Routes:
  * - POST /api/glasses/code        (no auth, glasses-web)  -> 201 GlassesCodeRes
  *   Issues a 4-digit code (expires in GLASSES_CODE_TTL_MS) that the lens displays.
- * - GET  /api/glasses/code/:code  (no auth, glasses poll) -> GlassesCodePollRes
+ * - GET  /api/glasses/code/:code?secret=<pollSecret>  (no auth, glasses poll) -> GlassesCodePollRes
+ *   The poll secret comes with the code and only the glasses know it (the DB keeps its
+ *   hash), so someone who sees the 4 digits on the lens can't collect the token.
  *   { linked: false } until the phone links it; then once { linked: true, token } with a
- *   fresh glasses session token. Later polls return { linked: false } (claimed).
+ *   fresh glasses session token. A wrong secret, an expired code or a second poll after
+ *   the token was handed out: 410.
  * - POST /api/glasses/link        (rider auth, phone-web) body GlassesLinkReq -> GlassesLinkRes
  *
  * Protocol types: GlassesCodeRes, GlassesCodePollRes, GlassesLinkReq, GlassesLinkRes.
  *
- * TODO:
- * - Security: anyone who polls the same 4-digit code during the window gets the token. The
- *   poll should require a secret only the glasses know (see README "Protocol gaps").
- *   Until then keep the TTL short and rate-limit polls per IP.
  */
 import { Hono } from "hono";
 import { GlassesLinkReq } from "@questline/protocol";
