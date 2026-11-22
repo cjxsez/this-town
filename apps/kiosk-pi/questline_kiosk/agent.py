@@ -286,9 +286,7 @@ class KioskAgent:
     async def on_nfc_write(self, event: NfcWriteEvent) -> None:
         """Write the URL to the tag, then confirm with nfc.written.
 
-        TODO:
-        - retry with a short sleep (RF arbitration) up to cfg.nfc.write_retries
-        - optional: read back with tag.read_url() and compare before acking
+        Retries and read-back verify live in the chip writers (nfc_tag.py).
         """
         url, write_id = event["url"], event["writeId"]
         if self.tag.mode != "dynamic":
