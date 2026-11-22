@@ -99,6 +99,10 @@ export const Stamp = z.object({
   partnerFirstName: z.string(),
   rare: z.boolean(),
   awardedAt: z.number().int(),
+  /** Match this stamp was earned in; phone passport uses it to link the person met. */
+  matchId: z.string().optional(),
+  /** Mission template id, or "games-playlist" for a GAMES_ONLY stamp (D28). */
+  templateId: z.string().optional(),
 });
 export type Stamp = z.infer<typeof Stamp>;
 
