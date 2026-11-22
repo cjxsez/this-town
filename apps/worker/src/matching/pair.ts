@@ -15,13 +15,9 @@
  *
  * Protocol types: CarId, InterestTag, MatchFoundEvent (meetAtCar, carDelta, youWalk).
  *
- * TODO:
- * - greedyPairs(): implement as described above.
- * - One pair per kiosk at a time: a car has one tag and one screen, so a car already hosting
- *   a pair (busyKiosks) cannot be the meeting point. If the preferred car is busy, use the
- *   other rider's car; if both are busy, skip the pair this round.
- * - Tie on remaining segments: the later check-in stays put (they just sat down; the rider
- *   who has been waiting walks over). In the demo Maya boards second and stays.
+ * When a car is missing from carOrder, carDelta returns 0 (wire type stays an int). Clients
+ * must treat carDelta === 0 with meetAtCar !== the rider's current car as "Go to car <label>"
+ * instead of "same car".
  */
 import type { CarId, InterestTag } from "@questline/protocol";
 import type { RoomRider, RoomState } from "../rooms/state";
@@ -60,12 +56,16 @@ export function meetingPoint(
   return { meetAtCar: stayer.car, walker: walker.userId };
 }
 
-/** carOrder is front first, so a positive delta means the kiosk is forward of you. */
+/**
+ * carOrder is front first, so a positive delta means the kiosk is forward of you.
+ * Unknown cars (not in carOrder) return 0; clients compare meetAtCar to the rider's car
+ * and fall back to "Go to car <label>" when they differ.
+ */
 export function carDelta(carOrder: readonly CarId[], fromCar: CarId, toCar: CarId): number {
   if (fromCar === toCar) return 0;
   const from = carOrder.indexOf(fromCar);
   const to = carOrder.indexOf(toCar);
-  if (from < 0 || to < 0) return 0; // TODO: unknown order; glasses should say "car <label>" instead
+  if (from < 0 || to < 0) return 0;
   return from - to;
 }
 

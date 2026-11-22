@@ -102,7 +102,7 @@ Ride Mode on = consent. There is no accept step. The consent is explicit: onboar
 
 **One pair per kiosk.** A kiosk has one tag and one screen, so it hosts at most one pair at a time. If the natural meeting kiosk is busy, use the other rider's car, or wait.
 
-**carDelta** in `match.found` counts cars from your current car to `meetAtCar`: positive is toward the front of the train, negative toward the back.
+**carDelta** in `match.found` counts cars from your current car to `meetAtCar`: positive is toward the front of the train, negative toward the back. When a car is missing from the trip's `carOrder` the worker still sends `carDelta: 0` (the field stays an int). Clients must not treat that as "same car": if `carDelta === 0` and `meetAtCar` is not the rider's current car, show "Go to car \<meetAtCar\>" (glasses MatchCard and phone meet screen).
 
 ## Two-player games (`/g/` and `/m`)
 
