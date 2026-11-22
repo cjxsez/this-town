@@ -31,6 +31,17 @@
  *   Mission    (nothing yet, see TODO)
  *   Stamp      select/back: dismiss early (auto-dismisses anyway)
  *   Offline    select: retry now
+ *   GuessGame  left/up: previous option or -1, right/down: next option or +1
+ *              select: lock in the answer (also Start and Restart)
+ *              Also takes wheel and click (pointer mode below), so it works from the frame
+ *              whether the strip's scroll arrives as arrow keys or as scroll events.
+ *   HikeGame   left/up: previous of the four options, right/down: next (reading order,
+ *              stops at the ends). select: lock in, skip the reveal, Start and Restart.
+ *              Wheel and click too, as GuessGame.
+ *              With the split prop (Split clue) a describe screen comes before each
+ *              question: select moves on to the guess, arrows do nothing.
+ *   EndButtons (last screen of each game) left/up: "Next game", right/down: "Again",
+ *              select: activate. On its own a game shows one Restart button instead.
  *
  * "Not now" is always one action away (architecture: safety and privacy): either the back
  * gesture, or focus the "Not now" button and pinch select.
@@ -63,12 +74,53 @@ export function keyToAction(key: string): InputAction | null {
   return KEY_TO_ACTION[key] ?? null;
 }
 
+/** Wheel travel that counts as one scroll step. A notched mouse wheel sends about 100 per notch. */
+const WHEEL_STEP_PX = 60;
+
+interface InputOptions {
+  /**
+   * Also read scroll (wheel) as arrows and a tap (click) as select. For screens that must
+   * work from the frame alone when the strip's scroll does not arrive as arrow keys.
+   * Opt-in: on other screens a stray click must not fire the focused button.
+   */
+  pointer?: boolean;
+}
+
 /**
  * Subscribe the current screen to input actions. Return `false` from the handler to let
  * the browser keep the default behavior for that key; anything else prevents default.
  */
-export function useInput(handler: (action: InputAction) => boolean | void): void {
+export function useInput(handler: (action: InputAction) => boolean | void, { pointer = false }: InputOptions = {}): void {
   const handlerRef = useRef(handler);
+
+  useEffect(() => {
+    if (!pointer) return;
+    let travel = 0;
+    function onWheel(e: WheelEvent) {
+      if (DEBUG_KEYS) console.log("[input] wheel", { deltaX: e.deltaX, deltaY: e.deltaY });
+      const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+      const delta = horizontal ? e.deltaX : e.deltaY;
+      // A new direction starts a new step, so a small correction is not swallowed.
+      if (Math.sign(delta) !== Math.sign(travel)) travel = 0;
+      travel += delta;
+      // One event moves at most one step: a wheel notch is one step, a slow drag adds up to one.
+      if (Math.abs(travel) >= WHEEL_STEP_PX) {
+        handlerRef.current(travel > 0 ? (horizontal ? "right" : "down") : horizontal ? "left" : "up");
+        travel = 0;
+      }
+      e.preventDefault();
+    }
+    function onClick() {
+      if (DEBUG_KEYS) console.log("[input] click");
+      handlerRef.current("select");
+    }
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("click", onClick);
+    };
+  }, [pointer]);
 
   useEffect(() => {
     handlerRef.current = handler;

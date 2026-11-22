@@ -1,0 +1,183 @@
+/*
+ * hike.css (glasses-web): what Trail trivia adds to the Guess who look in guess.css.
+ *
+ * The game's screens carry .guess as well, so the fonts, colors, title, progress steps,
+ * clock, buttons and recap list all come from guess.css. This file only has the photo, the
+ * 2x2 option grid and the reveal marks, scoped under .hike.
+ *
+ * The photo is the one bright area on the lens, so it stays small (320x200, about a sixth
+ * of the display) and sits beside the clock, not behind anything that has to be read.
+ * On the reveal nothing is filled: right is a green outline, a wrong pick an orange one.
+ */
+.hud.hike {
+  gap: 14px;
+}
+
+.hike-top {
+  display: flex;
+  align-items: stretch;
+  gap: 22px;
+}
+
+/* The picture stays crisp; the wobbly frame is drawn around it, like the clock outline. */
+.hike-photo {
+  position: relative;
+  flex: none;
+  width: 320px;
+  height: 200px;
+  margin: 4px 6px 8px 4px;
+  rotate: -0.6deg;
+}
+
+.hike-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--r3);
+}
+
+.hike-photo::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 2px solid var(--sea);
+  border-radius: var(--r3);
+  box-shadow: 4px 6px 0 var(--line);
+  filter: var(--wob);
+}
+
+.hike-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.hike .hike-clock {
+  min-width: 0;
+  margin-top: 14px;
+  font-size: 44px;
+}
+
+.hike .hike-clock.is-stopped {
+  color: var(--stone);
+}
+
+.hike-prompt {
+  min-height: 34px;
+  font: 700 31px/1.1 var(--font-hand);
+  white-space: nowrap;
+}
+
+/* On the reveal the prompt line names the place. */
+.hike-place {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 25px;
+  color: var(--paper);
+}
+
+.hike-verdict {
+  font: 400 18px/1 var(--font-display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.hike-verdict.is-right {
+  color: var(--leaf);
+}
+
+.hike-verdict.is-wrong {
+  color: var(--orange);
+}
+
+/* Reading order is the scroll order: top left, top right, bottom left, bottom right. */
+.hike-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px 16px;
+}
+
+.hike .hike-btn {
+  min-height: 64px;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 22px;
+  line-height: 1.05;
+}
+
+.hike .hike-btn.is-right {
+  border: 3px solid var(--leaf);
+  box-shadow: 4px 5px 0 var(--line);
+  color: var(--leaf);
+}
+
+.hike .hike-btn.is-wrong {
+  border: 3px dashed var(--orange);
+  color: var(--orange);
+}
+
+.hike .hike-btn.is-out {
+  border-color: #2b5f5c;
+  color: #7f8a80;
+}
+
+.hike-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hike-line {
+  align-items: center;
+}
+
+.hike-mark {
+  display: flex;
+  font-weight: 700;
+}
+
+.hike-mark.is-right {
+  color: var(--leaf);
+}
+
+.hike-mark.is-wrong,
+.hike-mark.is-none {
+  color: var(--orange);
+}
+
+/* Split clue: the guesser's turn keeps the frame but not the picture. */
+.hike-photo.is-hidden {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 26px/1 var(--font-hand);
+  color: var(--line);
+}
+
+/* Split clue: the words the describer may not say. Same height as the option grid. */
+.hike-avoid {
+  min-height: 140px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 12px 14px;
+}
+
+.hike-word {
+  padding: 8px 16px;
+  border: 3px dashed var(--orange);
+  border-radius: var(--r2);
+  font: 400 24px/1.1 var(--font-display);
+  text-transform: uppercase;
+  color: var(--orange);
+}

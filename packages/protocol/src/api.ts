@@ -2,7 +2,7 @@
 // Auth: `Authorization: Bearer <token>` except where noted.
 // Errors: any non-2xx response has an ErrorRes body.
 import { z } from "zod";
-import { CarId, Line, MatchInfo, Profile, RideSnapshot, RideState, Stamp, Stop } from "./models";
+import { CarId, Line, MatchInfo, PairColor, Profile, RideSnapshot, RideState, SocialBattery, Stamp, Stop } from "./models";
 
 export const OkRes = z.object({ ok: z.literal(true) });
 export type OkRes = z.infer<typeof OkRes>;
@@ -51,6 +51,10 @@ export const MeRes = z.object({
   email: Email.nullable(), // null for "Just play today" guests
 });
 export type MeRes = z.infer<typeof MeRes>;
+// PATCH /api/me   -> MeRes. Edit any profile field; the train you're on sees it right away.
+export const UpdateProfileReq = Profile.omit({ is18Plus: true }).partial();
+export type UpdateProfileReq = z.infer<typeof UpdateProfileReq>;
+// DELETE /api/me  -> OkRes. Ends the ride, signs out every device, scrubs the profile.
 
 // POST /api/glasses/code   (no auth, called by glasses-web) -> show `code` on the lens, keep `pollSecret`
 export const GlassesCodeRes = z.object({
@@ -70,14 +74,24 @@ export type GlassesLinkRes = OkRes;
 
 // POST /api/taps   (rider auth) -> phone-web calls this from the NFC landing page /k/:car?n=
 // The worker decides: check-in, move car, or stamp. The tap itself is the stamp confirmation.
+// Turning on Ride Mode is the consent to be matched (no accept step later), so the first
+// check-in of a ride needs both a destination and rideMode: true, which the phone only sends
+// after the rider confirmed on the Ride Mode screen. Without them: need-destination.
 export const TapReq = z.object({
   car: CarId,
   nonce: z.string().optional(),
   destinationStop: z.string().optional(), // stop id; required on first check-in of a ride
+  rideMode: z.literal(true).optional(),    // required on first check-in of a ride
 });
 export type TapReq = z.infer<typeof TapReq>;
 export const TapRes = z.discriminatedUnion("result", [
-  z.object({ result: z.literal("need-destination"), line: Line, stops: z.array(Stop) }),
+  z.object({
+    result: z.literal("need-destination"),
+    line: Line,
+    car: CarId,
+    stops: z.array(Stop),
+    suggestedStop: z.string().nullable(), // last destination on this line, preselected
+  }),
   z.object({ result: z.literal("checked-in"), state: RideState }),
   z.object({ result: z.literal("moved-car"), state: RideState }),
   z.object({ result: z.literal("stamp-pending") }), // you tapped, waiting on partner
@@ -93,8 +107,11 @@ export type RideStateRes = z.infer<typeof RideStateRes>;
 // POST /api/ride/not-now   -> OkRes   (REST twin of rider.notNow)
 // POST /api/ride/arrived   -> OkRes   (REST twin of rider.arrived)
 // PUT  /api/ride/ghost     { ghost } -> OkRes
+// POST /api/ride/mood      { mood } -> OkRes   (social battery for the rest of this ride and after)
 export const GhostReq = z.object({ ghost: z.boolean() });
 export type GhostReq = z.infer<typeof GhostReq>;
+export const MoodReq = z.object({ mood: SocialBattery });
+export type MoodReq = z.infer<typeof MoodReq>;
 
 // GET /api/passport
 export const PassportRes = z.object({
@@ -110,6 +127,7 @@ export const RecentMatchesRes = z.object({
     z.object({
       matchId: z.string(),
       partnerFirstName: z.string(),
+      color: PairColor,
       line: Line,
       at: z.number().int(),
       stamped: z.boolean(),

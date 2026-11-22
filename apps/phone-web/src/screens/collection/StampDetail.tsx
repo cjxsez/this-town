@@ -1,10 +1,10 @@
 import { Link, useParams } from "react-router";
-import { AnimalToken, Body, Card, Screen } from "../../ui";
+import { Body, Card, PairToken, Screen } from "../../ui";
 import { useApp } from "../../state/store";
 import { shortDate } from "../../state/format";
-import { LINES, badgeName, missionById, missionText, stationById } from "../../../shared/catalog";
+import { LINES, missionById, missionText, stationById } from "../../../shared/catalog";
 import type { Stamp, Station } from "../../../shared/types";
-import { MemoryPhoto, PaperBack } from "./parts";
+import { PaperBack } from "./parts";
 
 const lineLabel = (s: Stamp) => `${LINES[s.line].label}${s.branch ? ` ${s.branch}` : ""}`;
 const longDate = (iso: string) =>
@@ -29,14 +29,13 @@ export default function StampDetail() {
 
   const person = state.people.find((p) => p.id === stamp.withPersonId);
   const mission = missionById(stamp.missionId);
-  const memory = stamp.memoryId ? state.memories.find((m) => m.id === stamp.memoryId && m.status === "kept") : undefined;
   const meta = [lineLabel(stamp), shortDate(stamp.earnedAt), stamp.delayNote].filter(Boolean).join(" · ");
 
   return (
     <Screen tabs blobs="b" label="H3">
       <PaperBack to="/passport">PASSPORT</PaperBack>
 
-      <BigStamp stamp={stamp} station={station} withName={person?.firstName} number={state.profile?.badge?.number} />
+      <BigStamp stamp={stamp} station={station} withName={person?.firstName ?? stamp.withFirstName} />
 
       <div>
         <h1 className="cl-h1">{station.name.toUpperCase()}</h1>
@@ -58,16 +57,13 @@ export default function StampDetail() {
               WITH
             </div>
             <Link to={`/people/${person.id}`} className="cl-with">
-              <AnimalToken badge={person.badge} size={42} />
-              <span>
-                {person.firstName} · {badgeName(person.badge)}
-              </span>
+              <PairToken color={person.color} name={person.firstName} size={42} />
+              <span>{person.firstName}</span>
             </Link>
           </>
         )}
       </Card>
 
-      {memory && person && <MemoryPhoto memory={memory} name={person.firstName} style={{ flex: 1, minHeight: 150 }} />}
     </Screen>
   );
 }

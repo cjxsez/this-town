@@ -4,7 +4,6 @@ const TABS = [
   { to: "/ride", label: "Ride" },
   { to: "/passport", label: "Passport" },
   { to: "/people", label: "People" },
-  { to: "/memories", label: "Memories" },
   { to: "/me", label: "Me" },
 ];
 

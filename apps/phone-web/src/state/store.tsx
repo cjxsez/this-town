@@ -1,25 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
-import { badgeFor } from "../../shared/catalog";
-import type {
-  CheckIn,
-  GlassesStatus,
-  Memory,
-  Person,
-  Profile,
-  QuestRecap,
-  ReportReason,
-  SocialBattery,
-  Stamp,
-  TimeOfDay,
-} from "../../shared/types";
+import type { Person, Profile, QuestRecap, ReportReason, SocialBattery, Stamp, TimeOfDay } from "../../shared/types";
 import { api, sim } from "../api";
+import type { TapBody, TapResult } from "../lib/api";
 import { initialRide, rideReducer, type RideAction, type RideState } from "./ride";
-import { DEMO_PROFILE, SEED_MEMORIES, SEED_PEOPLE, SEED_STAMPS } from "./seed";
+import { DEMO_PROFILE, SEED_PEOPLE, SEED_STAMPS } from "./seed";
 
 export interface Settings {
   timeOfDay: TimeOfDay;
   handDrawn: boolean;
   motion: boolean;
+  /** Ghost mode: Ride Mode stays on but nobody is matched with you. */
   ghost: boolean;
   /** Floating demo panel (mock mode only). */
   demoPanel: boolean;
@@ -33,24 +23,12 @@ export interface AppState {
   settings: Settings;
   stamps: Stamp[];
   people: Person[];
-  memories: Memory[];
   lastRecap?: QuestRecap;
   ride: RideState;
-  glasses: GlassesStatus;
 }
 
-const STORAGE_KEY = "questline:v1";
-
-const initialGlasses: GlassesStatus = {
-  connected: false,
-  model: "Ray-Ban Display",
-  battery: 72,
-  neuralBand: true,
-  readBadges: true,
-  nodToAccept: false,
-  sessionLive: false,
-  cameraPaused: false,
-};
+// v2: the profile shape changed (no badge, spots, handles), so v1 saves are dropped.
+const STORAGE_KEY = "questline:v2";
 
 const initialState: AppState = {
   profile: null,
@@ -58,9 +36,7 @@ const initialState: AppState = {
   settings: { timeOfDay: "Day", handDrawn: true, motion: true, ghost: false, demoPanel: !!sim },
   stamps: [],
   people: [],
-  memories: [],
   ride: initialRide,
-  glasses: initialGlasses,
 };
 
 type Action =
@@ -69,64 +45,38 @@ type Action =
   | { type: "createProfile"; profile: Profile; seed: boolean }
   | { type: "updateProfile"; patch: Partial<Profile> }
   | { type: "settings"; patch: Partial<Settings> }
-  | { type: "stayInTouch"; personId: string; state: Person["stayInTouch"] }
   | { type: "block"; personId: string; blocked: boolean }
-  | { type: "memoryVote"; memoryId: string; keep: boolean }
-  | { type: "glasses"; patch: Partial<GlassesStatus> }
+  | { type: "serverStamps"; stamps: Stamp[] }
+  | { type: "serverPeople"; people: Person[] }
   | { type: "devRide"; ride: RideState }
   | { type: "reset" };
 
-/** When a quest reaches recap, write its stamp, person and memory into the collections. */
+/** When a quest reaches recap, write its stamp, person and recap into the collections. */
 function commitQuest(s: AppState, prev: RideState, next: RideState): AppState {
   const m = next.match ?? prev.match;
-  const c = next.checkIn;
+  const c = next.checkIn ?? prev.checkIn;
   if (!m || !c) return s;
-  const stamp = next.stamp;
+  const stamp = next.stamp ?? prev.stamp;
   const now = new Date().toISOString();
-  const kept = next.photo?.taken && next.photo.youKeep;
-  const memory: Memory | undefined = kept
-    ? {
-        id: `m-${Date.now()}`,
-        personId: m.id,
-        stationId: c.stationId,
-        takenAt: now,
-        rare: !!stamp?.rare,
-        status: "deciding",
-        youKept: true,
-        expiresAt: new Date(next.photo?.keepDeadline ?? Date.now() + 86_400_000).toISOString(),
-      }
-    : undefined;
+  const stationId = stamp?.stationId ?? c.nextStationId;
   const existing = s.people.find((p) => p.id === m.id);
   const person: Person = existing
-    ? { ...existing, quests: existing.quests + 1, metAt: now, metAtStationId: c.stationId }
-    : {
-        id: m.id,
-        firstName: m.firstName,
-        badge: m.badge,
-        pronoun: m.pronoun,
-        metAtStationId: c.stationId,
-        metAt: now,
-        quests: 1,
-        askMeAbout: m.askMeAbout,
-        stayInTouch: "off",
-      };
-  const mission = next.mission?.mission ?? prev.mission?.mission;
-  const recap: QuestRecap | undefined = mission && {
-    stationId: c.stationId,
+    ? { ...existing, quests: existing.quests + 1, metAt: now, metAtStationId: stationId }
+    : { id: m.id, firstName: m.firstName, color: m.color, metAtStationId: stationId, metAt: now, quests: 1 };
+  const recap: QuestRecap = {
+    stationId,
     at: now,
     person: m,
-    mission,
+    mission: next.mission?.mission ?? prev.mission?.mission,
     note: next.note,
-    photo: next.photo?.taken ? (kept ? "waiting" : "none") : "none",
-    streak: 3,
-    stampId: stamp?.id ?? "",
+    stamped: !!stamp,
+    stampId: stamp?.id,
   };
   return {
     ...s,
-    stamps: stamp && !s.stamps.some((x) => x.id === stamp.id) ? [{ ...stamp, memoryId: memory?.id }, ...s.stamps] : s.stamps,
+    stamps: stamp && !s.stamps.some((x) => x.id === stamp.id) ? [stamp, ...s.stamps] : s.stamps,
     people: [person, ...s.people.filter((p) => p.id !== m.id)],
-    memories: memory ? [memory, ...s.memories] : s.memories,
-    lastRecap: recap ?? s.lastRecap,
+    lastRecap: recap,
   };
 }
 
@@ -144,26 +94,21 @@ function reducer(s: AppState, a: Action): AppState {
         ...s,
         profile: a.profile,
         draft: {},
-        ...(a.seed && s.stamps.length === 0 && { stamps: SEED_STAMPS, people: SEED_PEOPLE, memories: SEED_MEMORIES }),
+        ...(a.seed && s.stamps.length === 0 && { stamps: SEED_STAMPS, people: SEED_PEOPLE }),
       };
     case "updateProfile":
       return s.profile ? { ...s, profile: { ...s.profile, ...a.patch } } : s;
     case "settings":
       return { ...s, settings: { ...s.settings, ...a.patch } };
-    case "stayInTouch":
-      return { ...s, people: s.people.map((p) => (p.id === a.personId ? { ...p, stayInTouch: a.state } : p)) };
     case "block":
       return { ...s, people: s.people.map((p) => (p.id === a.personId ? { ...p, blocked: a.blocked } : p)) };
-    case "memoryVote":
-      // If either deletes, it's gone for both, with no message about who.
-      return {
-        ...s,
-        memories: a.keep
-          ? s.memories.map((m) => (m.id === a.memoryId ? { ...m, youKept: true } : m))
-          : s.memories.filter((m) => m.id !== a.memoryId),
-      };
-    case "glasses":
-      return { ...s, glasses: { ...s.glasses, ...a.patch } };
+    case "serverStamps":
+      return { ...s, stamps: a.stamps };
+    case "serverPeople": {
+      // Keep local fields (blocked, where you met) for people the server also knows.
+      const local = new Map(s.people.map((p) => [p.id, p]));
+      return { ...s, people: a.people.map((p) => ({ ...p, ...local.get(p.id), firstName: p.firstName, color: p.color })) };
+    }
     case "devRide": {
       const next = { ...s, ride: a.ride };
       return a.ride.phase === "recap" ? commitQuest(next, a.ride, a.ride) : next;
@@ -182,7 +127,6 @@ function load(): AppState {
       ...initialState,
       ...saved,
       settings: { ...initialState.settings, ...saved.settings },
-      glasses: { ...initialGlasses, ...saved.glasses, sessionLive: false },
       ride: initialRide, // a ride never survives a reload; the server is the source of truth
     };
   } catch {
@@ -212,7 +156,9 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
     const ctx = () => ({ profile: ref.current.profile!, mood: ref.current.ride.mood, ghost: ref.current.settings.ghost });
 
     const ride = {
-      checkIn: (c: CheckIn) => r.checkIn(c, ctx()),
+      /** A kiosk tag tap (/k/:car). Needs a profile. */
+      tapKiosk: (body: TapBody): Promise<TapResult> => r.tapKiosk(body, ctx()),
+      /** Turn Ride Mode off. */
       checkOut: () => {
         r.checkOut();
         local({ type: "local/checkOut" });
@@ -220,58 +166,22 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
       setMood: (mood: SocialBattery) => {
         r.setMood(mood);
         local({ type: "local/mood", mood });
+        dispatch({ type: "updateProfile", patch: { battery: mood } });
       },
-      yes: () => {
-        local({ type: "local/offerYes" });
-        r.respondOffer(true);
-      },
-      skip: () => r.respondOffer(false),
-      withdraw: () => r.withdraw(),
-      cantSpot: () => local({ type: "local/cantSpot" }),
-      backToMeet: () => local({ type: "local/backToMeet" }),
-      atSpot: () => {
-        local({ type: "local/atSpot" });
-        r.atSpot();
-      },
-      met: () => {
-        local({ type: "local/met", at: Date.now() });
-        r.met();
-      },
-      startQuest: () => r.startQuest(),
-      newPrompt: () => r.newPrompt(),
-      missionDone: () => {
-        local({ type: "local/missionDone", bumpDeadline: Date.now() + 20_000 });
-        r.missionDone();
-      },
-      bump: () => {
-        local({ type: "local/bump" });
-        r.bump();
-      },
-      photoVote: (yes: boolean) => {
-        local({ type: "local/photoVote", yes });
-        r.photoVote(yes);
-      },
-      takePhoto: () => r.takePhoto(),
-      keepVote: (keep: boolean) => {
-        local({ type: "local/keepVote", keep });
-        r.keepVote(keep);
-      },
+      notNow: () => r.notNow(),
+      arrived: () => r.arrived(),
       setNote: (note: string) => local({ type: "local/note", note }),
-      dismissTrainSoon: () => local({ type: "local/dismissTrainSoon" }),
-      board: () => r.board(),
       dismiss: () => local({ type: "local/dismiss" }),
-      keepOnNextStation: () => r.keepOnNextStation(),
-      finish: () => {
-        local({ type: "local/finish" });
-        r.resync?.();
-      },
+      toRecap: () => local({ type: "local/toRecap" }),
+      finish: () => local({ type: "local/finish" }),
+      closeRideOver: () => local({ type: "local/closeRideOver" }),
     };
 
     return {
       ride,
       updateDraft: (patch: Draft) => dispatch({ type: "draft", patch }),
-      /** B7 "Done · start riding": the draft becomes the profile. */
-      finishOnboarding: (badgeNumber: number) => {
+      /** Last onboarding step: the draft becomes the profile and the rider is created. */
+      finishOnboarding: () => {
         const d = ref.current.draft;
         const profile: Profile = {
           id: `u-${Date.now().toString(36)}`,
@@ -279,20 +189,16 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
           kind: d.kind ?? "local",
           is18: !!d.is18,
           interests: d.interests ?? [],
-          spots: d.spots ?? [],
           askMeAbout: d.askMeAbout || undefined,
           battery: d.battery ?? "chat",
-          useAi: !!d.useAi,
-          handles: d.handles ?? {},
-          badge: badgeFor(badgeNumber),
-          homeStation: d.homeStation ?? "kenmore",
-          hasGlasses: !!d.hasGlasses,
+          rulesAccepted: !!d.rulesAccepted,
+          glassesLinked: !!d.glassesLinked,
           createdAt: new Date().toISOString(),
           email: d.email,
         };
         dispatch({ type: "createProfile", profile, seed: !!sim });
         dispatch({ type: "ride", action: { type: "local/mood", mood: profile.battery } });
-        void api.saveProfile(profile);
+        return api.saveProfile(profile);
       },
       /** Email sign-in found an existing account: its profile becomes this device's. */
       signedIn: (profile: Profile) => {
@@ -308,14 +214,15 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
         const p = ref.current.profile;
         if (p) void api.saveProfile({ ...p, ...patch });
       },
+      /** Glasses link. Onboarding calls it before the profile exists (the code is checked later). */
+      linkGlasses: async (code: string) => {
+        await api.linkGlasses(code);
+        dispatch({ type: "updateProfile", patch: { glassesLinked: true } });
+        dispatch({ type: "draft", patch: { glassesLinked: true } });
+      },
       setSettings: (patch: Partial<Settings>) => {
         dispatch({ type: "settings", patch });
         if (patch.ghost !== undefined) r.setGhost(patch.ghost);
-      },
-      setStayInTouch: async (personId: string, on: boolean) => {
-        dispatch({ type: "stayInTouch", personId, state: on ? "waiting" : "off" });
-        const state = await api.setStayInTouch(personId, on);
-        dispatch({ type: "stayInTouch", personId, state });
       },
       report: (personId: string, reason: ReportReason, alsoBlock: boolean) => {
         if (alsoBlock) dispatch({ type: "block", personId, blocked: true });
@@ -329,13 +236,14 @@ function useActions(state: AppState, dispatch: React.Dispatch<Action>) {
         dispatch({ type: "block", personId, blocked: false });
         return api.unblock(personId);
       },
-      voteMemory: (memoryId: string, keep: boolean) => {
-        dispatch({ type: "memoryVote", memoryId, keep });
-        return api.voteMemory(memoryId, keep);
+      /** Pull stamps and people from the server (http mode); mock mode keeps local data. */
+      refreshCollections: async () => {
+        const [stamps, people] = await Promise.all([api.loadPassport(), api.loadPeople()]).catch(() => [null, null]);
+        if (stamps) dispatch({ type: "serverStamps", stamps });
+        if (people) dispatch({ type: "serverPeople", people });
       },
       /** Dev gallery only: jump straight to a ride state. */
       devSetRide: (ride: RideState) => dispatch({ type: "devRide", ride }),
-      setGlasses: (patch: Partial<GlassesStatus>) => dispatch({ type: "glasses", patch }),
       deleteMyData: async () => {
         r.checkOut();
         await api.deleteMyData();
@@ -354,6 +262,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => api.ride.subscribe((e) => dispatch({ type: "ride", action: e })), []);
   useEffect(() => save(state), [state]);
+  // Server collections on load, and again after each stamp.
+  useEffect(() => {
+    if (state.profile) void actions.refreshCollections();
+  }, [state.profile?.id, state.ride.stampsThisRide, actions]);
 
   const value = useMemo(() => ({ state, actions }), [state, actions]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

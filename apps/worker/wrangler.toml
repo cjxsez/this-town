@@ -36,8 +36,8 @@ run_worker_first = ["/api/*", "/ws/*", "/g/*", "/kiosk/*", "/k/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "questline"
-# Replace with the id printed by `wrangler d1 create questline`.
-database_id = "00000000-0000-0000-0000-000000000000"
+# The questline D1 database in the Cloudflare account.
+database_id = "3be2dcde-a7b7-4b07-a249-19bf928170aa"
 migrations_dir = "migrations"
 
 [[durable_objects.bindings]]

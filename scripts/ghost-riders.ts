@@ -30,7 +30,7 @@ interface Ghost {
   car: string;
 }
 
-async function tap(g: Ghost, body: { car: string; nonce?: string; destinationStop?: string }): Promise<TapRes> {
+async function tap(g: Ghost, body: { car: string; nonce?: string; destinationStop?: string; rideMode?: true }): Promise<TapRes> {
   const res = await fetch(`${BASE}/api/taps`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${g.token}` },
@@ -92,7 +92,7 @@ async function main(): Promise<void> {
   }
   const ghosts: Ghost[] = seeded.slice(0, COUNT).map((s) => ({ ...s, car: CAR }));
   for (const g of ghosts) {
-    const r = await tap(g, { car: g.car, destinationStop: DEST });
+    const r = await tap(g, { car: g.car, destinationStop: DEST, rideMode: true });
     log(g, `boarded car ${g.car}: ${r.result}${r.result === "error" ? ` (${r.message})` : ""}`);
     if (r.result === "checked-in" || r.result === "moved-car") connect(g);
   }

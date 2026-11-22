@@ -2,7 +2,7 @@
 
 The rider's phone app. Mobile web (React 19 + Vite 8 + TypeScript, react-router 8), served by the worker at `/`.
 
-The screens are the "Questline screens v2" design: onboarding (B1 to B7), Ride Mode (C1 to H1), passport, people, memories, me, glasses, and the printable poster and badge. They talk to the backend through one seam, `src/api/types.ts` (`QuestlineApi` + `RideChannel`), which has two implementations:
+The screens follow the product in `docs/architecture.md` and are listed one by one in `docs/phone-flow.md`: onboarding (B1 to B7), the kiosk tap with the Ride Mode confirmation (`/k/:car`), the ride (C1 to H1), passport, people, me, glasses, and the printable kiosk sign. They talk to the backend through one seam, `src/api/types.ts` (`QuestlineApi` + `RideChannel`), which has two implementations:
 
 | Mode | Code | What it is |
 |---|---|---|
@@ -31,7 +31,7 @@ pnpm dev:phone
 
 Vite proxies `/api` and `/ws` to `http://localhost:8787`, so the app always uses same-origin relative URLs.
 
-The worker's happy path works on the demo trip (`pnpm smoke` checks it). For a match in http mode, run `pnpm seed && pnpm ghosts --car 1413 --auto` and onboard with an interest Maya has (ramen, film, bookstores).
+For a match in http mode, run `pnpm seed && pnpm ghosts --car 1413 --auto` and onboard with an interest Maya has (ramen, film, bookstores). C1's "Demo: tap the car 1412 kiosk" button stands in for a real tag (`VITE_DEMO_CAR`). In mock mode the same button and the demo panel play the whole ride.
 
 Other scripts (here, or `pnpm --filter @questline/phone-web <script>`):
 
@@ -47,48 +47,41 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 
 | Path | Screen |
 |---|---|
-| `/`, `/:stationId` | Landing (B1), or Ride Mode once a profile exists. `/:stationId` is what the platform poster's QR encodes. |
+| `/` | Landing (B1), or Ride Mode once a profile exists |
 | `/signin`, `/signin/code` | Email sign-in S1 (email) and S2 (6-digit code). Known email: back to the parked tap or `/ride`. New email: onboarding, then an account |
-| `/join/*` | Onboarding B2 to B7 |
-| `/ride` | Ride Mode. One URL; the screen follows the ride phase. |
-| `/k/:car?n=<nonce>` | Kiosk tag landing (`http` mode): `POST /api/taps`, destination picker, then `/ride`. Signed out: parks the tap and goes to `/signin` first |
-| `/passport`, `/people`, `/memories`, `/me` | Collection and settings |
-| `/print/poster/:stationId`, `/print/badge/:number` | Printables |
+| `/join/name`, `/join/interests`, `/join/about`, `/join/battery`, `/join/ride-mode`, `/join/glasses` | Onboarding B2 to B7 |
+| `/k/:car?n=<nonce>` | Kiosk tag landing: pick your stop, confirm Ride Mode, or a car move / stamp tap. Signed out (worker mode): parks the tap and goes to `/signin` first |
+| `/ride` | Ride Mode. One URL; the screen follows the ride phase |
+| `/passport`, `/passport/:id`, `/people`, `/people/:id`, `/people/:id/report`, `/me`, `/me/glasses` | Collection and settings |
+| `/print/tag/:car` | Printable "Tap here" sign for a kiosk, with a QR fallback to `/k/:car` |
+| `/screens`, `/lens` | Dev: every screen with fixture data, every glasses card |
 
 ## How the worker's events reach the screens
 
-`src/api/backend/ride.ts` turns worker events into the `ServerEvent`s of the ride reducer (`src/state/ride.ts`); `src/api/backend/map.ts` holds every conversion.
+`src/api/backend/ride.ts` turns worker events into the `ServerEvent`s of the ride reducer (`src/state/ride.ts`); `src/api/backend/map.ts` holds every conversion. `src/api/mock/rideSim.ts` emits the same events in mock mode.
 
 | Worker | Phone |
 |---|---|
 | `GET /api/ride/state` (load, tab focus, socket drop), `ride.snapshot` | rebuilds the ride |
-| `ride.state` riding | `checkedIn` the first time, then `trainEta` (next stop ETA) |
-| `ride.state` off | `trainDeparted`, socket closed |
-| `match.found` | `matched` (E1). "Never mind" / call-off -> `rider.notNow` + `cancelled` (D3) |
-| `match.cleared` | `cancelled` before a mission started, `ended` (recap) after |
-| `mission.start` | `matched` if not yet, then `missionAssigned` (F1) |
-| `mission.end` time-up / cancelled | `ended` |
-| `stamp.progress` | `partnerBumped` |
+| tap result `need-destination` | `/k/:car` destination picker, then the Ride Mode confirmation |
+| tap with `rideMode: true` -> `checked-in` | "Ride Mode is on", then `riding` (C2) |
+| `ride.state` riding | `rideStatus` (next stop, riders on train) |
+| `ride.state` off | `rideEnded` -> "Ride Mode is off" (C4) |
+| `match.found` | `matched` -> meet (E1). No accept step |
+| tap on the meeting kiosk, "I'm at the kiosk" | `arrived` (`rider.arrived`, REST fallback) |
+| `match.cleared` before a mission | `cancelled` -> D3 ("Skipped" when it was you) |
+| `mission.start` | `missionAssigned` (F1) |
+| `stamp.progress`, tap result `stamp-pending` | `stampProgress` (1 of 2) |
 | `stamp.awarded`, tap result `stamp-awarded` | `stampAwarded` (G2) |
-| "I'm here" (E1), "Start" (E3) | `rider.arrived` (socket, REST fallback) |
-| Ride Mode off | `POST /api/ride/end` |
-| Ghost toggle | `PUT /api/ride/ghost` |
-| Report | `POST /api/report` with the match id |
+| `mission.end` time-up | `missionEnded` -> recap without a stamp |
+| Not now | `rider.notNow` (REST fallback) |
+| Turn Ride Mode off | `POST /api/ride/end` |
+| Ghost toggle, mood | `PUT /api/ride/ghost`, `POST /api/ride/mood` |
 | Sign in with email | `POST /api/auth/email/start`, then `/verify`: a token (known email) or a signup ticket (new email, kept in `localStorage`) |
-| Onboarding done | `POST /api/users` once, with the signup ticket if there is one; token in `localStorage` |
+| Onboarding done, profile edits | `POST /api/users` once (with the signup ticket if there is one), then `PATCH /api/me` |
+| Link glasses | `POST /api/glasses/link` |
+| Passport, People | `GET /api/passport`, `GET /api/matches/recent` |
+| Report / block | `POST /api/report` with the match id |
+| Delete my data | `DELETE /api/me` |
 
-## Frontend and worker differences
-
-The worker runs the v2 product (kiosk check-in, no accept step, meet at a kiosk, tag-tap stamp). What the screens still need is in `docs/handoff-phone-v2.md`.
-
-Already aligned:
-
-- **Consent.** `match.found` goes straight to `matched`; there is no offer timer. Skip / "Not now" sends `rider.notNow`.
-- **Interests, battery, rider kind.** The protocol uses this app's ids and names (decision D14), so `map.ts` passes them through.
-- **Stations.** `RideState.nextStopId` and `Stamp.stationId` are catalog ids; the demo trip is Kenmore to Government Ctr.
-
-Still bridged in `map.ts` until the screens change:
-
-- **Badges and passwords.** The worker has pair colors, not animal badges. The animal is picked from the match id and the E3 password lines are made from the color.
-- **Stamp.** The design bumps phones; the worker stamps when both tap the kiosk tag. G1 shows after your own tap.
-- **No worker route yet:** photos and memories (out of scope: no camera), stay in touch, block without a report, unblock, profile edits and delete, mood change mid-ride, new prompt, passport sync (`GET /api/passport` exists, not read yet), the glasses link screen.
+No worker route yet: unblock (only changes this device).

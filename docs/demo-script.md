@@ -12,4 +12,4 @@ Setup: two kiosks on the table labeled **car 1412** and **car 1413**. 1413 is wh
 6. **Late bonus (20 s).** `POST /api/demo/delay`, then `POST /api/demo/advance` to reach Hynes. You're matched again for the next segment and get a rare late-train mission, shown with the gold rare accent.
 7. **Close (20 s).** Passport on the phone. Line: "The phone decides who. The glasses and the kiosk make it happen."
 
-Fallbacks: if the glasses misbehave, open `/g/` in a 600x600 browser window on the laptop. If the dynamic tag fails, swap in the static sticker. `pnpm smoke` runs this whole flow headless against a worker, as a pre-demo check.
+Fallbacks: if the glasses misbehave, open `/g/?ride` in a 600x600 browser window on the laptop. If the dynamic tag fails, swap in the static sticker. `pnpm smoke` runs this whole flow headless against a worker, as a pre-demo check.

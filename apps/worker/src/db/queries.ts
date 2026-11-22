@@ -619,3 +619,67 @@ export async function passportFor(db: D1Database, userId: string): Promise<Passp
     byLine,
   };
 }
+
+// ---------- profile edits, deletion, history ----------
+
+export async function updateUser(db: D1Database, userId: string, p: Profile): Promise<void> {
+  await db
+    .prepare(
+      "UPDATE users SET first_name = ?, interests = ?, ask_me_about = ?, social_battery = ?, status = ?, languages = ? WHERE id = ?",
+    )
+    .bind(p.firstName, JSON.stringify(p.interests), p.askMeAbout, p.socialBattery, p.status, JSON.stringify(p.languages), userId)
+    .run();
+}
+
+export async function setUserBattery(db: D1Database, userId: string, battery: string): Promise<void> {
+  await db.prepare("UPDATE users SET social_battery = ? WHERE id = ?").bind(battery, userId).run();
+}
+
+/**
+ * "Delete my data". Matches and mission sessions stay (the other rider's stamps point at
+ * them), but everything that identifies this rider goes: profile text, sessions, glasses
+ * codes, their stamps, met pairs, blocks, and their first name on other riders' stamps.
+ */
+export async function scrubUser(db: D1Database, userId: string): Promise<void> {
+  await db.batch([
+    // Free the email too, so signing in with it later starts a fresh account.
+    db.prepare("DELETE FROM login_codes WHERE email = (SELECT email FROM users WHERE id = ?1)").bind(userId),
+    db.prepare("UPDATE users SET first_name = 'Deleted', ask_me_about = '', interests = '[]', languages = '[]', email = NULL WHERE id = ?1").bind(userId),
+    db.prepare("DELETE FROM sessions WHERE user_id = ?1").bind(userId),
+    db.prepare("DELETE FROM glasses_codes WHERE user_id = ?1").bind(userId),
+    db.prepare("DELETE FROM stamps WHERE user_id = ?1").bind(userId),
+    db.prepare("UPDATE stamps SET partner_first_name = 'Someone' WHERE partner_user_id = ?1").bind(userId),
+    db.prepare("DELETE FROM met_pairs WHERE user_a = ?1 OR user_b = ?1").bind(userId),
+    db.prepare("DELETE FROM blocks WHERE blocker_id = ?1 OR blocked_id = ?1").bind(userId),
+  ]);
+}
+
+export interface RecentMatchRow {
+  matchId: string;
+  partnerFirstName: string;
+  color: PairColor;
+  line: Line;
+  at: number;
+  stamped: boolean;
+}
+
+export async function recentMatches(db: D1Database, userId: string, limit = 20): Promise<RecentMatchRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT m.id, m.color, m.line, m.created_at, u.first_name,
+              EXISTS (SELECT 1 FROM stamps s WHERE s.match_id = m.id AND s.user_id = ?1) AS stamped
+       FROM matches m JOIN users u ON u.id = CASE WHEN m.user_a = ?1 THEN m.user_b ELSE m.user_a END
+       WHERE m.user_a = ?1 OR m.user_b = ?1
+       ORDER BY m.created_at DESC LIMIT ?2`,
+    )
+    .bind(userId, limit)
+    .all<{ id: string; color: string; line: string; created_at: number; first_name: string; stamped: number }>();
+  return results.map((r) => ({
+    matchId: r.id,
+    partnerFirstName: r.first_name,
+    color: r.color as PairColor,
+    line: LineSchema.parse(r.line),
+    at: r.created_at,
+    stamped: r.stamped === 1,
+  }));
+}

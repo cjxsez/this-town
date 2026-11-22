@@ -1,11 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router";
-import { backend } from "../../api";
-import { api as rest, errorMessage } from "../../lib/api";
+import { useState, type ReactNode } from "react";
 import { useApp } from "../../state/store";
-import { ArtSlot, BackLink, Button, Card, Eyebrow, Hint, Screen, TextField, Toggle } from "../../ui";
+import { ArtSlot, BackLink, Body, Button, Card, Hint, Screen } from "../../ui";
+import LinkGlasses from "../onboarding/LinkGlasses";
 
-/** Small status pill: "CONNECTED" (leaf) or "NOT CONNECTED" (paper). */
+/** Small status pill: "LINKED" (leaf) or "NOT LINKED" (paper). */
 export function StatusPill({ children, tone = "leaf" }: { children: ReactNode; tone?: "leaf" | "paper" | "ink" }) {
   const bg = tone === "leaf" ? "var(--leaf)" : tone === "ink" ? "var(--ink)" : "var(--paper)";
   return (
@@ -31,77 +29,26 @@ export const GlassesTag = () => (
   </span>
 );
 
-function SettingRow({ title, sub, children }: { title: string; sub: ReactNode; children: ReactNode }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-      <div>
-        <div style={{ font: "700 23px/1.08 var(--font-hand)" }}>{title}</div>
-        <div style={{ fontSize: 17, lineHeight: 1.2, color: "var(--ink-soft)" }}>{sub}</div>
-      </div>
-      {children}
-    </div>
-  );
-}
-
+/**
+ * J1 Glasses. The glasses run the Questline Web App and link to this rider with a 4-digit
+ * code. They need no input: match, where to go, mission and stamp all appear on their own.
+ * No camera, no mic.
+ */
 export default function Glasses() {
-  const { state, actions } = useApp();
-  const g = state.glasses;
-  const navigate = useNavigate();
-  const [pairing, setPairing] = useState(false);
-  const [code, setCode] = useState("");
-  const [linkError, setLinkError] = useState<string | null>(null);
+  const { state } = useApp();
+  const linked = !!state.profile?.glassesLinked;
+  const [relink, setRelink] = useState(false);
 
-  // Against the worker: the lens shows a 4-digit code (glasses-web), the rider types it here
-  // and POST /api/glasses/link ties the glasses to this rider (docs/architecture.md "Identity").
-  const link = async () => {
-    setPairing(true);
-    setLinkError(null);
-    try {
-      await rest.linkGlasses(code);
-      actions.setGlasses({ connected: true });
-      actions.updateProfile({ hasGlasses: true });
-      setCode("");
-    } catch (e) {
-      setLinkError(errorMessage(e));
-    } finally {
-      setPairing(false);
-    }
-  };
-
-  // Simulator mode: pairing is faked.
-  useEffect(() => {
-    if (!pairing || backend) return;
-    const t = setTimeout(() => {
-      actions.setGlasses({ connected: true });
-      actions.updateProfile({ hasGlasses: true });
-      setPairing(false);
-    }, 1200);
-    return () => clearTimeout(t);
-  }, [pairing, actions]);
-
-  const start = () => {
-    actions.setGlasses({ sessionLive: true, lastCardAt: Date.now() });
-    navigate("/me/glasses/live");
-  };
+  if (!linked || relink) return <LinkGlasses />;
 
   return (
     <Screen
       label="J1"
       blobs={false}
       footer={
-        g.connected ? (
-          <Button onClick={start} tilt={-0.7}>
-            Start session
-          </Button>
-        ) : backend ? (
-          <Button onClick={() => void link()} disabled={pairing || code.length !== 4} tilt={-0.7}>
-            {pairing ? "Linking…" : "Link glasses"}
-          </Button>
-        ) : (
-          <Button onClick={() => setPairing(true)} disabled={pairing} tilt={-0.7}>
-            {pairing ? "Connecting…" : "Connect"}
-          </Button>
-        )
+        <Button variant="secondary" onClick={() => setRelink(true)} tilt={-0.7}>
+          Link different glasses
+        </Button>
       }
     >
       <div className="q-blob" style={{ left: 120, top: 110, width: 330, height: 200, borderRadius: "46% 54% 60% 40%/55% 45% 55% 45%" }} />
@@ -116,52 +63,17 @@ export default function Glasses() {
       <div style={{ flex: "1 0 110px", minHeight: 110, color: "var(--ink)", display: "flex" }}>
         <ArtSlot id="glasses-art" placeholder="glasses illustration" style={{ width: "100%", flex: 1 }} />
       </div>
-      <Card style={{ gap: 4, rotate: "0.6deg" }}>
+      <Card style={{ gap: 6, rotate: "0.6deg" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <div className="q-title--sm">{g.model}</div>
-          {g.connected ? <StatusPill>CONNECTED</StatusPill> : <StatusPill tone="paper">{pairing ? "PAIRING…" : "NOT CONNECTED"}</StatusPill>}
+          <div className="q-title--sm">Meta Ray-Ban Display</div>
+          <StatusPill>LINKED</StatusPill>
         </div>
-        <div style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink-soft)" }} aria-live="polite">
-          {g.connected ? `Battery ${g.battery}% · ${g.neuralBand ? "Neural Band paired" : "Neural Band not paired"}` : "Not connected"}
-        </div>
+        <Body style={{ margin: 0 }}>Open Questline on your glasses and keep it open while you ride. It shows your match, where to meet, the mission and your stamp.</Body>
       </Card>
-      {backend && !g.connected && (
-        <Card>
-          <Eyebrow>Code on your glasses</Eyebrow>
-          <TextField
-            label="4-digit code on your glasses"
-            inputMode="numeric"
-            maxLength={4}
-            placeholder="0000"
-            value={code}
-            onChange={(v) => {
-              setCode(v.replace(/\D/g, "").slice(0, 4));
-              setLinkError(null);
-            }}
-          />
-          {linkError ? (
-            <Hint style={{ color: "var(--brick)" }}>
-              <span role="alert">{linkError}</span>
-            </Hint>
-          ) : (
-            <Hint>Open Questline on your glasses. It shows 4 digits.</Hint>
-          )}
-        </Card>
-      )}
-      <Card>
-        <SettingRow title="Read badges with camera" sub="7 fps · frames checked for a tag, then thrown away">
-          <Toggle checked={g.readBadges} onChange={(v) => actions.setGlasses({ readBadges: v })} label="Read badges with camera" />
-        </SettingRow>
-        <div style={{ borderTop: "2px dashed var(--stone)" }} />
-        <SettingRow title="Nod to accept" sub="Experimental">
-          <Toggle checked={g.nodToAccept} onChange={(v) => actions.setGlasses({ nodToAccept: v })} label="Nod to accept (experimental)" />
-        </SettingRow>
+      <Card style={{ gap: 6 }}>
+        <Body style={{ margin: 0 }}>Nothing to press. If the side of the frame works for you, swipe to move and tap to pick.</Body>
+        <Hint>The glasses never use their camera or microphone for Questline.</Hint>
       </Card>
-      {!backend && (
-        <Hint style={{ color: "var(--onsea)", fontSize: 16 }}>
-          In the simulator, pairing is pretend. Against the worker you type the code from the lens.
-        </Hint>
-      )}
     </Screen>
   );
 }

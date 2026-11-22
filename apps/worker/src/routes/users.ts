@@ -9,18 +9,21 @@
  *   400 "bad-ticket" (unknown, used or expired), 409 "email-taken", 429 "rate-limited" (per IP).
  * - GET  /api/me     (rider auth)                                -> MeRes
  *   Profile, email (null for guests), and whether a glasses session exists.
+ * - PATCH /api/me    (rider auth)   UpdateProfileReq             -> MeRes
+ * - DELETE /api/me   (rider auth)                                -> OkRes
+ *   Checks out, signs out every device, scrubs the profile and frees the email.
  *
- * Protocol types: CreateUserReq, CreateUserRes, MeRes, Profile.
+ * Protocol types: CreateUserReq, CreateUserRes, MeRes, UpdateProfileReq, Profile.
  *
  * TODO:
- * - PUT /api/me to edit the profile, if phone-web needs it (not in the protocol yet).
  * - Let a guest attach an email later (verify a code while signed in).
  */
 import { Hono } from "hono";
-import { CreateUserReq } from "@questline/protocol";
+import { CreateUserReq, Profile, UpdateProfileReq } from "@questline/protocol";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
 import {
+  activeCheckin,
   createSession,
   createUser,
   getUser,
@@ -28,7 +31,10 @@ import {
   getUserIdByEmail,
   hasGlassesSession,
   redeemSignupTicket,
+  scrubUser,
+  updateUser,
 } from "../db/queries";
+import { roomFor } from "../rooms/stub";
 import type { CreateUserResT, MeResT } from "../lib/api";
 import { readJson } from "../lib/http";
 import { limitByIp } from "../lib/rateLimit";
@@ -67,4 +73,32 @@ usersRoutes.get("/me", requireRider, async (c) => {
     email: await getUserEmail(c.env.DB, userId),
   };
   return c.json(res);
+});
+
+usersRoutes.patch("/me", requireRider, async (c) => {
+  const body = await readJson(c.req.raw, UpdateProfileReq);
+  if (!body.ok) return c.json({ error: body.error, issues: body.issues }, 400);
+  const userId = c.get("userId");
+  const user = await getUser(c.env.DB, userId);
+  if (!user) return c.json({ error: "not found" }, 404);
+  const next = Profile.safeParse({ ...user.profile, ...body.data });
+  if (!next.success) return c.json({ error: "invalid profile", issues: next.error.issues }, 400);
+  await updateUser(c.env.DB, userId, next.data);
+  const active = await activeCheckin(c.env.DB, userId);
+  if (active) await roomFor(c.env, active.tripId).updateRiderProfile(userId, next.data);
+  const res: MeResT = {
+    userId,
+    profile: next.data,
+    glassesLinked: await hasGlassesSession(c.env.DB, userId),
+    email: await getUserEmail(c.env.DB, userId),
+  };
+  return c.json(res);
+});
+
+usersRoutes.delete("/me", requireRider, async (c) => {
+  const userId = c.get("userId");
+  const active = await activeCheckin(c.env.DB, userId);
+  if (active) await roomFor(c.env, active.tripId).checkOut(userId, "ride-end");
+  await scrubUser(c.env.DB, userId);
+  return c.json({ ok: true as const });
 });

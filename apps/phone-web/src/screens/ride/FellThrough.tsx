@@ -4,8 +4,8 @@ import { Body, Button, Screen, Title } from "../../ui";
 import { PlatformHouse, PlatformStage, PlatformTopBar, PlatformTree } from "./parts/PlatformKit";
 
 /**
- * D3: the same neutral screen whether they skipped, you skipped, it timed out
- * or the train got too close. No sad face, no blame.
+ * D3: the match ended before the mission. Neutral either way: no sad face, no blame, and
+ * it never says who skipped. If you pressed "Not now", it confirms what that did.
  */
 export default function FellThrough() {
   const { ride, act } = useRide();
@@ -41,8 +41,17 @@ export default function FellThrough() {
       </PlatformStage>
 
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <Title style={{ fontSize: 54 }}>Not this one.</Title>
-        <Body style={{ fontSize: 23 }}>Still looking. Quests stay on.</Body>
+        {ride.fellThroughReason === "you" ? (
+          <>
+            <Title style={{ fontSize: 54 }}>Skipped.</Title>
+            <Body style={{ fontSize: 23 }}>No matches for the next 10 minutes. Ride Mode stays on.</Body>
+          </>
+        ) : (
+          <>
+            <Title style={{ fontSize: 54 }}>Not this one.</Title>
+            <Body style={{ fontSize: 23 }}>Still looking. Ride Mode stays on.</Body>
+          </>
+        )}
       </div>
     </Screen>
   );

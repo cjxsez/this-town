@@ -21,7 +21,7 @@ export function shortDate(iso: string, now = Date.now()): string {
 export const timeOfDay = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-/** "23 h" / "45 min" until an ISO deadline, for auto-deleting memories. */
+/** "23 h" / "45 min" until an ISO deadline. */
 export function hoursLeft(iso: string | undefined, now = Date.now()): string {
   if (!iso) return "";
   const s = Math.max(0, (new Date(iso).getTime() - now) / 1000);
