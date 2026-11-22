@@ -18,19 +18,13 @@
  *   socket auth failure (4001/4003/401)-> clear token, LinkCode
  *
  * Socket: /ws/rider?token= (lib/socket.ts), sends rider.hello {client:"glasses"} on open.
- *
- * TODO:
- * - Reloading mid-match loses the card: RideState says "matched"/"in-mission" but carries
- *   no match or mission. Ask the worker to replay match.found / mission.start after
- *   rider.hello, or extend the protocol.
- * - mission.end "stamped" with no stamp.awarded within ~5 s: fall back to Idle.
- * - Screen Wake Lock (navigator.wakeLock) if the glasses browser supports it; the page
- *   must stay open for the whole ride (no notifications on the platform).
+ * Reload mid-match restores from ride.snapshot.match / mission (protocol RideSnapshot).
  */
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import type { Mission as MissionModel, Partner, RideState, ServerToRider, Stamp as StampModel } from "@questline/protocol";
 import { clearToken, loadToken } from "./lib/link";
 import { connectRiderSocket, type MatchFound, type RiderSocket, type SocketStatus } from "./lib/socket";
+import { useWakeLock } from "./lib/wakeLock";
 import { Idle } from "./screens/Idle";
 import { LinkCode } from "./screens/LinkCode";
 import { MatchCard } from "./screens/MatchCard";
@@ -133,6 +127,7 @@ function reducer(state: State, action: Action): State {
 export function App() {
   const [state, dispatch] = useReducer(reducer, undefined, initState);
   const socketRef = useRef<RiderSocket | null>(null);
+  useWakeLock(Boolean(state.token));
 
   useEffect(() => {
     if (!state.token) return;
