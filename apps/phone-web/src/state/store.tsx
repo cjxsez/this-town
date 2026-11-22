@@ -14,6 +14,8 @@ export interface Settings {
   ghost: boolean;
   /** Floating demo panel (mock mode only). */
   demoPanel: boolean;
+  /** The waiting song on the Riding screen (lib/music.ts). Off = muted. */
+  music: boolean;
 }
 
 export type Draft = Partial<Omit<Profile, "id" | "createdAt">>;
@@ -34,7 +36,7 @@ const STORAGE_KEY = "questline:v2";
 const initialState: AppState = {
   profile: null,
   draft: {},
-  settings: { timeOfDay: "Day", handDrawn: true, motion: true, ghost: false, demoPanel: !!sim },
+  settings: { timeOfDay: "Day", handDrawn: true, motion: true, ghost: false, demoPanel: !!sim, music: true },
   stamps: [],
   people: [],
   ride: initialRide,

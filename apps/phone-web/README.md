@@ -47,6 +47,16 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 
 Landing (B1) has two ways in: **Sign in with email** (a one-time code; the code screens and accounts are PR #4, `feat/email-signin`; until it lands the button continues like the guest path) and **Just play today** (first name only). There is no Apple sign-in. Its pieces enter in order (island, name tile by tile, line, buttons), held back while the start screen's doors are opening onto it. Any other screen the doors open onto (Ride Mode, for a returning rider) does the same through `<Screen>`: its pieces stay hidden behind the shut doors and rise in as they part (`doorsEntrance`, on by default).
 
+## Waiting song
+
+While a rider waits for a match on the Riding screen (C2) a song loops, and "♪ Music on/off" there mutes it (kept in settings). It stops on a match, at the end of the ride, or offline, and pauses while the page is hidden. Browsers only play sound after a tap, so "Turn on Ride Mode" and "Got it" on the kiosk-tap screen unlock it; otherwise it starts on the rider's next touch. Code: `src/lib/music.ts`.
+
+The file is `public/sounds/waiting.m4a` and is **not in git** (a commercial track, and this repo is public): it ships with whatever build you deploy from a machine that has it. Without it the screen is just quiet. To make it from an MP3:
+
+```
+ffmpeg -i song.mp3 -vn -map_metadata -1 -c:a aac -b:a 112k apps/phone-web/public/sounds/waiting.m4a
+```
+
 ## Look
 
 Every screen follows the start screen:

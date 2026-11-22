@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams, useSearchParams } from "react-router"
 import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
 import { backend } from "../../api";
 import { errorMessage, type TapResult } from "../../lib/api";
+import { unlockWaitingMusic } from "../../lib/music";
 import { playTapSound } from "../../lib/sound";
 import { useApp } from "../../state/store";
 import { Body, Button, Card, Eyebrow, Hint, Screen, TextLink, Title } from "../../ui";
@@ -117,7 +118,10 @@ export default function Tap() {
     return <Navigate to={backend ? "/signin" : "/"} replace />;
   }
 
-  const toRide = () => navigate("/ride", { replace: true });
+  const toRide = () => {
+    unlockWaitingMusic(); // inside the tap, so iOS lets Riding start the waiting song
+    navigate("/ride", { replace: true });
+  };
   const color = state.ride.match ? PAIR_COLOR_HEX[state.ride.match.color] : undefined;
 
   const footer =
@@ -133,7 +137,13 @@ export default function Tap() {
       </Button>
     ) : view.step === "confirm" ? (
       <>
-        <Button huge onClick={() => send(view.dest.id, true)}>
+        <Button
+          huge
+          onClick={() => {
+            unlockWaitingMusic();
+            send(view.dest.id, true);
+          }}
+        >
           Turn on Ride Mode
         </Button>
         <TextLink to="/ride">Not today</TextLink>

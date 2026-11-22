@@ -18,3 +18,7 @@ apps/kiosk-pi/config.toml
 
 # seed output
 scripts/.seed-tokens.json
+
+# The waiting song on the Riding screen is a commercial track: kept local, not in this public repo.
+# See apps/phone-web/README.md (Waiting song).
+apps/phone-web/public/sounds/waiting.m4a
