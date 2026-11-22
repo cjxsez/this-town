@@ -4,13 +4,9 @@
  * Shows a big 4-digit code. The rider types it on the phone (phone-web calls
  * POST /api/glasses/link). Meanwhile lib/link.ts runs:
  *   POST /api/glasses/code, then polls GET /api/glasses/code/:code until linked.
- * On link, the token is saved and onLinked(token) moves App to Idle.
+ * On link, shows "Linked as <firstName>" for 2 s, then onLinked(token) moves App to Idle.
  *
  * Input: select = retry after an error.
- *
- * TODO:
- * - Show time left on the code (expiresAt) and fade it before it rotates.
- * - Short "Linked!" confirmation before switching to Idle.
  */
 import { useEffect, useRef, useState } from "react";
 import { useInput } from "../lib/input";
@@ -20,9 +16,12 @@ interface LinkCodeProps {
   onLinked: (token: string) => void;
 }
 
+const LINKED_HOLD_MS = 2_000;
+
 export function LinkCode({ onLinked }: LinkCodeProps) {
   const [code, setCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [linkedAs, setLinkedAs] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const onLinkedRef = useRef(onLinked);
 
@@ -31,6 +30,7 @@ export function LinkCode({ onLinked }: LinkCodeProps) {
   });
 
   useEffect(() => {
+    if (linkedAs !== null) return; // hold the confirmation; do not restart linking
     setCode(null);
     setError(null);
     return startLinking({
@@ -38,14 +38,25 @@ export function LinkCode({ onLinked }: LinkCodeProps) {
         setCode(c);
         setError(null);
       },
-      onLinked: (token) => onLinkedRef.current(token),
+      onLinked: (token, firstName) => {
+        setLinkedAs(firstName ?? "you");
+        window.setTimeout(() => onLinkedRef.current(token), LINKED_HOLD_MS);
+      },
       onError: (msg) => setError(msg),
     });
-  }, [attempt]);
+  }, [attempt, linkedAs]);
 
   useInput((action) => {
     if (action === "select" && error) setAttempt((n) => n + 1);
   });
+
+  if (linkedAs !== null) {
+    return (
+      <main className="hud hud-center">
+        <div className="hud-title">Linked as {linkedAs}</div>
+      </main>
+    );
+  }
 
   return (
     <main className="hud hud-center">
