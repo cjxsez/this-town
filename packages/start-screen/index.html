@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#62c1bc" />
+    <title>In This Town start screen</title>
+    <style>
+      html, body { height: 100%; margin: 0; }
+      body { background: #e7e9da; overflow: hidden; }
+      #stage { position: relative; width: 100vw; height: 100dvh; }
+      /* ?w=&h= : a fixed-size box in the middle of the page, like the phone shell. */
+      body.boxed { display: flex; align-items: center; justify-content: center; }
+      body.boxed #stage { flex: none; }
+      #note {
+        position: absolute; inset: 0; z-index: 0; /* under the start screen, so its doors open onto this */
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+        padding: 24px; text-align: center;
+        background: #f4f5ec; color: #26343b;
+        font: 700 24px/1.2 "Gaegu", "Comic Sans MS", cursive;
+      }
+      #note[hidden] { display: none; }
+      #note p { margin: 0; max-width: 16em; text-wrap: balance; }
+      #note code { font: 400 16px/1.3 ui-monospace, Menlo, monospace; }
+      #again {
+        min-height: 52px; padding: 4px 22px; cursor: pointer;
+        background: #f2c84b; color: #26343b; border: 2px solid #26343b; border-radius: 4px 7px 5px 8px;
+        box-shadow: inset 0 -5px 0 #c9982e, 3px 4px 0 #557585;
+        font: 400 17px/1.1 "Bungee", "Arial Black", sans-serif;
+      }
+      #again:focus-visible { outline: 3px solid #6bbde6; outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="note" hidden>
+        <p>The doors closed and <code>onBegin()</code> was called. Nothing is wired to it yet.</p>
+        <button id="again" type="button">Play it again</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

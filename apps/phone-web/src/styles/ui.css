@@ -23,9 +23,11 @@
 .q-blob { position: absolute; z-index: -1; background: var(--foam2); filter: var(--rag); pointer-events: none; }
 
 /* ---------- type ---------- */
-.q-title { font: 700 38px/1.03 var(--font-hand); text-wrap: balance; }
-.q-title--md { font: 700 30px/1.05 var(--font-hand); text-wrap: balance; }
-.q-title--sm { font: 700 27px/1.08 var(--font-hand); }
+/* Headings are block letters (Bungee), like the tiles on the start screen.
+   Handwriting (Gaegu) is for sentences: what the app says and what you say. */
+.q-title { font: 400 26px/1.12 var(--font-display); letter-spacing: .01em; text-transform: uppercase; text-wrap: balance; }
+.q-title--md { font: 400 22px/1.12 var(--font-display); letter-spacing: .01em; text-transform: uppercase; text-wrap: balance; }
+.q-title--sm { font: 400 18px/1.15 var(--font-display); letter-spacing: .01em; text-transform: uppercase; text-wrap: balance; }
 .q-display { font: 400 30px/1 var(--font-display); letter-spacing: .01em; }
 .q-eyebrow { font: 400 11px/1.3 var(--font-display); letter-spacing: .06em; color: var(--ink-soft); text-transform: uppercase; }
 .q-body { font-size: 19px; line-height: 1.2; text-wrap: pretty; }
@@ -165,6 +167,8 @@
 .q-art { position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--ink); }
 .q-art--empty { border: 2px dashed var(--ink); background: rgba(255,255,255,.35); font: 700 15px var(--font-hand); text-align: center; padding: 4px; }
 .q-art img { width: 100%; height: 100%; object-fit: cover; }
+.q-art--contain { overflow: visible; }
+.q-art--contain img { object-fit: contain; }
 
 .q-animal {
   flex: none; position: relative; border-radius: 50%;
@@ -178,3 +182,73 @@
 .q-scrim { position: absolute; inset: 0; z-index: 40; background: rgba(22,35,42,.45); display: flex; flex-direction: column; justify-content: flex-end; }
 .q-sheet { background: var(--paper); color: var(--ink); border: var(--ol) solid var(--ink); border-bottom: 0; border-radius: 22px 18px 0 0; padding: 18px 18px calc(var(--safe-bottom) + 18px); display: flex; flex-direction: column; gap: 12px; }
 .q-toast { position: absolute; left: var(--gutter); right: var(--gutter); top: calc(var(--safe-top) + 14px); z-index: 60; }
+
+/* ---------- screen-reader only ---------- */
+.q-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+/* ---------- tile titles: one letter per chunky paper tile ---------- */
+.q-tiles { font: 400 20px/1 var(--font-display); margin: 0; }
+.q-tiles__art { display: flex; flex-wrap: wrap; gap: .34em .5em; }
+.q-tiles__word { display: inline-flex; gap: .14em; }
+.q-tile {
+  flex: none; display: inline-grid; place-items: center;
+  width: 1.36em; height: 1.6em; padding-bottom: .14em;
+  background: var(--paper); color: var(--ink);
+  border: var(--ol) solid var(--ink); border-radius: var(--r1);
+  /* lower lip and hard shadow, as on the 3D tiles */
+  box-shadow: inset 0 -.16em 0 var(--paper-lo), 2px 3px 0 var(--shadow);
+}
+.q-tile:nth-child(4n+2) { border-radius: var(--r2); }
+.q-tile:nth-child(4n+3) { border-radius: var(--r3); }
+.q-tile:nth-child(4n) { border-radius: var(--r4); }
+.q-tiles--center .q-tiles__art { justify-content: center; }
+/* The T of TOWN: a green roundel with a paper ring, as on the start screen. */
+.q-tile.q-tile--roundel {
+  width: 1.6em; padding-bottom: 0; border-radius: 50%;
+  background: var(--green); color: var(--paper);
+  box-shadow: inset 0 0 0 .1em var(--green), inset 0 0 0 .17em var(--paper), 2px 3px 0 var(--shadow);
+}
+
+/* ---------- sprites: cut-out art from the start screen's renderer ---------- */
+.q-sprite { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; }
+
+/* ---------- live 3D platform scene (ride screens) ---------- */
+.q-scene3d { position: relative; overflow: hidden; isolation: isolate; background: var(--sea); }
+/* Pops in once the scene is drawing. */
+.q-scene3d__view { position: absolute; inset: 0; opacity: 0; scale: .94; transition: opacity .22s, scale .5s cubic-bezier(.2,.9,.3,1.25); }
+.q-scene3d[data-status="ready"] .q-scene3d__view { opacity: 1; scale: 1; }
+.q-scene3d__over { position: absolute; inset: 0; pointer-events: none; }
+.q-scene3d__flat { position: absolute; inset: 0; }
+/* As a full-screen backdrop: the picture runs edge to edge, and below the page's frame
+   it fades into the sea so the cards and text there sit on calm water. */
+.q-screen__backdrop { position: absolute; inset: 0; z-index: -1; }
+.q-scene3d--backdrop { position: absolute; inset: 0; }
+.q-scene3d__fade {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom,
+    transparent calc(var(--frame-bottom, 60%) - 30px),
+    color-mix(in srgb, var(--sea) 82%, transparent) calc(var(--frame-bottom, 60%) + 50px),
+    var(--sea) calc(var(--frame-bottom, 60%) + 120px));
+}
+.q-scene3d[data-status="loading"] .q-scene3d__fade { opacity: 0; }
+.q-scene3d__sign {
+  position: absolute; min-width: 108px; min-height: 34px; padding: 2px 10px 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper); color: var(--ink);
+  border: var(--ol) solid var(--ink); border-top: 8px solid var(--green); border-radius: 4px;
+  box-shadow: 2px 3px 0 var(--shadow);
+  font: 400 13px var(--font-display); white-space: nowrap; text-transform: uppercase;
+}
+.q-scene3d__note {
+  position: absolute; padding: 3px 10px; border-radius: var(--r2);
+  background: var(--paper); color: var(--ink); border: var(--ol) solid var(--ink);
+  font: 700 18px/1.2 var(--font-hand); white-space: nowrap;
+}
+:root.no-motion .q-scene3d__view { transition: none; }
+
+/* ---------- 3D start screen host ---------- */
+.q-start { position: absolute; inset: 0; z-index: 5; background: var(--sea); }
+/* After BEGIN only the doors remain on top, and the page behind shows through as they part. */
+.q-start--revealing { background: transparent; pointer-events: none; }

@@ -9,14 +9,47 @@ export type OkRes = z.infer<typeof OkRes>;
 export const ErrorRes = z.object({ error: z.string(), code: z.string().optional() });
 export type ErrorRes = z.infer<typeof ErrorRes>;
 
+// ---- Email sign-in (one-time code) ----
+// An email address is an account. Signing in sends a 6-digit code; verifying it either
+// signs in to the existing rider or, for a new email, returns a short-lived signupTicket
+// that POST /api/users redeems so the new rider is created with that email.
+// "Just play today" skips this: POST /api/users without a ticket makes an email-less guest.
+export const Email = z.string().trim().toLowerCase().email().max(254);
+export type Email = z.infer<typeof Email>;
+
+// POST /api/auth/email/start   (no auth) -> OkRes. Sends the code.
+//   429 ErrorRes code "too-soon" when a code was sent to this email in the last 30 s,
+//   or "rate-limited" past the per-IP / per-email caps (any no-auth route can answer that).
+export const AuthStartReq = z.object({ email: Email });
+export type AuthStartReq = z.infer<typeof AuthStartReq>;
+
+// POST /api/auth/email/verify  (no auth) -> AuthVerifyRes
+//   400 ErrorRes code "wrong-code" | "expired" (no live code: ask for a new one) | "too-many-attempts"
+export const AuthVerifyReq = z.object({ email: Email, code: z.string().regex(/^\d{6}$/) });
+export type AuthVerifyReq = z.infer<typeof AuthVerifyReq>;
+export const AuthVerifyRes = z.discriminatedUnion("status", [
+  // Existing account: a new phone session for it.
+  z.object({ status: z.literal("signed-in"), userId: z.string(), token: z.string(), email: Email, profile: Profile }),
+  // No account for this email yet: onboard, then POST /api/users with the ticket (valid 30 min).
+  z.object({ status: z.literal("new-account"), email: Email, signupTicket: z.string() }),
+]);
+export type AuthVerifyRes = z.infer<typeof AuthVerifyRes>;
+
 // POST /api/users   (no auth) -> create rider
-export const CreateUserReq = Profile;
+//   With signupTicket: the rider gets the verified email (an account). Without: a guest.
+//   400 ErrorRes code "bad-ticket" (expired or used), 409 code "email-taken".
+export const CreateUserReq = Profile.extend({ signupTicket: z.string().optional() });
 export type CreateUserReq = z.infer<typeof CreateUserReq>;
 export const CreateUserRes = z.object({ userId: z.string(), token: z.string() });
 export type CreateUserRes = z.infer<typeof CreateUserRes>;
 
 // GET /api/me
-export const MeRes = z.object({ userId: z.string(), profile: Profile, glassesLinked: z.boolean() });
+export const MeRes = z.object({
+  userId: z.string(),
+  profile: Profile,
+  glassesLinked: z.boolean(),
+  email: Email.nullable(), // null for "Just play today" guests
+});
 export type MeRes = z.infer<typeof MeRes>;
 // PATCH /api/me   -> MeRes. Edit any profile field; the train you're on sees it right away.
 export const UpdateProfileReq = Profile.omit({ is18Plus: true }).partial();

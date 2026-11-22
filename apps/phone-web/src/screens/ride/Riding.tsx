@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { LINES } from "../../../shared/catalog";
 import type { SocialBattery } from "../../../shared/types";
 import { sim } from "../../api";
@@ -12,6 +12,7 @@ import {
   PlatformTopBar,
   PlatformTree,
 } from "./parts/PlatformKit";
+import { PlatformScene3D, PlatformSign } from "./parts/PlatformScene3D";
 
 const MOODS: { value: SocialBattery; label: string }[] = [
   { value: "nod", label: "Nod" },
@@ -28,6 +29,8 @@ export default function Riding() {
   const { state, actions } = useApp();
   const ghost = state.settings.ghost;
   const [confirmOff, setConfirmOff] = useState(false);
+  const frame = useRef<HTMLDivElement>(null);
+  const [flat, setFlat] = useState(false);
   const dest = ride.checkIn?.destinationName ?? "your stop";
 
   const turnOff = () => {
@@ -36,9 +39,14 @@ export default function Riding() {
   };
 
   return (
-    <Screen label="C2" tabs blobs="a">
+    <Screen
+      label="C2"
+      tabs
+      blobs={false}
+      backdrop={<PlatformScene3D line={ride.checkIn?.line} mode="loop" frameRef={frame} onStatus={(s) => setFlat(s === "failed")} />}
+    >
       <PlatformTopBar ride={ride} />
-      <WaitingPlatformScene />
+      <RidingFrame frameRef={frame} flat={flat} />
 
       <Card style={{ gap: 8, flex: "none" }}>
         <PlatformQuestsToggle on onToggle={() => setConfirmOff(true)} label="Ride Mode" />
@@ -94,8 +102,39 @@ export default function Riding() {
   );
 }
 
-/** The illustrated ride: line strip, next stop and your stop, your rider in the car. */
-function WaitingPlatformScene() {
+/**
+ * The room the page leaves for the live platform, which runs full-screen behind it
+ * (see Riding). Your car, the next stop and your stop are laid over it; without
+ * WebGL the flat scene takes its place.
+ */
+function RidingFrame({ frameRef, flat }: { frameRef: RefObject<HTMLDivElement | null>; flat: boolean }) {
+  const { ride } = useRide();
+  const c = ride.checkIn;
+  const line = LINES[c?.line ?? "green"];
+  const stops = c ? [c.nextStationName, ...(c.destinationId !== c.nextStationId ? [`${c.destinationName} ★`] : [])] : [];
+  return (
+    <div ref={frameRef} style={{ flex: "1 0 auto", minHeight: 300, position: "relative", margin: "0 calc(-1 * var(--gutter))" }}>
+      {flat ? (
+        <WaitingPlatformFlat />
+      ) : (
+        <>
+          {c && <PlatformSign name={`Car ${c.car}`} color={line.hex} style={{ right: 16, top: 6 }} />}
+          {stops.length > 0 && (
+            <div className="q-scene3d__note" style={{ left: 16, top: 8, fontSize: 16 }}>
+              Next: {stops.join(", ")}
+            </div>
+          )}
+          <div className="q-scene3d__note" style={{ left: 16, bottom: 10 }}>
+            You're here{c ? ` · car ${c.car}` : ""}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The flat ride scene (line strip, stops, your rider), shown when the 3D scene cannot run. */
+function WaitingPlatformFlat() {
   const { ride } = useRide();
   const c = ride.checkIn;
   const line = LINES[c?.line ?? "green"];
@@ -164,7 +203,7 @@ function WaitingPlatformScene() {
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 10, background: "var(--yellow)", borderRight: "2px solid var(--ink)" }} />
       </div>
       <div style={{ position: "absolute", left: 150, bottom: 84, width: 100, height: 110 }}>
-        <ArtSlot id="ride-rider" placeholder="your rider" style={{ width: "100%", height: "100%" }} />
+        <ArtSlot id="ride-rider" fit="contain" placeholder="your rider" style={{ width: "100%", height: "100%" }} />
       </div>
       {/* station sign */}
       <div style={{ position: "absolute", left: 318, bottom: 92, width: 4, height: 52, background: "var(--ink)" }} />

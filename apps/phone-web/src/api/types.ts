@@ -33,7 +33,21 @@ export interface RideChannel {
   arrived(): void;
 }
 
+/** What verifying an email code leads to. */
+export type SignInResult =
+  /** Existing account: this device now holds its token. */
+  | { status: "signed-in"; profile: Profile }
+  /** New email: onboard, and the rider is created as an account with this email. */
+  | { status: "new-account"; email: string };
+
+/** Email one-time-code sign-in. Errors are thrown with a message fit to show the rider. */
+export interface AuthApi {
+  sendCode(email: string): Promise<void>;
+  verifyCode(email: string, code: string): Promise<SignInResult>;
+}
+
 export interface QuestlineApi {
+  auth: AuthApi;
   /** Create the rider (first call) or save edits. */
   saveProfile(p: Profile): Promise<void>;
   deleteMyData(): Promise<void>;

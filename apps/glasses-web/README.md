@@ -114,11 +114,11 @@ Requirements: glasses software v125+, Meta AI app v272+, and a **public HTTPS UR
 
 1. Deploy: `pnpm run deploy` from the repo root (builds the web apps, copies them into `apps/worker/public/`, deploys the worker). The glasses URL is `https://<worker-host>/g/`.
 2. Turn on Developer Mode once: Meta AI app > Settings > App Info, tap the app version 5 times, Enable.
-3. Add the Web App: Meta AI app > App Settings > Apps > Web Apps > Connect Web App, paste `https://<worker-host>/g/`, Save.
+3. Add the Web App: Meta AI app > App Settings > Apps > Web Apps > Connect Web App, paste `https://husshusshuss.boston/g/`, Save.
 4. On the glasses, the app shows at the bottom of the app grid (marked unverified). Pin it and open it.
 5. Read the 4-digit code on the lens and enter it on the phone. Keep the Web App open for the whole ride.
 
-Alternative install: a QR link of the form `fb-viewapp://web_app_deep_link?appName=Questline&appUrl=https://<worker-host>/g/`, scanned with the glasses.
+Alternative install: a QR link of the form `fb-viewapp://web_app_deep_link?appName=Questline&appUrl=https://husshusshuss.boston/g/`, scanned with the glasses.
 
 Icons: Meta needs PNG icons (no SVG), 52x52 or larger, found via the manifest or page source. `public/manifest.webmanifest`, `public/icon-192.png` and `public/icon-512.png` cover that.
 

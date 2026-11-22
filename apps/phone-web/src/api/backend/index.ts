@@ -1,7 +1,7 @@
 import { api as rest } from "../../lib/api";
-import { getToken } from "../../lib/auth";
+import { getToken, setSignupTicket, setToken } from "../../lib/auth";
 import type { QuestlineApi } from "../types";
-import { REPORT_REASON, toPerson, toStamp } from "./map";
+import { fromWireProfile, REPORT_REASON, toPerson, toStamp } from "./map";
 import { BackendRide } from "./ride";
 
 /** The real worker (apps/worker) behind the same seam the simulator fills in mock mode. */
@@ -9,6 +9,22 @@ export function createBackendApi(): Omit<QuestlineApi, "ride"> & { ride: Backend
   const ride = new BackendRide();
   return {
     ride,
+    auth: {
+      sendCode: async (email) => {
+        await rest.authStart(email);
+      },
+      verifyCode: async (email, code) => {
+        const res = await rest.authVerify(email, code);
+        if (res.status === "signed-in") {
+          ride.signOut(); // drop any guest token and ride state on this device first
+          setSignupTicket(null);
+          setToken(res.token);
+          return { status: "signed-in", profile: fromWireProfile(res.profile, res) };
+        }
+        setSignupTicket(res.signupTicket);
+        return { status: "new-account", email: res.email };
+      },
+    },
     saveProfile: (p) => ride.saveProfile(p).catch((e) => console.warn("[questline] could not save the profile", e)),
     deleteMyData: async () => {
       if (getToken()) await rest.deleteMe();

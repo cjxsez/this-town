@@ -1,0 +1,42 @@
+/* Design tokens, copied from apps/phone-web/src/styles/tokens.css so the kiosk and the
+   phone look like one game. Keep the two in step when the palette changes.
+   The kiosk always uses the Day sea (no time-of-day switch). */
+:root {
+  --sea: #62c1bc;
+  --foam: #9ae4d6;
+  --foam2: #7fd3c8;
+  --onsea: #26343b;
+  --night: #2b4656;
+  --night-foam: #3a5c70;
+  --ol: 3px;
+  --wob: url(#ql-wob);
+  --rag: url(#ql-rag);
+
+  --ink: #26343b;
+  --ink-deep: #16232a;
+  --ink-soft: #48606d;
+  --shadow: #557585;
+  --paper: #f4f5ec;
+  --paper-hi: #fbfbf5;
+  --paper-lo: #d5d9c7;
+  --stone: #b7bfb2;
+  --stone-dk: #8f9a8e;
+
+  --yellow: #f2c84b;
+  --yellow-dk: #c9982e;
+  --sky: #6bbde6;
+  --leaf: #8fcf95;
+  --green: #3f8f5a;
+  --red: #d9453b;
+  --ticket: #f3d9b1;
+
+  --font-hand: "Gaegu", "Comic Sans MS", cursive;
+  --font-display: "Bungee", "Arial Black", sans-serif;
+  --font-shade: "Bungee Shade", "Bungee", "Arial Black", sans-serif;
+
+  /* Wobbly corner sets, so neighbouring boxes never look stamped out. */
+  --r1: 6px 10px 7px 11px;
+  --r2: 11px 7px 10px 6px;
+  --r3: 7px 11px 6px 10px;
+  --r4: 10px 6px 11px 7px;
+}

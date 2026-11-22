@@ -1,10 +1,10 @@
 // Seeds demo profiles into the worker so matching has people to work with.
 // Usage: pnpm seed            (targets http://localhost:8787)
-//        WORKER_URL=https://<domain> pnpm seed
+//        WORKER_URL=https://<domain> KIOSK_KEY=... pnpm seed   (the key skips per-IP rate limits)
 //
 // Writes { firstName, userId, token } per profile to scripts/.seed-tokens.json (gitignored)
 // so ghost-riders.ts can act as these users. Running it again creates fresh users.
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import type { Profile } from "@questline/protocol";
 
 export const DEMO_PROFILES: Profile[] = [
@@ -17,13 +17,26 @@ export const DEMO_PROFILES: Profile[] = [
 
 export const TOKENS_FILE = new URL("./.seed-tokens.json", import.meta.url);
 
+/** KIOSK_KEY from the env or apps/worker/.dev.vars; lets seeding skip the per-IP rate limits. */
+function kioskKey(): string {
+  if (process.env.KIOSK_KEY) return process.env.KIOSK_KEY;
+  try {
+    const line = readFileSync(new URL("../apps/worker/.dev.vars", import.meta.url), "utf8")
+      .split("\n")
+      .find((l) => l.startsWith("KIOSK_KEY="));
+    return line?.slice("KIOSK_KEY=".length).replace(/^"|"$/g, "") ?? "";
+  } catch {
+    return "";
+  }
+}
+
 async function main(): Promise<void> {
   const base = (process.env.WORKER_URL ?? "http://localhost:8787").replace(/\/+$/, "");
   const out: { firstName: string; userId: string; token: string }[] = [];
   for (const p of DEMO_PROFILES) {
     const res = await fetch(`${base}/api/users`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-kiosk-key": kioskKey() },
       body: JSON.stringify(p),
     });
     if (!res.ok) throw new Error(`POST /api/users for ${p.firstName}: ${res.status} ${await res.text()}`);

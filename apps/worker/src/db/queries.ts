@@ -2,7 +2,8 @@
  * db/queries.ts: typed D1 helpers. The only module that writes SQL.
  *
  * Responsible for (tables from migrations/0001_init.sql):
- * - users: create, read profile, ghost preference.
+ * - users: create, read profile, ghost preference, look up by email.
+ * - login_codes, signup_tickets: email one-time-code sign-in (migrations/0003).
  * - sessions: mint bearer tokens (store sha256 only), resolve token -> userId.
  * - glasses_codes: issue 4-digit codes, link from phone, claim from glasses poll.
  * - checkins: active check-in lookup (used to route rider sockets / ride routes to the right
@@ -30,8 +31,14 @@ import {
   type Stamp,
 } from "@questline/protocol";
 import type { GlassesCodePollResT, GlassesCodeResT, PassportResT } from "../lib/api";
-import { fourDigitCode, newId, newToken, orderedPair, sha256Hex } from "../lib/ids";
-import { GLASSES_CODE_TTL_MS } from "../lib/time";
+import { fourDigitCode, newId, newToken, orderedPair, sha256Hex, sixDigitCode } from "../lib/ids";
+import {
+  GLASSES_CODE_TTL_MS,
+  LOGIN_CODE_MAX_ATTEMPTS,
+  LOGIN_CODE_RESEND_MS,
+  LOGIN_CODE_TTL_MS,
+  SIGNUP_TICKET_TTL_MS,
+} from "../lib/time";
 
 // ---------- row types (snake_case, exactly as stored) ----------
 
@@ -46,6 +53,7 @@ export interface UserRow {
   is_18_plus: number;
   ghost: number;
   created_at: number;
+  email: string | null;
 }
 
 export interface CheckinRow {
@@ -196,12 +204,18 @@ export function stampFromRow(row: {
 
 // ---------- users ----------
 
-export async function createUser(db: D1Database, profile: Profile, now: number): Promise<{ userId: string }> {
+/** `email` is the verified account email; null makes a "Just play today" guest. */
+export async function createUser(
+  db: D1Database,
+  profile: Profile,
+  now: number,
+  email: string | null = null,
+): Promise<{ userId: string }> {
   const userId = newId("usr");
   await db
     .prepare(
-      `INSERT INTO users (id, first_name, interests, ask_me_about, social_battery, status, languages, is_18_plus, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+      `INSERT INTO users (id, first_name, interests, ask_me_about, social_battery, status, languages, is_18_plus, created_at, email)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
     )
     .bind(
       userId,
@@ -212,6 +226,7 @@ export async function createUser(db: D1Database, profile: Profile, now: number):
       profile.status,
       JSON.stringify(profile.languages),
       now,
+      email,
     )
     .run();
   return { userId };
@@ -221,6 +236,91 @@ export async function getUser(db: D1Database, userId: string): Promise<UserWithP
   const row = await db.prepare("SELECT * FROM users WHERE id = ?").bind(userId).first<UserRow>();
   if (!row) return null;
   return { userId: row.id, profile: profileFromRow(row), ghost: row.ghost === 1 };
+}
+
+export async function getUserIdByEmail(db: D1Database, email: string): Promise<string | null> {
+  const row = await db.prepare("SELECT id FROM users WHERE email = ?").bind(email).first<{ id: string }>();
+  return row?.id ?? null;
+}
+
+export async function getUserEmail(db: D1Database, userId: string): Promise<string | null> {
+  const row = await db.prepare("SELECT email FROM users WHERE id = ?").bind(userId).first<{ email: string | null }>();
+  return row?.email ?? null;
+}
+
+// ---------- email sign-in ----------
+
+const loginCodeHash = (email: string, code: string) => sha256Hex(`${email}:${code}`);
+
+/** True while the last code to `email` is inside the resend cooldown. */
+export async function loginCodeTooSoon(db: D1Database, email: string, now: number): Promise<boolean> {
+  const row = await db.prepare("SELECT sent_at FROM login_codes WHERE email = ?").bind(email).first<{ sent_at: number }>();
+  return !!row && now - row.sent_at < LOGIN_CODE_RESEND_MS;
+}
+
+/**
+ * Issue a fresh 6-digit code for `email`, replacing any earlier one. Returns null when a code
+ * went out less than LOGIN_CODE_RESEND_MS ago (the caller answers 429).
+ */
+export async function issueLoginCode(db: D1Database, email: string, now: number): Promise<string | null> {
+  const prev = await db.prepare("SELECT sent_at FROM login_codes WHERE email = ?").bind(email).first<{ sent_at: number }>();
+  if (prev && now - prev.sent_at < LOGIN_CODE_RESEND_MS) return null;
+  const code = sixDigitCode();
+  await db
+    .prepare(
+      `INSERT INTO login_codes (email, code_hash, expires_at, attempts, sent_at) VALUES (?, ?, ?, 0, ?)
+       ON CONFLICT (email) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at,
+         attempts = 0, sent_at = excluded.sent_at`,
+    )
+    .bind(email, await loginCodeHash(email, code), now + LOGIN_CODE_TTL_MS, now)
+    .run();
+  return code;
+}
+
+/** Forget the code, e.g. when the email could not be sent, so a retry isn't blocked by the cooldown. */
+export async function deleteLoginCode(db: D1Database, email: string): Promise<void> {
+  await db.prepare("DELETE FROM login_codes WHERE email = ?").bind(email).run();
+}
+
+export type LoginCodeCheck = "ok" | "wrong-code" | "expired" | "too-many-attempts";
+
+/** Checks a code. A correct code is used up; a wrong one counts against LOGIN_CODE_MAX_ATTEMPTS. */
+export async function checkLoginCode(db: D1Database, email: string, code: string, now: number): Promise<LoginCodeCheck> {
+  const row = await db
+    .prepare("SELECT code_hash, expires_at, attempts FROM login_codes WHERE email = ?")
+    .bind(email)
+    .first<{ code_hash: string; expires_at: number; attempts: number }>();
+  if (!row || row.expires_at <= now) return "expired";
+  if (row.attempts >= LOGIN_CODE_MAX_ATTEMPTS) return "too-many-attempts";
+  if (row.code_hash === (await loginCodeHash(email, code))) {
+    // Single use: only the request that actually deletes the row wins.
+    const del = await db.prepare("DELETE FROM login_codes WHERE email = ? AND code_hash = ?").bind(email, row.code_hash).run();
+    return del.meta.changes === 1 ? "ok" : "expired";
+  }
+  await db.prepare("UPDATE login_codes SET attempts = attempts + 1 WHERE email = ?").bind(email).run();
+  return row.attempts + 1 >= LOGIN_CODE_MAX_ATTEMPTS ? "too-many-attempts" : "wrong-code";
+}
+
+/** A verified new email gets a ticket that POST /api/users redeems. Returns the raw ticket. */
+export async function createSignupTicket(db: D1Database, email: string, now: number): Promise<string> {
+  const ticket = newToken();
+  await db
+    .prepare("INSERT INTO signup_tickets (ticket_hash, email, expires_at) VALUES (?, ?, ?)")
+    .bind(await sha256Hex(ticket), email, now + SIGNUP_TICKET_TTL_MS)
+    .run();
+  return ticket;
+}
+
+/** Marks the ticket used and returns its email, or null if it is unknown, used or expired. */
+export async function redeemSignupTicket(db: D1Database, ticket: string, now: number): Promise<string | null> {
+  const row = await db
+    .prepare(
+      `UPDATE signup_tickets SET used_at = ? WHERE ticket_hash = ? AND used_at IS NULL AND expires_at > ?
+       RETURNING email`,
+    )
+    .bind(now, await sha256Hex(ticket), now)
+    .first<{ email: string }>();
+  return row?.email ?? null;
 }
 
 export async function setUserGhost(db: D1Database, userId: string, ghost: boolean): Promise<void> {
@@ -542,7 +642,9 @@ export async function setUserBattery(db: D1Database, userId: string, battery: st
  */
 export async function scrubUser(db: D1Database, userId: string): Promise<void> {
   await db.batch([
-    db.prepare("UPDATE users SET first_name = 'Deleted', ask_me_about = '', interests = '[]', languages = '[]' WHERE id = ?1").bind(userId),
+    // Free the email too, so signing in with it later starts a fresh account.
+    db.prepare("DELETE FROM login_codes WHERE email = (SELECT email FROM users WHERE id = ?1)").bind(userId),
+    db.prepare("UPDATE users SET first_name = 'Deleted', ask_me_about = '', interests = '[]', languages = '[]', email = NULL WHERE id = ?1").bind(userId),
     db.prepare("DELETE FROM sessions WHERE user_id = ?1").bind(userId),
     db.prepare("DELETE FROM glasses_codes WHERE user_id = ?1").bind(userId),
     db.prepare("DELETE FROM stamps WHERE user_id = ?1").bind(userId),

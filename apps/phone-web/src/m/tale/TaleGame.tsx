@@ -30,7 +30,7 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain }: GameProps<T
           </Button>
         }
       >
-        <Eyebrow>Questline games</Eyebrow>
+        <Eyebrow>In This Town games</Eyebrow>
         <Title>Tall tale</Title>
         <Body>Tell your worst T story. It might be made up.</Body>
         <Hint>You each get a secret card: tell the truth, or make it up. Then guess if your partner's story is true.</Hint>
@@ -100,7 +100,7 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain }: GameProps<T
         footer={
           called ? undefined : (
             <ButtonRow>
-              <Button huge variant="leaf" tilt={-0.5} onClick={() => send({ type: "call", call: "truth" })}>
+              <Button huge variant="leaf" onClick={() => send({ type: "call", call: "truth" })}>
                 True
               </Button>
               <Button huge onClick={() => send({ type: "call", call: "fake" })}>
@@ -135,7 +135,7 @@ export function TaleGame({ view, send, serverNow, onNext, onAgain }: GameProps<T
       <Eyebrow>Tall tale</Eyebrow>
       <Title size="md">{view.summary}</Title>
       <Story label="Your story" result={view.yours} />
-      <Story label="Their story" result={view.theirs} tilt />
+      <Story label="Their story" result={view.theirs} />
       <Card ink tight className="tale-score">
         <span>
           You <b>{view.youPoints}</b>
@@ -187,9 +187,9 @@ function Peek({ card, spark, onPeek }: { card: TaleCard; spark: string; onPeek?:
   );
 }
 
-function Story({ label, result, tilt }: { label: string; result: TaleResult; tilt?: boolean }) {
+function Story({ label, result }: { label: string; result: TaleResult }) {
   return (
-    <Card tight className="tale-story" style={tilt ? { rotate: "0.5deg" } : { rotate: "-0.4deg" }}>
+    <Card tight className="tale-story">
       <div className="tale-story-head">
         <Eyebrow>{label}</Eyebrow>
         <span className={`tale-tag is-${result.card}`}>{CARD_WORD[result.card]}</span>

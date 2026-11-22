@@ -6,3 +6,5 @@ export { Title, Display, Eyebrow, Body, Hint } from "./Type";
 export { Segmented, Chip, Toggle, Checkbox, Radio, TextField, Steps } from "./Controls";
 export { LinePill, TrainPill } from "./Pills";
 export { ArtSlot, PairToken } from "./Art";
+export { Wordmark, GAME_NAME } from "./Wordmark";
+export { TileTitle } from "./TileTitle";

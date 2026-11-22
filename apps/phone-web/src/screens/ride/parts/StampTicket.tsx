@@ -27,8 +27,10 @@ function TicketShape({
   ol,
   shadow,
   rare,
+  shine,
   children,
 }: {
+  shine?: boolean;
   stub: number;
   edgeR: number;
   edgeStep: number;
@@ -61,9 +63,12 @@ function TicketShape({
           color: "var(--ink)",
           mask,
           maskComposite: "intersect",
+          position: "relative",
         }}
       >
         {children}
+        {/* A glint that sweeps across the paper now and then; clipped to the ticket by its mask. */}
+        {shine && <div className="q-ticket-shine" aria-hidden />}
       </div>
     </div>
   );
@@ -114,6 +119,7 @@ export function StampTicketLarge({
   rare,
   number,
   style,
+  shine,
 }: {
   station: string;
   lineLabel: string;
@@ -123,10 +129,12 @@ export function StampTicketLarge({
   rare: boolean;
   number?: number;
   style?: CSSProperties;
+  /** A glint sweeps across it now and then (the G2 celebration). */
+  shine?: boolean;
 }) {
   return (
-    <div style={{ height: 160, rotate: "-5deg", filter: "var(--wob)", ...style }}>
-      <TicketShape stub={246} edgeR={6} edgeStep={20} notchR={9} ol={2} shadow="5px 7px 0" rare={rare}>
+    <div style={{ height: 160, filter: "var(--wob)", ...style }}>
+      <TicketShape stub={246} edgeR={6} edgeStep={20} notchR={9} ol={2} shadow="5px 7px 0" rare={rare} shine={shine}>
         <div style={{ flex: "none", width: 246, boxSizing: "border-box", padding: "14px 12px 0 24px" }}>
           <div
             style={{
@@ -137,7 +145,7 @@ export function StampTicketLarge({
               letterSpacing: ".06em",
             }}
           >
-            <span>QUESTLINE</span>
+            <span>IN THIS TOWN</span>
             <span>{lineLabel}</span>
           </div>
           <div
@@ -195,7 +203,7 @@ export function StampTicketSmall({
   style?: CSSProperties;
 }) {
   return (
-    <div style={{ flex: "none", width: 176, height: 64, rotate: "-1.5deg", filter: "var(--wob)", ...style }}>
+    <div style={{ flex: "none", width: 176, height: 64, filter: "var(--wob)", ...style }}>
       <TicketShape stub={124} edgeR={3.5} edgeStep={12.8} notchR={6} ol={1.5} shadow="3px 4px 0" rare={rare}>
         <div style={{ flex: "none", width: 124, boxSizing: "border-box", padding: "10px 6px 0 14px" }}>
           <div style={{ font: "400 15px/1 var(--font-display)", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden" }}>

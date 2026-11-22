@@ -31,6 +31,27 @@ export function toInterestTags(interests: string[]): InterestTag[] {
   return interests.filter((id): id is InterestTag => InterestTag.safeParse(id).success).slice(0, 8);
 }
 
+/**
+ * The worker's profile as the phone's, for a rider signing back in on a new device. They
+ * accepted the Ride Mode rules when they made the account. glassesLinked starts false and
+ * the Me tab refreshes it from GET /api/me.
+ */
+export function fromWireProfile(w: WireProfile, ids: { userId: string; email: string }): Profile {
+  return {
+    id: ids.userId,
+    firstName: w.firstName,
+    kind: w.status,
+    is18: w.is18Plus,
+    interests: [...w.interests],
+    askMeAbout: w.askMeAbout || undefined,
+    battery: w.socialBattery,
+    rulesAccepted: true,
+    glassesLinked: false,
+    createdAt: new Date().toISOString(),
+    email: ids.email,
+  };
+}
+
 export function toWireProfile(p: Profile): WireProfile {
   return {
     firstName: p.firstName.slice(0, 24),

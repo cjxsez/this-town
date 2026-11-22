@@ -1,17 +1,21 @@
-import { useEffect, type ReactNode } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router";
+import { useEffect, useState, type ReactNode } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
 import { AppProvider, useApp } from "./state/store";
+import { setDoorsOpening } from "./state/doors";
 import { HandDrawnFx } from "./fx/HandDrawnFx";
 import { DemoPanel } from "./dev/DemoPanel";
 import { ScreenIndex, ScreenPreview } from "./dev/ScreenGallery";
 
 import Landing from "./screens/onboarding/Landing";
+import Start from "./screens/onboarding/Start";
 import Name from "./screens/onboarding/Name";
 import Interests from "./screens/onboarding/Interests";
 import AskMeAbout from "./screens/onboarding/AskMeAbout";
 import Battery from "./screens/onboarding/Battery";
 import RideModeRules from "./screens/onboarding/RideModeRules";
 import LinkGlasses from "./screens/onboarding/LinkGlasses";
+import SignInEmail from "./screens/signin/SignInEmail";
+import SignInCode from "./screens/signin/SignInCode";
 import Poster from "./screens/print/Poster";
 import RideRoute from "./screens/ride/RideRoute";
 import Tap, { takePendingTap } from "./screens/ride/Tap";
@@ -32,10 +36,53 @@ function RequireProfile({ children }: { children: ReactNode }) {
   return state.profile ? <>{children}</> : <Navigate to="/" replace />;
 }
 
-/** "/" is the landing page for new riders and Ride Mode for returning ones. */
+const STARTED_KEY = "its.started";
+const hasStarted = () => {
+  try {
+    return sessionStorage.getItem(STARTED_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const markStarted = () => {
+  try {
+    sessionStorage.setItem(STARTED_KEY, "1");
+  } catch {
+    // Private mode without storage: the start screen just shows again next time.
+  }
+};
+
+/** "/" is the landing page for new riders and Ride Mode for returning ones (after the start screen, see Shell). */
 function Home() {
   const { state } = useApp();
   return state.profile ? <Navigate to="/ride" replace /> : <Landing />;
+}
+
+type Gate = "start" | "reveal" | "done";
+
+/**
+ * The 3D start screen sits above the routes: once per visit (tab session) at "/",
+ * and every time at "/start". Nothing mounts behind it until BEGIN; then the page
+ * mounts behind the shut doors and they open onto it. Living here, not inside a
+ * route, it survives the redirect a returning rider gets to /ride.
+ */
+function useStartGate() {
+  const location = useLocation();
+  const [gate, setGate] = useState<Gate>(() =>
+    location.pathname === "/start" || (location.pathname === "/" && !hasStarted()) ? "start" : "done",
+  );
+  return {
+    gate,
+    begin() {
+      markStarted();
+      setDoorsOpening(true);
+      setGate("reveal");
+    },
+    revealed() {
+      setDoorsOpening(false);
+      setGate("done");
+    },
+  };
 }
 
 const guard = (el: ReactNode) => <RequireProfile>{el}</RequireProfile>;
@@ -44,19 +91,27 @@ const guard = (el: ReactNode) => <RequireProfile>{el}</RequireProfile>;
 function usePendingTap() {
   const { state } = useApp();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const joined = !!state.profile;
+  // Onboarding (B7) and sign-in (S2) hand the tap back themselves when they finish; replaying
+  // it here too would race their own navigate("/ride").
+  const busy = pathname.startsWith("/join/") || pathname.startsWith("/signin");
   useEffect(() => {
-    const path = joined ? takePendingTap() : null;
+    const path = joined && !busy ? takePendingTap() : null;
     if (path) navigate(path, { replace: true });
-  }, [joined, navigate]);
+  }, [joined, busy, navigate]);
 }
 
 function Shell() {
   usePendingTap();
+  const start = useStartGate();
   return (
     <div className="app-shell">
-      <Routes>
+      {start.gate !== "start" && <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/signin" element={<SignInEmail />} />
+        <Route path="/signin/code" element={<SignInCode />} />
+        <Route path="/start" element={<Navigate to="/" replace />} />
         <Route path="/join/name" element={<Name />} />
         <Route path="/join/interests" element={<Interests />} />
         <Route path="/join/about" element={<AskMeAbout />} />
@@ -79,7 +134,8 @@ function Shell() {
         <Route path="/screens" element={<ScreenIndex />} />
         <Route path="/screens/:id" element={<ScreenPreview />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      </Routes>}
+      {start.gate !== "done" && <Start revealing={start.gate === "reveal"} onBegin={start.begin} onRevealed={start.revealed} />}
       <DemoPanel />
     </div>
   );

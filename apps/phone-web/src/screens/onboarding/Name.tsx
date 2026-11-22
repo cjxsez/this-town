@@ -24,7 +24,7 @@ export default function Name() {
       blobs="b"
       footer={
         <ButtonRow>
-          <Button tilt={0.8} disabled={!ready} onClick={() => navigate("/join/interests")}>
+          <Button disabled={!ready} onClick={() => navigate("/join/interests")}>
             Next
           </Button>
         </ButtonRow>

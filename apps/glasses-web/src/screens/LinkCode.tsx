@@ -53,8 +53,8 @@ export function LinkCode({ onLinked }: LinkCodeProps) {
       <div className="hud-code" aria-live="polite">
         {code ?? "····"}
       </div>
-      <div className="hud-body">Enter this code in Questline on your phone</div>
-      {error && <div className="hud-warn">Can't reach Questline. Pinch to retry.</div>}
+      <div className="hud-body">Enter this code in In This Town on your phone</div>
+      {error && <div className="hud-warn">Can't reach In This Town. Pinch to retry.</div>}
     </main>
   );
 }

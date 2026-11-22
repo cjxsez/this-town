@@ -1,0 +1,118 @@
+/* G2 (stamp) and H1 (quest recap) celebrations. Timings are ms after the screen appears.
+   Everything ends at rest; Motion off shows the resting picture straight away. */
+
+/* ---------- confetti ---------- */
+.q-confetti { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 3; }
+.q-confetti__bit {
+  position: absolute; left: -5px; top: -4px; width: 10px; height: 7px;
+  border: 1.5px solid var(--ink); border-radius: 2px; opacity: 0;
+  animation: q-confetti 1.5s cubic-bezier(.15,.7,.3,1) both; animation-delay: calc(var(--d, 0) * 1ms);
+}
+.q-confetti__bit--1 { width: 7px; height: 7px; border-radius: 50%; }
+.q-confetti__bit--2 { width: 4px; height: 12px; }
+@keyframes q-confetti {
+  0% { opacity: 0; transform: translate(0, 0) scale(.3) rotate(0); }
+  8% { opacity: 1; }
+  45% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1) rotate(calc(var(--spin) * .6)); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + 150px)) scale(.9) rotate(var(--spin)); }
+}
+
+/* ---------- ticket glint ---------- */
+.q-ticket-shine {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 0 38%, rgb(255 255 255 / .75) 46%, rgb(255 255 255 / .2) 52%, transparent 60%) no-repeat;
+  background-size: 260% 100%; background-position: 140% 0;
+  animation: q-shine 4.2s ease-in-out 1500ms infinite;
+}
+@keyframes q-shine {
+  0% { background-position: 140% 0; }
+  26%, 100% { background-position: -40% 0; }
+}
+
+/* ---------- G2: the stamp ---------- */
+/* The stage takes the room between the top bar and the button: the catch, the title and
+   the tally, together in the middle, so there's no dead space on a tall phone. */
+.g2-stage {
+  flex: 1 0 auto; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter);
+}
+.g2-rays {
+  position: absolute; left: 50%; top: 50%; width: 640px; height: 640px; margin: -420px 0 0 -320px;
+  border-radius: 50%; z-index: -1; pointer-events: none;
+  background: repeating-conic-gradient(var(--foam) 0deg 10deg, transparent 10deg 20deg);
+  mask-image: radial-gradient(circle, #000 22%, transparent 66%);
+  animation: q-spin 48s linear infinite, q-fadeIn .6s 200ms both;
+}
+.g2-group { position: relative; flex: none; width: min(350px, calc(100% - 4px)); height: 384px; }
+
+/* The ticket drops in from above, lands in the riders' hands, then floats there. */
+.g2-ticket { position: absolute; left: 0; right: 0; top: 0; z-index: 2; animation: g2-drop .8s cubic-bezier(.2,.9,.25,1.2) 150ms both; }
+.g2-ticket__float { position: relative; animation: g2-float 3.2s ease-in-out 1300ms infinite alternate; }
+@keyframes g2-drop {
+  0% { opacity: 0; transform: translateY(-280px) rotate(-16deg) scale(1.12); }
+  25% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes g2-float { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+/* Two riders on a slice of platform, arms up to catch it. */
+/* Feet on the platform's top, raised hands just at the ticket's lower edge. */
+.g2-platform { position: absolute; left: 50%; top: 312px; width: 380px; max-width: none; margin-left: -190px; animation: q-enter .6s cubic-bezier(.2,.9,.3,1.15) both; }
+.g2-rider { position: absolute; top: 138px; width: 168px; max-width: none; transform-origin: 50% 100%; z-index: 1; }
+/* Already there, arms up and waiting; they jump to meet the ticket as it lands, then keep cheering. */
+.g2-rider--you { left: calc(50% - 166px); animation: q-enter .55s cubic-bezier(.2,.9,.3,1.15) both, g2-catch .7s ease-out 600ms both, g2-cheer 1.6s ease-in-out 1500ms infinite; }
+.g2-rider--friend { left: calc(50% - 2px); animation: q-enter .55s cubic-bezier(.2,.9,.3,1.15) 80ms both, g2-catch .7s ease-out 650ms both, g2-cheer 1.6s ease-in-out 2300ms infinite; }
+@keyframes g2-catch {
+  0% { transform: none; }
+  30% { transform: translateY(-24px) scale(.97, 1.04); }
+  62% { transform: translateY(0) scale(1.06, .92); }
+  100% { transform: none; }
+}
+@keyframes g2-cheer {
+  0%, 60%, 100% { transform: none; }
+  20% { transform: translateY(-12px); }
+  40% { transform: translateY(0) scale(1.04, .95); }
+}
+
+.g2-title { text-align: center; display: flex; flex-direction: column; gap: 6px; }
+.g2-title h1 { font: 400 30px/1.02 var(--font-display); text-transform: uppercase; }
+.g2-title p { font-size: 22px; line-height: 1.2; text-wrap: pretty; }
+.g2-chips { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- H1: quest recap ---------- */
+.h1-hero { position: relative; flex: none; height: 282px; margin: 0 calc(-1 * var(--gutter)); }
+.h1-hero__backdrop { position: absolute; left: 50%; bottom: 0; width: 420px; max-width: none; margin-left: -210px; animation: q-enter .6s cubic-bezier(.2,.9,.3,1.15) both; }
+/* Turned towards each other so their raised hands meet over the middle. */
+.h1-hero__rider { position: absolute; bottom: 26px; width: 150px; max-width: none; transform-origin: 50% 100%; z-index: 1; }
+.h1-hero__rider--you { left: calc(50% - 118px); animation: h1-in-left .6s cubic-bezier(.2,.9,.3,1.1) 250ms both, h1-hop .5s ease-out 900ms both; }
+.h1-hero__rider--friend { left: calc(50% - 38px); animation: h1-in-right .6s cubic-bezier(.2,.9,.3,1.1) 250ms both, h1-hop .5s ease-out 900ms both; }
+@keyframes h1-in-left { from { opacity: 0; transform: translateX(-90px); } to { opacity: 1; transform: none; } }
+@keyframes h1-in-right { from { opacity: 0; transform: translateX(90px); } to { opacity: 1; transform: none; } }
+@keyframes h1-hop { 0%, 100% { translate: 0 0; } 40% { translate: 0 -14px; } }
+/* The clap: a star of ink lines where the hands meet. */
+.h1-hero__clap { position: absolute; left: 50%; bottom: 180px; width: 0; height: 0; z-index: 2; }
+.h1-hero__clap span {
+  position: absolute; left: -2px; top: -14px; width: 4px; height: 12px; border-radius: 2px; background: var(--ink);
+  transform-origin: 2px 26px; opacity: 0; animation: h1-clap .55s ease-out 900ms both;
+}
+@keyframes h1-clap { 0% { opacity: 0; scale: .4; } 30% { opacity: 1; } 100% { opacity: 0; scale: 1.3; } }
+
+.h1-stats { display: flex; gap: 14px; align-items: center; }
+.h1-stats__list { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+/* ---------- line progress ---------- */
+.q-line-progress { width: min(340px, 100%); display: flex; flex-direction: column; gap: 6px; }
+.q-line-progress__label { display: flex; justify-content: space-between; font: 400 12px var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
+.q-line-progress__dots { display: flex; justify-content: space-between; gap: 3px; position: relative; }
+.q-line-progress__dots::before { content: ""; position: absolute; left: 4px; right: 4px; top: 50%; height: 3px; margin-top: -1.5px; background: var(--ink); border-radius: 2px; }
+.q-line-progress__dots span { position: relative; flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--paper); border: 2px solid var(--ink); }
+.q-line-progress__dots span.is-on { background: var(--line); }
+.q-line-progress__dots span.is-new { animation: q-dot-pop .6s cubic-bezier(.3,1.8,.5,1) both; animation-delay: calc(var(--d, 0) * 1ms); }
+@keyframes q-dot-pop { 0% { scale: 0; } 60% { scale: 1.8; } 100% { scale: 1.25; } }
+.q-line-progress__bar { height: 12px; border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); overflow: hidden; }
+.q-line-progress__bar span { display: block; height: 100%; background: var(--line); }
+
+/* ---------- Motion off ---------- */
+:root.no-motion :is(.g2-rays, .g2-ticket, .g2-ticket__float, .g2-platform, .g2-rider, .q-ticket-shine, .h1-hero__backdrop, .h1-hero__rider, .q-line-progress__dots span) { animation: none; }
+:root.no-motion :is(.q-confetti, .h1-hero__clap) { display: none; }

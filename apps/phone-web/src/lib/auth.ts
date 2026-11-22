@@ -17,6 +17,7 @@
  */
 
 const TOKEN_KEY = "questline.token";
+const TICKET_KEY = "questline.signupTicket";
 
 let memoryToken: string | null = null;
 
@@ -43,6 +44,27 @@ export function clearToken(): void {
     localStorage.removeItem(TOKEN_KEY);
   } catch {
     // Nothing to clear.
+  }
+}
+
+/**
+ * The signup ticket from verifying a NEW email (POST /api/auth/email/verify). Kept until
+ * onboarding finishes and POST /api/users redeems it; valid 30 minutes on the worker.
+ */
+export function getSignupTicket(): string | null {
+  try {
+    return localStorage.getItem(TICKET_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setSignupTicket(ticket: string | null): void {
+  try {
+    if (ticket) localStorage.setItem(TICKET_KEY, ticket);
+    else localStorage.removeItem(TICKET_KEY);
+  } catch {
+    // Storage blocked: the rider is created as a guest instead.
   }
 }
 

@@ -23,7 +23,7 @@ const backChip = {
   borderRadius: "var(--r3)",
   boxShadow: "3px 5px 0 var(--shadow)",
   filter: "var(--wob)",
-  rotate: "-0.4deg",
+  
   font: "400 13px var(--font-display)",
   cursor: "pointer",
 } as const;
@@ -60,7 +60,7 @@ export default function Report() {
   if (sent) {
     return (
       <Screen label="I2" blobs="c" footer={<Button to="/people">Back to People</Button>}>
-        <Title style={{ fontSize: 46, marginTop: 40 }}>Thanks for telling us.</Title>
+        <Title style={{ marginTop: 40 }}>Thanks for telling us.</Title>
         <Body style={{ fontSize: 22 }}>
           We'll look at it. {p.Subj} won't be told who reported.
           {alsoBlock && ` You won't be matched with ${p.obj} again.`}
@@ -75,7 +75,7 @@ export default function Report() {
       label="I2"
       blobs="c"
       footer={
-        <Button onClick={send} disabled={!reason || sending} tilt={0.8}>
+        <Button onClick={send} disabled={!reason || sending}>
           {sending ? "Sending…" : "Send report"}
         </Button>
       }
@@ -83,7 +83,7 @@ export default function Report() {
       <button type="button" onClick={back} style={backChip}>
         ← BACK
       </button>
-      <Title style={{ fontSize: 46 }}>Report {name}</Title>
+      <Title>Report {name}</Title>
       <Body style={{ fontSize: 22 }}>{p.Subj} won't be told who reported.</Body>
       <Card style={{ gap: 0 }}>
         <div role="radiogroup" aria-label="What happened">

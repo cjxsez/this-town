@@ -28,6 +28,8 @@ export interface Profile {
   /** Glasses linked with the 4-digit code (POST /api/glasses/link). */
   glassesLinked: boolean;
   createdAt: string;
+  /** Verified sign-in email. Absent for "Just play today" guests. */
+  email?: string;
 }
 
 export interface Station {

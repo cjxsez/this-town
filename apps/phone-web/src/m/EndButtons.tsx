@@ -4,7 +4,7 @@ import { Button, ButtonRow } from "../ui";
 export function EndButtons({ onNext, onAgain }: { onNext: () => void; onAgain: () => void }) {
   return (
     <ButtonRow>
-      <Button variant="secondary" tilt={-0.5} onClick={onAgain}>
+      <Button variant="secondary" onClick={onAgain}>
         Again
       </Button>
       <Button onClick={onNext}>Next game</Button>

@@ -16,9 +16,10 @@ Contract: `packages/protocol`. Architecture: `docs/architecture.md`.
 
 The happy path works on the demo trip and is covered by `pnpm smoke` (see "Run locally"):
 
-- onboarding (`POST /api/users`, `GET /api/me`) and the 4-digit glasses link with a poll secret
+- email sign-in with a 6-digit code (`POST /api/auth/email/start`, `/verify`), accounts by email, guest onboarding (`POST /api/users`, `GET /api/me`)
+- the 4-digit glasses link with a poll secret
 - check-in from a kiosk tap: destination picker, then `rideMode: true` is required to turn Ride Mode on (D15); moving cars, ending the ride, ghost mode, mood (`POST /api/ride/mood`)
-- profile edits and delete: `PATCH /api/me`, `DELETE /api/me` (checks out, then scrubs the rider; partners' stamps say "Someone")
+- profile edits and delete: `PATCH /api/me`, `DELETE /api/me` (checks out, then scrubs the rider and frees their email; partners' stamps say "Someone")
 - People: `GET /api/matches/recent`
 - matching with no accept step: same trip, shared interests, closest car first, one pair per kiosk
 - arrival (tap on the meeting kiosk, `rider.arrived`, `POST /api/ride/arrived`, or 20 s autostart)
@@ -42,7 +43,11 @@ src/index.ts                  Hono app: mounts /api routes, /ws upgrades -> Trai
 src/env.ts                    Env bindings type, AppEnv for Hono, readConfig() for [vars]
 src/auth.ts                   bearer token middleware (rider), kiosk key check
 src/nfc.ts                    mission nonces and tag URLs (${PUBLIC_ORIGIN}/k/<car>?n=<nonce>)
-src/routes/users.ts           POST /api/users, GET /api/me
+src/routes/auth.ts            POST /api/auth/email/start, POST /api/auth/email/verify (one-time code)
+src/routes/users.ts           POST /api/users (+ signupTicket), GET /api/me
+src/email/loginCode.ts        the sign-in email, via the EMAIL send_email binding
+src/email/template.ts         its look (phone-web's tokens: sea, paper card, yellow keycaps)
+src/lib/rateLimit.ts          per-IP / per-email limits on the no-auth routes (D1 counters)
 src/routes/glasses.ts         POST /api/glasses/code, GET /api/glasses/code/:code, POST /api/glasses/link
 src/routes/taps.ts            POST /api/taps: check-in, move car, stamp confirm, need-destination
 src/routes/ride.ts            POST /api/ride/end, PUT /api/ride/ghost, GET /api/ride/state (glasses polling)
@@ -94,6 +99,16 @@ pnpm smoke                                                # in another terminal:
 `wrangler dev` needs `public/` to exist. It is gitignored and filled by `pnpm build` (root), which builds the three web apps and copies their `dist/` folders in. During development the web apps run on their own Vite servers and should proxy `/api` and `/ws` to `http://localhost:8787`.
 
 Override any `[vars]` in `.dev.vars`. Set `PUBLIC_ORIGIN` to an address your phone can open (it goes into NFC tag URLs).
+
+### Sign-in email
+
+Under `wrangler dev` the `EMAIL` binding is simulated: nothing is sent, and each sign-in email is printed in the worker log, code in the subject (`Subject: 402 524 is your Questline code`). To send real mail from local dev, add `remote = true` under `[[send_email]]` in `wrangler.toml`.
+
+Before deploying: onboard the sending domain with `npx wrangler email sending enable husshusshuss.boston` (Cloudflare adds the SPF/DKIM records on `cf-bounce.husshusshuss.boston`). `EMAIL_FROM` in `[vars]` is `signin@husshusshuss.boston`. Sending to any recipient needs the Workers Paid plan. Apply `migrations/0003_email_signin.sql` and `0004_rate_limits.sql` with `pnpm db:migrate:remote`.
+
+### Rate limits
+
+`src/lib/rateLimit.ts` caps the routes anyone can call without a token, per client IP (`cf-connecting-ip`) in 10-minute windows: sign-in emails 20, code checks 40, new riders 20, glasses codes 30. One email address gets at most 6 sign-in emails an hour, on top of the 30 s resend cooldown. Over a limit: 429 `{ code: "rate-limited" }` with `Retry-After`. Requests with a valid `X-Kiosk-Key` skip the per-IP limits; `pnpm seed` and `pnpm smoke` send it. Locally every request counts as one IP, so to reset: `npx wrangler d1 execute questline --local --command "DELETE FROM rate_limits"` from `apps/worker/`.
 
 ## Create the D1 database
 

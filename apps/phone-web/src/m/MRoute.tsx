@@ -118,7 +118,7 @@ export default function MRoute() {
           </Button>
         }
       >
-        <Eyebrow>Questline games</Eyebrow>
+        <Eyebrow>In This Town games</Eyebrow>
         <Title>Enter the code</Title>
         <Body>Your partner's glasses show a 4-digit code. Type it here to play together.</Body>
         <TextField

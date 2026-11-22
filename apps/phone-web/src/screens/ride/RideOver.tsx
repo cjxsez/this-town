@@ -1,28 +1,12 @@
-import { LINES, LINE_STATION_COUNT, stationById } from "../../../shared/catalog";
-import type { CheckIn, GreenBranch, Stamp } from "../../../shared/types";
+import { LINES } from "../../../shared/catalog";
+import type { LineColor } from "../../../shared/types";
+import { lineProgress } from "../../state/progress";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useApp, useRide } from "../../state/store";
 import { Body, Button, LinePill, Screen, Title, TrainPill } from "../../ui";
-import { lineName, stationFor } from "./parts/PlatformKit";
-
-/** Stops per Green Line branch, trunk included (Gov't Ctr out to the end of the branch). */
-const BRANCH_STOPS: Record<GreenBranch, number> = { B: 23, C: 19, D: 19, E: 18 };
-
-/** Distinct stations stamped on this line (and branch, for the Green Line). */
-function lineProgress(stamps: Stamp[], c: CheckIn) {
-  const ids = new Set(
-    stamps
-      .filter((s) => s.line === c.line)
-      .filter((s) => {
-        if (c.line !== "green" || !c.branch) return true;
-        const st = stationById(s.stationId);
-        return !st?.branches || st.branches.includes(c.branch);
-      })
-      .map((s) => s.stationId),
-  );
-  const total = c.line === "green" && c.branch ? BRANCH_STOPS[c.branch] : LINE_STATION_COUNT[c.line];
-  return { got: ids.size, total };
-}
+import { lineName, stationFor, TrolleySprite } from "./parts/PlatformKit";
+import { PlatformScene3D, PlatformSign } from "./parts/PlatformScene3D";
 
 /**
  * C4: Ride Mode is off. Confirms it, says why (your stop, you turned it off, end of the
@@ -32,10 +16,12 @@ export default function RideOver() {
   const { ride, act } = useRide();
   const { state } = useApp();
   const navigate = useNavigate();
+  const frame = useRef<HTMLDivElement>(null);
+  const [flat, setFlat] = useState(false);
   const c = ride.checkIn;
   const station = stationFor(c?.destinationId);
   const lineHex = LINES[c?.line ?? "green"].hex;
-  const progress = c ? lineProgress(state.stamps, c) : undefined;
+  const progress = c ? lineProgress(state.stamps, c.line, c.branch) : undefined;
   const why =
     ride.rideOverReason === "you"
       ? "You turned it off. Nobody can be matched with you until you tap a kiosk again."
@@ -54,14 +40,14 @@ export default function RideOver() {
       label="C4"
       tabs
       blobs={false}
+      backdrop={<PlatformScene3D line={c?.line} mode="arrive" frameRef={frame} onStatus={(s) => setFlat(s === "failed")} />}
       footer={
         <>
-          <Button tilt={-0.7} onClick={act.closeRideOver}>
+          <Button onClick={act.closeRideOver}>
             Done
           </Button>
           <Button
             variant="secondary"
-            tilt={0.6}
             onClick={() => {
               act.closeRideOver();
               navigate("/passport");
@@ -72,39 +58,18 @@ export default function RideOver() {
         </>
       }
     >
-      <div className="q-blob" style={{ left: -40, top: 130, width: 340, height: 190, borderRadius: "46% 54% 60% 40%/55% 45% 55% 45%" }} />
-      <div className="q-blob" style={{ left: 230, top: 60, width: 230, height: 130, borderRadius: "58% 42% 45% 55%/45% 60% 40% 55%" }} />
-
       <div className="q-topbar">
         {c ? <LinePill line={c.line}>{lineName(c).toUpperCase()}</LinePill> : <span />}
         <TrainPill>RIDE MODE OFF</TrainPill>
       </div>
 
-      <div
-        aria-hidden
-        style={{ flex: "1 0 auto", minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))", background: "var(--ink)", overflow: "hidden" }}
-      >
-        {["15%", "49%", "83%"].map((l) => (
-          <div key={l} style={{ position: "absolute", left: l, top: 22, width: 10, height: 10, borderRadius: "50%", background: "var(--yellow)" }} />
-        ))}
-        <div className="anim-trainIn" style={{ position: "absolute", left: -160, bottom: 70, display: "flex", gap: 8 }}>
-          <NoMatchCar lineHex={lineHex} />
-          <NoMatchCar lineHex={lineHex} front />
-        </div>
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 52, height: 10, background: "repeating-linear-gradient(90deg, var(--stone-dk) 0 18px, var(--ink) 18px 24px)" }} />
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40, background: "var(--stone)", borderTop: "2.5px solid var(--ink)" }}>
-          <div
-            style={{
-              height: 16,
-              background: "radial-gradient(circle, var(--yellow-dk) 3px, transparent 3.5px) 0 0/14px 16px, var(--yellow)",
-              borderBottom: "2.5px solid var(--ink)",
-            }}
-          />
-        </div>
+      {/* Room for the trolley, which pulls in at your stop and stays (full-screen behind the page). */}
+      <div ref={frame} style={{ flex: "1 0 auto", minHeight: 220, position: "relative", margin: "0 calc(-1 * var(--gutter))" }}>
+        {flat ? <RideOverFlatScene line={c?.line} /> : <PlatformSign name={c?.destinationName ?? station.name} color={lineHex} style={{ right: 16, top: 6 }} />}
       </div>
 
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <Title style={{ fontSize: 40 }}>Ride Mode is off.</Title>
+        <Title>Ride Mode is off.</Title>
         <Body style={{ fontSize: 21 }}>{why}</Body>
         <Body style={{ fontSize: 21 }}>{got}</Body>
         {c && progress && (
@@ -117,29 +82,27 @@ export default function RideOver() {
   );
 }
 
-function NoMatchCar({ lineHex, front }: { lineHex: string; front?: boolean }) {
+/** The flat tunnel scene, shown when the 3D scene cannot run. */
+function RideOverFlatScene({ line }: { line?: LineColor }) {
   return (
-    <div
-      style={{
-        flex: "none",
-        width: 270,
-        height: 98,
-        position: "relative",
-        background: "var(--paper)",
-        borderRadius: front ? "14px 30px 8px 8px" : "14px 14px 8px 8px",
-      }}
-    >
-      <div style={{ position: "absolute", left: 14, right: front ? 30 : 14, top: 14, display: "flex", justifyContent: "space-between" }}>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <span key={i} style={{ width: 38, height: 30, borderRadius: 6, background: "#62C1BC", border: "2.5px solid var(--ink)" }} />
-        ))}
+    <div aria-hidden style={{ position: "absolute", inset: 0, background: "var(--ink)", overflow: "hidden" }}>
+      {["15%", "49%", "83%"].map((l) => (
+        <div key={l} style={{ position: "absolute", left: l, top: 22, width: 10, height: 10, borderRadius: "50%", background: "var(--yellow)" }} />
+      ))}
+      {/* Negative delay: the first frame (and the paused frame with motion off) shows the train at the platform. */}
+      <div className="anim-trainIn" style={{ position: "absolute", left: -160, bottom: 70, display: "flex", gap: 8, animationDelay: "-3.4s" }}>
+        <TrolleySprite line={line} width={420} />
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 56, height: 14, background: lineHex }} />
-      {front && (
-        <div style={{ position: "absolute", right: 10, top: 74, width: 14, height: 14, borderRadius: "50%", background: "var(--yellow)", border: "2.5px solid var(--ink)" }} />
-      )}
-      <div style={{ position: "absolute", left: 36, bottom: -9, width: 20, height: 20, borderRadius: "50%", background: "var(--stone-dk)" }} />
-      <div style={{ position: "absolute", right: 36, bottom: -9, width: 20, height: 20, borderRadius: "50%", background: "var(--stone-dk)" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 52, height: 10, background: "repeating-linear-gradient(90deg, var(--stone-dk) 0 18px, var(--ink) 18px 24px)" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40, background: "var(--stone)", borderTop: "2.5px solid var(--ink)" }}>
+        <div
+          style={{
+            height: 16,
+            background: "radial-gradient(circle, var(--yellow-dk) 3px, transparent 3.5px) 0 0/14px 16px, var(--yellow)",
+            borderBottom: "2.5px solid var(--ink)",
+          }}
+        />
+      </div>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
+import { backend } from "../../api";
 import { errorMessage, type TapResult } from "../../lib/api";
+import { playTapSound } from "../../lib/sound";
 import { useApp } from "../../state/store";
 import { Body, Button, Card, Eyebrow, Hint, Screen, TextLink, Title } from "../../ui";
 
@@ -13,6 +15,16 @@ export function takePendingTap(): string | null {
     const path = sessionStorage.getItem(PENDING_KEY);
     sessionStorage.removeItem(PENDING_KEY);
     return path?.startsWith("/k/") ? path : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The car of a tap waiting on sign-in, without using it up (for "then we'll check you in"). */
+export function peekPendingCar(): string | null {
+  try {
+    const path = sessionStorage.getItem(PENDING_KEY);
+    return path?.startsWith("/k/") ? decodeURIComponent(path.slice(3).split(/[?/]/)[0] ?? "") || null : null;
   } catch {
     return null;
   }
@@ -38,6 +50,9 @@ type View =
  * tap means. On the first tap of a ride that is: pick your stop, then confirm Ride Mode.
  * Confirming is the consent to be matched on this train, so it's its own screen that says
  * exactly what it means, and only "Turn on Ride Mode" sends rideMode: true.
+ *
+ * Not signed in: the tap is parked, the rider signs in with an email code (/signin) or
+ * onboards, and App's usePendingTap brings them back here.
  */
 export default function Tap() {
   const { car = "" } = useParams();
@@ -49,6 +64,9 @@ export default function Tap() {
   const [view, setView] = useState<View>({ step: "working" });
   const partner = useRef(state.ride.match?.firstName);
   partner.current = state.ride.match?.firstName ?? partner.current;
+
+  // Chime as soon as the tag link opens, signed in or not.
+  useEffect(() => playTapSound(), []);
 
   const send = useCallback(
     (destinationStop?: string, rideMode?: true) => {
@@ -95,7 +113,8 @@ export default function Tap() {
     } catch {
       // Storage blocked: they tap again after joining.
     }
-    return <Navigate to="/" replace />;
+    // Not signed in: sign in with an email code (or onboard), then usePendingTap replays this.
+    return <Navigate to={backend ? "/signin" : "/"} replace />;
   }
 
   const toRide = () => navigate("/ride", { replace: true });
@@ -127,13 +146,13 @@ export default function Tap() {
 
       {view.step === "working" && (
         <div role="status">
-          <Title style={{ fontSize: 44 }}>One sec…</Title>
+          <Title>One sec…</Title>
         </div>
       )}
 
       {view.step === "destination" && (
         <>
-          <Title style={{ fontSize: 40 }}>Where are you getting off?</Title>
+          <Title>Where are you getting off?</Title>
           <Hint>Ride Mode turns off at your stop, and missions always end before a stop, so you never miss it.</Hint>
           <Card>
             <div role="radiogroup" aria-label="Your stop" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -155,7 +174,7 @@ export default function Tap() {
 
       {view.step === "confirm" && (
         <>
-          <Title style={{ fontSize: 40 }}>Turn on Ride Mode?</Title>
+          <Title>Turn on Ride Mode?</Title>
           <Body>
             Car {car}, riding to <strong>{view.dest.name}</strong>.
           </Body>
@@ -174,7 +193,7 @@ export default function Tap() {
 
       {view.step === "on" && (
         <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Title style={{ fontSize: 44 }}>Ride Mode is on.</Title>
+          <Title>Ride Mode is on.</Title>
           <Card style={{ gap: 6, background: "var(--leaf)" }}>
             <Body style={{ margin: 0 }}>
               Car <strong>{view.car}</strong>, riding to <strong>{view.dest}</strong>.
@@ -194,7 +213,7 @@ export default function Tap() {
 
       {view.step === "moved" && (
         <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Title style={{ fontSize: 40 }}>{view.meeting ? "You made it." : `You're in car ${view.car} now.`}</Title>
+          <Title>{view.meeting ? "You made it." : `You're in car ${view.car} now.`}</Title>
           <Body>{view.meeting ? "This is your meeting kiosk. The mission starts on its screen in a moment." : "Ride Mode moved with you. Matching uses this car now."}</Body>
           <Button huge onClick={toRide}>
             OK
@@ -204,7 +223,7 @@ export default function Tap() {
 
       {view.step === "already" && (
         <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Title style={{ fontSize: 40 }}>Ride Mode is already on.</Title>
+          <Title>Ride Mode is already on.</Title>
           <Body>You're checked in to car {view.car}. If you're meeting someone here, the mission starts on the kiosk.</Body>
           <Button huge onClick={toRide}>
             OK
@@ -214,7 +233,7 @@ export default function Tap() {
 
       {view.step === "stampPending" && (
         <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Title style={{ fontSize: 44 }}>1 of 2 tapped.</Title>
+          <Title>1 of 2 tapped.</Title>
           <Body>Your half is in. Waiting for {partner.current ?? "your match"} to tap the tag.</Body>
           <div aria-hidden style={{ height: 14, borderRadius: 7, border: "var(--ol) solid var(--ink)", overflow: "hidden" }}>
             <div style={{ width: "50%", height: "100%", background: color ?? "var(--leaf)" }} />
@@ -227,7 +246,7 @@ export default function Tap() {
 
       {view.step === "stamped" && (
         <div role="status" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Title style={{ fontSize: 44 }}>Stamped!</Title>
+          <Title>Stamped!</Title>
           <Body>
             {view.station} stamp with {view.partner}. It's in your passport.
           </Body>
@@ -239,7 +258,7 @@ export default function Tap() {
 
       {view.step === "error" && (
         <div role="alert" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Title style={{ fontSize: 44 }}>That tap didn't take.</Title>
+          <Title>That tap didn't take.</Title>
           <Body>{view.message}</Body>
           <Hint>Tap the tag again to get a fresh one.</Hint>
           <Button onClick={toRide}>Back to Ride Mode</Button>

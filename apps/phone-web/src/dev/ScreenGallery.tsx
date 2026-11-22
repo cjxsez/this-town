@@ -67,6 +67,12 @@ export function ScreenPreview() {
   const needsProfile = !!entry && !/^[AB]/.test(entry.id);
 
   useEffect(() => {
+    // Previews go straight to the screen, past the once-per-visit start screen.
+    try {
+      sessionStorage.setItem("its.started", "1");
+    } catch {
+      // no storage: the start screen shows first, which is fine
+    }
     if (needsProfile && !state.profile) actions.useDemoProfile();
     if (entry && !entry.to) actions.devSetRide(rideFixture(entry.id));
     setReady(true);

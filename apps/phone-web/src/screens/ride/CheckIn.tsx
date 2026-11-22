@@ -21,8 +21,8 @@ export default function CheckIn() {
   return (
     <Screen label="C1" tabs blobs={false}>
       <PlatformBlobs blobs={[[120, 110, 330, 200], [-80, 60, 240, 130]]} />
-      <Title style={{ fontSize: 34 }}>Tap the kiosk in your car.</Title>
-      <Body>Every train car has a Questline kiosk. Hold your phone to the tag on it to turn on Ride Mode.</Body>
+      <Title>Tap the kiosk in your car.</Title>
+      <Body>Every train car has an In This Town kiosk. Hold your phone to the tag on it to turn on Ride Mode.</Body>
 
       <Card style={{ gap: 10 }}>
         <Eyebrow>How Ride Mode works</Eyebrow>

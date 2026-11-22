@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useApp } from "../../state/store";
-import { ArtSlot, BackLink, Body, Button, Card, Hint, Screen } from "../../ui";
+import { ArtSlot, BackLink, Body, Button, Card, Hint, Screen, TileTitle } from "../../ui";
 import LinkGlasses from "../onboarding/LinkGlasses";
 
 /** Small status pill: "LINKED" (leaf) or "NOT LINKED" (paper). */
@@ -30,7 +30,7 @@ export const GlassesTag = () => (
 );
 
 /**
- * J1 Glasses. The glasses run the Questline Web App and link to this rider with a 4-digit
+ * J1 Glasses. The glasses run the In This Town Web App and link to this rider with a 4-digit
  * code. They need no input: match, where to go, mission and stamp all appear on their own.
  * No camera, no mic.
  */
@@ -46,7 +46,7 @@ export default function Glasses() {
       label="J1"
       blobs={false}
       footer={
-        <Button variant="secondary" onClick={() => setRelink(true)} tilt={-0.7}>
+        <Button variant="secondary" onClick={() => setRelink(true)}>
           Link different glasses
         </Button>
       }
@@ -57,22 +57,20 @@ export default function Glasses() {
         <BackLink to="/me">Me</BackLink>
         <GlassesTag />
       </div>
-      <div className="q-display" style={{ fontSize: 28, lineHeight: 1.02 }}>
-        GLASSES
-      </div>
+      <TileTitle text="GLASSES" />
       <div style={{ flex: "1 0 110px", minHeight: 110, color: "var(--ink)", display: "flex" }}>
-        <ArtSlot id="glasses-art" placeholder="glasses illustration" style={{ width: "100%", flex: 1 }} />
+        <ArtSlot id="glasses-art" fit="contain" placeholder="glasses illustration" style={{ width: "100%", flex: 1 }} />
       </div>
-      <Card style={{ gap: 6, rotate: "0.6deg" }}>
+      <Card style={{ gap: 6 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <div className="q-title--sm">Meta Ray-Ban Display</div>
           <StatusPill>LINKED</StatusPill>
         </div>
-        <Body style={{ margin: 0 }}>Open Questline on your glasses and keep it open while you ride. It shows your match, where to meet, the mission and your stamp.</Body>
+        <Body style={{ margin: 0 }}>Open In This Town on your glasses and keep it open while you ride. It shows your match, where to meet, the mission and your stamp.</Body>
       </Card>
       <Card style={{ gap: 6 }}>
         <Body style={{ margin: 0 }}>Nothing to press. If the side of the frame works for you, swipe to move and tap to pick.</Body>
-        <Hint>The glasses never use their camera or microphone for Questline.</Hint>
+        <Hint>The glasses never use their camera or microphone for In This Town.</Hint>
       </Card>
     </Screen>
   );

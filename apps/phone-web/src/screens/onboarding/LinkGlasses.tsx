@@ -3,10 +3,11 @@ import { useNavigate } from "react-router";
 import { Body, Button, ButtonRow, Card, Eyebrow, Hint, Screen, TextField, TextLink } from "../../ui";
 import { errorMessage } from "../../lib/api";
 import { useApp } from "../../state/store";
+import { takePendingTap } from "../ride/Tap";
 import { JoinSteps, JoinTitle } from "./parts";
 
 /**
- * B7 Link your glasses. Open Questline on the Meta Ray-Ban Display, read the 4-digit code
+ * B7 Link your glasses. Open In This Town on the Meta Ray-Ban Display, read the 4-digit code
  * on the lens, type it here. Optional: without glasses, this phone shows everything.
  * Linking needs the rider to exist, so this step creates them first.
  */
@@ -19,7 +20,8 @@ export default function LinkGlasses() {
   const [linked, setLinked] = useState(false);
   const onboarding = !state.profile;
 
-  const done = () => navigate("/ride", { replace: true });
+  // A kiosk tap made before joining picks up where it left off (pick your stop, Ride Mode).
+  const done = () => navigate(takePendingTap() ?? "/ride", { replace: true });
 
   const ensureProfile = async () => {
     if (!state.profile) await actions.finishOnboarding();
@@ -50,15 +52,15 @@ export default function LinkGlasses() {
       blobs="b"
       footer={
         linked ? (
-          <Button tilt={0.6} onClick={done}>
+          <Button onClick={done}>
             Start riding
           </Button>
         ) : (
           <ButtonRow>
-            <Button variant="secondary" tilt={-0.5} onClick={() => void skip()}>
+            <Button variant="secondary" onClick={() => void skip()}>
               No glasses
             </Button>
-            <Button tilt={0.6} disabled={busy || !/^\d{4}$/.test(code)} onClick={() => void link()}>
+            <Button disabled={busy || !/^\d{4}$/.test(code)} onClick={() => void link()}>
               {busy ? "Linking…" : "Link"}
             </Button>
           </ButtonRow>
@@ -70,11 +72,11 @@ export default function LinkGlasses() {
       {linked ? (
         <Card style={{ gap: 6, background: "var(--leaf)" }}>
           <Eyebrow>Linked</Eyebrow>
-          <Body style={{ margin: 0 }}>Your glasses will show your match and where to meet. Keep Questline open on them while you ride.</Body>
+          <Body style={{ margin: 0 }}>Your glasses will show your match and where to meet. Keep In This Town open on them while you ride.</Body>
         </Card>
       ) : (
         <Card style={{ gap: 8 }}>
-          <Body style={{ margin: 0 }}>Open Questline on your Meta Ray-Ban Display. It shows a 4-digit code. Type it here.</Body>
+          <Body style={{ margin: 0 }}>Open In This Town on your Meta Ray-Ban Display. It shows a 4-digit code. Type it here.</Body>
           <TextField
             label="Code on your glasses"
             value={code}

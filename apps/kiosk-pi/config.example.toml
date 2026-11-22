@@ -3,7 +3,7 @@
 # Loaded and validated by questline_kiosk/config.py.
 
 # Host only, no scheme, no path. For `wrangler dev` on a laptop: "localhost:8787" with tls = false.
-domain = "questline.example.com"
+domain = "husshusshuss.boston"
 tls = true
 
 # MBTA carriage label printed on the car. Must match CarId in packages/protocol/src/models.ts.

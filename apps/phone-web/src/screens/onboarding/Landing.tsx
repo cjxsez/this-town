@@ -1,18 +1,29 @@
+import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router";
-import { ArtSlot, Button, ButtonRow, Screen, TextLink } from "../../ui";
+import { ArtSlot, Button, ButtonRow, Screen, TextLink, Wordmark } from "../../ui";
 import { useApp } from "../../state/store";
+import { DOORS_ENTER_DELAY_MS, doorsOpening } from "../../state/doors";
 
 /**
- * B1 Landing. Rendered at "/", and where a kiosk tag tap lands a rider with no profile
- * (the tap is replayed after onboarding). Every sign-in goes to B2.
+ * B1 Landing. Rendered at "/", and where a kiosk tag tap lands a rider with no profile in
+ * simulator mode (against the worker a signed-out tap goes to S1 /signin instead; the tap is
+ * replayed after sign-in or onboarding). Email goes to S1 (6-digit code: returning riders
+ * sign straight back in, new ones carry on to B2 as an account). "Just play today" goes to B2
+ * as a guest.
+ *
+ * Everything enters in order: the island, the name tile by tile, the line, then the
+ * buttons. When the start screen's doors are opening onto this page, it all waits
+ * until they have parted.
  */
 export default function Landing() {
   const navigate = useNavigate();
   const { actions } = useApp();
+  // Read once: whether the train doors are opening onto this page right now.
+  const [offset] = useState(() => (doorsOpening() ? DOORS_ENTER_DELAY_MS : 0));
+  /** Entrance `ms` after the page appears (plus the doors' delay), merged with any style of its own. */
+  const at = (ms: number, style?: CSSProperties) => ({ className: "q-enter", style: { ...style, "--d": offset + ms } as CSSProperties });
 
-  // TODO(backend): Sign in with Apple and the email magic link are stubs.
-  // Both should authenticate first and then continue to B2 like "Just play today".
-  const signIn = (_method: "apple" | "email" | "guest") => navigate("/join/name");
+  const signIn = (method: "email" | "guest") => navigate(method === "email" ? "/signin" : "/join/name");
 
   const skipSetup = () => {
     actions.useDemoProfile();
@@ -23,27 +34,23 @@ export default function Landing() {
     <Screen
       label="B1"
       blobs="a"
+      doorsEntrance={false}
       footer={
         <>
           <ButtonRow>
-            <Button variant="dark" tilt={-0.7} onClick={() => signIn("apple")}>
-              Continue with Apple
+            <Button variant="dark" onClick={() => signIn("email")} {...at(520)}>
+              Sign in with email
             </Button>
           </ButtonRow>
           <ButtonRow>
-            <Button variant="secondary" tilt={0.5} onClick={() => signIn("email")}>
-              Email me a link
-            </Button>
-          </ButtonRow>
-          <ButtonRow>
-            <Button tilt={-0.4} onClick={() => signIn("guest")}>
+            <Button onClick={() => signIn("guest")} {...at(600)}>
               Just play today (first name only)
             </Button>
           </ButtonRow>
         </>
       }
     >
-      <div style={{ flex: 1, minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))" }}>
+      <div {...at(0, { flex: 1, minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))" })}>
         <div
           className="anim-drift"
           style={{
@@ -60,6 +67,7 @@ export default function Landing() {
         />
         <ArtSlot
           id="hero-art"
+          fit="contain"
           placeholder="hero art (UI team)"
           style={{ position: "absolute", left: 24, right: 24, top: 4, bottom: 6 }}
         />
@@ -72,8 +80,10 @@ export default function Landing() {
           demo: skip setup
         </TextLink>
       </div>
-      <h1 style={{ font: "400 46px/1 var(--font-shade)", textAlign: "center" }}>QUESTLINE</h1>
-      <p style={{ fontSize: 21, lineHeight: 1.2, textWrap: "pretty", textAlign: "center" }}>
+      <h1>
+        <Wordmark enterAt={offset + 120} />
+      </h1>
+      <p {...at(440, { fontSize: 21, lineHeight: 1.2, textWrap: "pretty", textAlign: "center" })}>
         Tap the kiosk in your train car and meet one other rider who likes what you like. A short game, face to face, done before your stop.
       </p>
     </Screen>

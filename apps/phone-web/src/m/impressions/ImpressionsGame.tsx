@@ -127,11 +127,11 @@ function Talk({ view, send, serverNow }: Props & { view: Of<"talk"> }) {
         <>
           <div className="impressions-ask">How close was their guess about you?</div>
           <ButtonRow>
-            {RATINGS.map((rating, i) => (
+            {RATINGS.map((rating) => (
               <Button
                 key={rating}
                 variant={view.yourRating === rating ? "primary" : "secondary"}
-                tilt={i === 1 ? 0.5 : -0.5}
+               
                 aria-pressed={view.yourRating === rating}
                 className="impressions-rate"
                 onClick={() => send({ type: "rate", rating })}

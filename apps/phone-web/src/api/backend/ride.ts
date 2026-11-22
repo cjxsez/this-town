@@ -16,7 +16,7 @@ import type {
 } from "@questline/protocol";
 import type { Profile, SocialBattery } from "../../../shared/types";
 import { api as rest, ApiError, type TapBody, type TapResult } from "../../lib/api";
-import { clearToken, getToken, setToken } from "../../lib/auth";
+import { clearToken, getSignupTicket, getToken, setSignupTicket, setToken } from "../../lib/auth";
 import { connectRiderSocket, type RiderSocket } from "../../lib/socket";
 import type { FellThroughReason, RideOverReason, ServerEvent } from "../../state/ride";
 import type { RideChannel, RideContext } from "../types";
@@ -62,12 +62,26 @@ export class BackendRide implements RideChannel {
 
   // ---- account ----
 
-  /** Creates the rider on first save, PATCHes after that. */
+  /**
+   * Creates the rider on first save, PATCHes after that. A rider who verified a new email
+   * sends the signup ticket on create, which makes them an account with that email;
+   * otherwise it is a "Just play today" guest.
+   */
   async saveProfile(profile: Profile): Promise<void> {
     if (!getToken()) {
+      const ticket = getSignupTicket() ?? undefined;
       this.creating ??= rest
-        .createUser(toWireProfile(profile) as WireProfile)
-        .then((r) => setToken(r.token))
+        .createUser(toWireProfile(profile) as WireProfile, ticket)
+        .then((r) => {
+          setToken(r.token);
+          setSignupTicket(null);
+        })
+        .catch((e: unknown) => {
+          // Expired/used ticket, or the email got an account meanwhile: drop the ticket so the
+          // next try doesn't fail the same way, and surface the error.
+          if (ticket && e instanceof ApiError && (e.status === 400 || e.status === 409)) setSignupTicket(null);
+          throw e;
+        })
         .finally(() => {
           this.creating = null;
         });

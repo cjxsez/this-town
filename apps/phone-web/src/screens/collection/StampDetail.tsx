@@ -42,7 +42,7 @@ export default function StampDetail() {
         <p style={{ fontSize: 21, lineHeight: 1.2, margin: "6px 0 0", textWrap: "pretty" }}>{meta}</p>
       </div>
 
-      <Card style={{ rotate: "0.8deg", gap: 6 }}>
+      <Card style={{ gap: 6 }}>
         {mission && (
           <>
             <div className="q-eyebrow">MISSION</div>
@@ -79,7 +79,7 @@ function BigStamp({ stamp, station, withName, number }: { stamp: Stamp; station:
             <div className="cl-bigstamp__paper">
               <div className="cl-bigstamp__main">
                 <div className="cl-bigstamp__top">
-                  <span>QUESTLINE</span>
+                  <span>IN THIS TOWN</span>
                   <span>{lineLabel(stamp).toUpperCase()}</span>
                 </div>
                 <div className="cl-bigstamp__name">{station.name.toUpperCase()}</div>

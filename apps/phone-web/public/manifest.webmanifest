@@ -1,6 +1,6 @@
 {
-  "name": "Questline",
-  "short_name": "Questline",
+  "name": "In This Town",
+  "short_name": "In This Town",
   "description": "Side quests while you wait for the T.",
   "start_url": "/",
   "display": "standalone",
