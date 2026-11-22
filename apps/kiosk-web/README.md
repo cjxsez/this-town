@@ -2,6 +2,8 @@
 
 The touchscreen UI in each train car's kiosk (decision D7). Runs in Chromium kiosk mode on a Raspberry Pi 7" screen, 800x480 landscape. Shows idle stats and "Tap to play", the incoming pair in their color, the mission with a big countdown, and a celebration when they stamp.
 
+It wears the phone app's look: sea background, paper cards with ink outlines, Bungee block letters, Gaegu handwriting, the IN THIS TOWN letter tiles. Tokens in `src/styles/tokens.css` are copied from `apps/phone-web/src/styles/tokens.css`; keep them in step. Screens are laid out on an 800x480 stage that scales to fit the window, so the same build works on the Pi and full screen on a laptop or TV.
+
 Served by the worker at `https://<domain>/kiosk/:car` (Vite `base: "/kiosk/"`). The car comes from the path, the kiosk key from `?key=` (saved to `localStorage`, used as a fallback when the query is missing).
 
 ## Privacy rule
@@ -17,8 +19,9 @@ Socket: `/ws/kiosk/:car?key=&role=screen`. On open it sends `kiosk.hello { car, 
 | bad URL (no car or key) | `Disconnected` (setup error) |
 | socket dropped, retrying | `Disconnected` (reconnecting) |
 | `kiosk.idle` | updates riders in car / on train / next stop; `Idle` when no pair is active |
-| `pair.incoming` | `PairIncoming`: color fill, "Maya & Andres, meet here" |
-| `mission.show` | `Mission`: title, prompt, big countdown, "Tap the tag to stamp" |
+| `pair.incoming` | `PairIncoming`: color fill, both initials, "Maya & Andres", how many are here |
+| `mission.show` | `Mission`: title, prompt, countdown with a draining bar, "Both tap the tag" |
+| `stamp.progress` | fills the two tap dots on `Mission` |
 | `celebrate` | `Celebrate`: color burst (gold for `rare`), back to `Idle` after 6 s |
 | `pair.cleared` | `Idle` |
 | `nfc.write` | ignored (for the Pi agent) |
@@ -28,18 +31,22 @@ Socket: `/ws/kiosk/:car?key=&role=screen`. On open it sends `kiosk.hello { car, 
 ```
 index.html                  800x480 viewport
 vite.config.ts              base /kiosk/, port 5175, proxies /api and /ws to :8787
+public/art/                 sprites copied from phone-web/public/art (town strip on Idle)
 src/main.tsx                React entry, blocks context menu / zoom
-src/App.tsx                 state machine on ServerToKiosk events
-src/styles.css              800x480, big type
+src/App.tsx                 state machine on ServerToKiosk events, ?preview= screens
+src/styles.css              the phone look on the kiosk: cards, pills, tiles, motion
+src/styles/tokens.css       colors and fonts, copied from phone-web
 src/lib/config.ts           car from /kiosk/:car, key from ?key= or localStorage
+src/lib/preview.ts          sample data for ?preview=
 src/lib/socket.ts           /ws/kiosk/:car socket, kiosk.hello, reconnect, drops nfc.write
-src/screens/Idle.tsx        riders in car / on train, next stop, Tap to play
-src/screens/PairIncoming.tsx color fill + first names
-src/screens/Mission.tsx     title, prompt, countdown, tap hint
-src/screens/Celebrate.tsx   color burst, rare variant
-src/screens/Disconnected.tsx reconnecting / setup error
-src/components/Countdown.tsx m:ss to an epoch ms time
-src/components/NfcHint.tsx  NFC icon + label
+src/screens/Idle.tsx        Tap to play, riders in car / on train, next stop, town strip
+src/screens/PairIncoming.tsx color fill, initials, first names
+src/screens/Mission.tsx     title, prompt, countdown + drain bar, tap dots
+src/screens/Celebrate.tsx   stamp ticket, rays, confetti, rare variant
+src/screens/Disconnected.tsx reconnecting / setup error (night sea)
+src/components/Stage.tsx    scales the 800x480 stage to the window
+src/components/Ui.tsx       Wordmark, PairToken, NfcMark, Screen, hand-drawn filters
+src/components/Countdown.tsx m:ss to an epoch ms time, drain bar
 ```
 
 ## Run locally
@@ -66,3 +73,14 @@ chromium-browser --kiosk --noerrdialogs --disable-infobars \
 ```
 
 The real flags live in the Pi's `config.toml` (`browser.flags`). The Pi agent opens its own socket to the same URL with `role=pi` for the LEDs and the NFC tag; this screen does not talk to the Pi directly. Launch flags and autostart live in `apps/kiosk-pi/README.md` and `docs/hardware.md`.
+
+## Preview the screens
+
+No socket or key needed, sample names only:
+
+```
+http://localhost:5175/kiosk/1412?preview=all        cycles every 6 s
+http://localhost:5175/kiosk/1412?preview=idle       or pair, mission, celebrate, rare, offline
+```
+
+Same on production: `https://<domain>/kiosk/1412?preview=all`.

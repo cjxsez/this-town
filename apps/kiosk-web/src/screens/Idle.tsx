@@ -2,19 +2,18 @@
  * Idle.tsx (kiosk-web): the default screen, readable from across the car.
  *
  * Driven by kiosk.idle: ridersInCar, ridersOnTrain, nextStop, nextStopEtaSec (shown as a
- * countdown). Big "Tap to play" with the NFC icon: tapping the tag with a phone opens
- * /k/<car> on phone-web and checks the rider in.
+ * countdown). The big yellow card points riders at the NFC tag: tapping it with a phone
+ * opens /k/<car> on phone-web and checks the rider in. A trolley rolls along the town
+ * strip at the bottom so the screen never looks frozen.
  *
  * Public screen: counts only, no names here.
  *
  * TODO:
- * - Touch anywhere: show a 10 s "How it works" overlay (the screen is a touchscreen but
- *   nothing on it needs touch today).
- * - Attract loop (subtle animation) so the screen does not look frozen.
+ * - Touch anywhere: show a 10 s "How it works" overlay.
  */
 import type { ServerToKiosk } from "@questline/protocol";
 import { Countdown } from "../components/Countdown";
-import { NfcHint } from "../components/NfcHint";
+import { NfcMark, Screen, Wordmark, art } from "../components/Ui";
 
 export type IdleStats = Omit<Extract<ServerToKiosk, { type: "kiosk.idle" }>, "type" | "serverNow">;
 
@@ -27,24 +26,63 @@ interface IdleProps {
 
 export function Idle({ car, stats, nextStopAt }: IdleProps) {
   return (
-    <main className="screen idle">
-      <header className="idle-top">
-        <div className="idle-stat">
-          <span className="idle-num">{stats?.ridersInCar ?? "–"}</span>
-          <span className="idle-cap">in this car</span>
-        </div>
-        <div className="idle-stat">
-          <span className="idle-num">{stats?.ridersOnTrain ?? "–"}</span>
-          <span className="idle-cap">on this train</span>
-        </div>
-        <div className="idle-stat idle-next">
-          <span className="idle-cap">Next stop</span>
-          <span className="idle-stop">{stats?.nextStop ?? "…"}</span>
-          {nextStopAt !== null && <Countdown endsAt={nextStopAt} className="countdown-sm" />}
-        </div>
+    <Screen label="Kiosk idle" blobs="a">
+      <header className="k-topbar">
+        <Wordmark size={24} />
+        <span className="k-pill k-pill--dark">Car {car}</span>
       </header>
-      <NfcHint label="Tap to play" size={96} />
-      <footer className="screen-foot">In This Town · car {car}</footer>
-    </main>
+
+      <div style={{ display: "flex", gap: 18, alignItems: "stretch" }}>
+        <section className="k-card k-card--yellow" style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 22, padding: "20px 24px", borderRadius: "var(--r1)" }}>
+          <NfcMark size={124} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+            <div className="k-eyebrow">Tap the tag on this kiosk</div>
+            <h1 className="k-display" style={{ fontSize: 44 }}>Tap to play</h1>
+            <p className="k-body" style={{ fontSize: 24 }}>Meet someone on this train who likes what you like.</p>
+          </div>
+        </section>
+
+        <div style={{ width: 196, display: "flex", flexDirection: "column", gap: 12 }}>
+          <Stat n={stats?.ridersInCar} label="playing in this car" />
+          <Stat n={stats?.ridersOnTrain} label="on this train" />
+        </div>
+      </div>
+
+      <section className="k-card" style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: "10px 18px", borderRadius: "var(--r2)", marginRight: 214 }}>
+        <span className="k-pill__dot" style={{ width: 18, height: 18, background: "var(--red)" }} />
+        <span className="k-eyebrow" style={{ color: "var(--ink)" }}>Next stop</span>
+        <span className="k-title" style={{ fontSize: 24, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {stats?.nextStop ?? "…"}
+        </span>
+        {nextStopAt !== null && <Countdown endsAt={nextStopAt} style={{ fontSize: 26 }} />}
+      </section>
+
+      <TownStrip />
+    </Screen>
+  );
+}
+
+function Stat({ n, label }: { n: number | undefined; label: string }) {
+  return (
+    <div className="k-card" style={{ flex: 1, gap: 2, justifyContent: "center", padding: "10px 16px", borderRadius: "var(--r4)" }}>
+      <span className="k-num" style={{ font: "400 46px/1 var(--font-display)" }}>{n ?? "–"}</span>
+      <span className="k-hint" style={{ color: "var(--ink)", fontWeight: 700, lineHeight: 1.05 }}>{label}</span>
+    </div>
+  );
+}
+
+/** Ground, a dashed track, a few houses and trees, and a trolley rolling past. */
+function TownStrip() {
+  return (
+    <div className="k-town" aria-hidden>
+      <img src={art("sprite-house-pink.webp")} alt="" style={{ left: 40, height: 74 }} />
+      <img src={art("sprite-tree.webp")} alt="" style={{ left: 116, height: 70 }} />
+      <img src={art("sprite-house-red.webp")} alt="" style={{ left: 560, height: 78 }} />
+      <img src={art("sprite-tree.webp")} alt="" style={{ left: 640, height: 64 }} />
+      <img src={art("sprite-house-pink.webp")} alt="" style={{ left: 704, height: 70 }} />
+      <div className="k-town__ground" />
+      <div className="k-town__rail" />
+      <img className="k-town__trolley" src={art("sprite-trolley-green.webp")} alt="" style={{ left: 0, bottom: 8, height: 62 }} />
+    </div>
   );
 }
