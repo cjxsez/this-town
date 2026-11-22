@@ -1,10 +1,13 @@
 // End-to-end smoke test of the happy path against a running worker (DEMO_MODE on).
+// It asks GET /api/health which flow the worker runs and checks that one: with GAMES_ONLY
+// (D26) a match leads to the two-player games; otherwise to a kiosk mission and a stamp.
 // Usage: pnpm smoke            (worker on http://localhost:8787, KIOSK_KEY from apps/worker/.dev.vars)
 //        WORKER_URL=https://<host> KIOSK_KEY=... pnpm smoke
 //
 // Plays: two riders (Andres in car 1412, Maya in 1413), Andres's glasses, the kiosk screen
 // and Pi in car 1413. Walks through onboarding, glasses link, check-in, match, walking to the
-// kiosk, mission, two-tap stamp, passport. Exits non-zero on the first thing that's wrong.
+// kiosk, then the games (or mission, two-tap stamp, passport). Exits non-zero on the first
+// thing that's wrong.
 import { readFileSync } from "node:fs";
 import type { Profile, ServerToKiosk, ServerToRider, TapRes } from "@questline/protocol";
 
@@ -99,6 +102,9 @@ const profile = (firstName: string, interests: Profile["interests"]): Profile =>
 async function main() {
   if (!KIOSK_KEY) fail("set KIOSK_KEY (or put it in apps/worker/.dev.vars)");
   await fetch(`${BASE}/api/demo/reset`, { method: "POST", headers: { "x-kiosk-key": KIOSK_KEY } });
+  const health = await api<{ gamesOnly?: boolean }>("GET", "/api/health");
+  const GAMES_ONLY = health.gamesOnly === true;
+  console.log(GAMES_ONLY ? "Worker runs games-only (D26): checking the game flow.\n" : "Worker runs kiosk missions: checking the mission flow.\n");
 
   // Onboarding
   const andres = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Andres", ["ramen", "film", "hackathons"]));
@@ -159,34 +165,52 @@ async function main() {
   for (const seat of [match.game.seat, mayaGame.seat]) await api("GET", `/api/game/rooms/${match.game.code}?seat=${seat}`);
   ok(`game room ${match.game.code}: Andres seat ${match.game.seat}, Maya seat ${mayaGame.seat}`);
 
-  // Andres walks to 1413 and taps its tag: that's arriving, which starts the mission.
+  // Andres walks to 1413 and taps its tag: that's arriving.
   const walk = await api<TapRes>("POST", "/api/taps", { car: "1413" }, andres.token);
   if (walk.result !== "moved-car") fail(`expected moved-car, got ${JSON.stringify(walk)}`);
-  const started = await glasses.wait("mission.start");
-  const show = await screen.wait("mission.show");
-  const write = await pi.wait("nfc.write", 8000, (e) => e.url.includes("?n="));
-  ok(`mission "${started.mission.title}": ${show.mission.prompt}`);
-  const nonce = new URL(write.url).searchParams.get("n") ?? "";
-  pi.send({ type: "nfc.written", writeId: write.writeId, url: write.url });
+  /** Where the pair got their stamp; stays null in games-only, where nobody is stamped. */
+  let stampStationId: string | null = null;
+  if (GAMES_ONLY) {
+    // D26: arriving starts no mission; the pair plays the games in their room instead.
+    await screen.wait("pair.incoming", 8000, (e) => e.arrived >= 1);
+    await new Promise((r) => setTimeout(r, 1500));
+    if (glasses.events.some((e) => e.type === "mission.start")) fail("games-only: a kiosk mission started");
+    const room = match.game!;
+    await api("POST", `/api/game/rooms/${room.code}/act`, { seat: room.seat, action: { type: "ready", phase: "intro" } });
+    const view = await api<{ gameId: string | null; game: { phase?: string } }>("POST", `/api/game/rooms/${room.code}/act`, {
+      seat: mayaGame.seat,
+      action: { type: "ready", phase: "intro" },
+    });
+    if (view.gameId !== "tale" || view.game.phase !== "think") fail(`both ready should start Tall tale, got ${JSON.stringify(view)}`);
+    ok("games only: arriving starts no mission, and the pair is playing Tall tale in their room");
+  } else {
+    const started = await glasses.wait("mission.start");
+    const show = await screen.wait("mission.show");
+    const write = await pi.wait("nfc.write", 8000, (e) => e.url.includes("?n="));
+    ok(`mission "${started.mission.title}": ${show.mission.prompt}`);
+    const nonce = new URL(write.url).searchParams.get("n") ?? "";
+    pi.send({ type: "nfc.written", writeId: write.writeId, url: write.url });
 
-  // A stale tap (no nonce) is refused, then both tap with the fresh nonce.
-  const stale = await api<TapRes>("POST", "/api/taps", { car: "1413" }, maya.token);
-  if (stale.result !== "error") fail(`a tap without the fresh nonce should fail, got ${stale.result}`);
-  const t1 = await api<TapRes>("POST", "/api/taps", { car: "1413", nonce }, maya.token);
-  if (t1.result !== "stamp-pending") fail(`first tap: expected stamp-pending, got ${JSON.stringify(t1)}`);
-  await screen.wait("stamp.progress");
-  const t2 = await api<TapRes>("POST", "/api/taps", { car: "1413", nonce }, andres.token);
-  if (t2.result !== "stamp-awarded") fail(`second tap: expected stamp-awarded, got ${JSON.stringify(t2)}`);
-  await mayaSock.wait("stamp.awarded");
-  await screen.wait("celebrate");
-  ok(`stamp: ${t2.stamp.station} (${t2.stamp.stationId}) with ${t2.stamp.partnerFirstName}`);
-  await phone.wait("match.cleared");
-  await screen.wait("pair.cleared", 12000);
-  ok("pair cleared after the celebration");
+    // A stale tap (no nonce) is refused, then both tap with the fresh nonce.
+    const stale = await api<TapRes>("POST", "/api/taps", { car: "1413" }, maya.token);
+    if (stale.result !== "error") fail(`a tap without the fresh nonce should fail, got ${stale.result}`);
+    const t1 = await api<TapRes>("POST", "/api/taps", { car: "1413", nonce }, maya.token);
+    if (t1.result !== "stamp-pending") fail(`first tap: expected stamp-pending, got ${JSON.stringify(t1)}`);
+    await screen.wait("stamp.progress");
+    const t2 = await api<TapRes>("POST", "/api/taps", { car: "1413", nonce }, andres.token);
+    if (t2.result !== "stamp-awarded") fail(`second tap: expected stamp-awarded, got ${JSON.stringify(t2)}`);
+    await mayaSock.wait("stamp.awarded");
+    await screen.wait("celebrate");
+    ok(`stamp: ${t2.stamp.station} (${t2.stamp.stationId}) with ${t2.stamp.partnerFirstName}`);
+    await phone.wait("match.cleared");
+    await screen.wait("pair.cleared", 12000);
+    ok("pair cleared after the celebration");
 
-  const passport = await api<{ stamps: unknown[]; peopleMet: number }>("GET", "/api/passport", undefined, andres.token);
-  if (passport.stamps.length !== 1 || passport.peopleMet !== 1) fail(`passport: ${JSON.stringify(passport)}`);
-  ok("passport has 1 stamp, 1 person met");
+    const passport = await api<{ stamps: unknown[]; peopleMet: number }>("GET", "/api/passport", undefined, andres.token);
+    if (passport.stamps.length !== 1 || passport.peopleMet !== 1) fail(`passport: ${JSON.stringify(passport)}`);
+    ok("passport has 1 stamp, 1 person met");
+    stampStationId = t2.stamp.stationId;
+  }
 
   // Not now from the phone on a fresh rider, then end the ride.
   const lena = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Lena", ["film", "coffee", "chess"]));
@@ -202,8 +226,8 @@ async function main() {
   // History, profile edits, mood.
   type Recent = { matches: { matchId: string; partnerFirstName: string; color: string; stamped: boolean; stationId: string | null; blocked: boolean }[] };
   const recent = await api<Recent>("GET", "/api/matches/recent", undefined, andres.token);
-  if (recent.matches[0]?.partnerFirstName !== "Maya" || !recent.matches[0]?.stamped) fail(`recent matches: ${JSON.stringify(recent)}`);
-  if (recent.matches[0]?.stationId !== t2.stamp.stationId) fail(`recent match should say where you met (${t2.stamp.stationId}): ${JSON.stringify(recent.matches[0])}`);
+  if (recent.matches[0]?.partnerFirstName !== "Maya" || recent.matches[0]?.stamped !== !GAMES_ONLY) fail(`recent matches: ${JSON.stringify(recent)}`);
+  if (recent.matches[0]?.stationId !== stampStationId) fail(`recent match should say where you met (${stampStationId}): ${JSON.stringify(recent.matches[0])}`);
 
   // Block Maya from People, see it on the server, then unblock (later steps pair them again).
   const metMaya = recent.matches[0]!.matchId;
@@ -231,14 +255,16 @@ async function main() {
   const snap = await kaiSock.wait("ride.snapshot");
   if (!snap.snapshot.match || snap.snapshot.match.carDelta !== 0) fail(`Kai and Zoe should be matched in their own car: ${JSON.stringify(snap.snapshot.match)}`);
   await api("POST", "/api/ride/arrived", undefined, kai.token);
-  await kaiSock.wait("mission.start");
-  ok("same-car pair: \"I'm here\" started the mission");
+  if (!GAMES_ONLY) {
+    await kaiSock.wait("mission.start");
+    ok("same-car pair: \"I'm here\" started the mission");
+  }
   await api("POST", "/api/ride/not-now", undefined, zoe.token);
   const cleared = await kaiSock.wait("match.cleared");
   const mine = await zoeSock.wait("match.cleared");
   if (cleared.reason !== "partner-not-now" || mine.reason !== "you-not-now") fail(`not-now reasons: ${cleared.reason} / ${mine.reason}`);
-  await kaiSock.wait("mission.end", 8000, (e) => e.reason === "cancelled");
-  ok("Not now cleared the pair and cancelled the mission");
+  if (!GAMES_ONLY) await kaiSock.wait("mission.end", 8000, (e) => e.reason === "cancelled");
+  ok(GAMES_ONLY ? "same-car pair: Not now cleared the pair" : "Not now cleared the pair and cancelled the mission");
 
   // A report mid-match: the pair ends, the reported rider only hears their partner left, and
   // the two are never matched again on this trip.
@@ -262,27 +288,37 @@ async function main() {
   await api("POST", "/api/ride/end", undefined, max.token);
   ok("a report ends the pair, tells the reported rider only that their partner left, and never re-pairs them");
 
-  // Late-train bonus: a scripted delay unlocks it for the next mission.
+  // Late-train bonus: a scripted delay unlocks it for the next mission (missions only).
   const demo = (path: string, body: object = {}) =>
     fetch(`${BASE}/api/demo/${path}`, { method: "POST", headers: { "x-kiosk-key": KIOSK_KEY, "content-type": "application/json" }, body: JSON.stringify(body) });
-  if (!(await demo("delay", { seconds: 240 })).ok) fail("demo delay failed");
+  if (!GAMES_ONLY && !(await demo("delay", { seconds: 240 })).ok) fail("demo delay failed");
   const ana = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Ana", ["rowing", "trivia", "comics"]));
   const ben = await api<{ userId: string; token: string }>("POST", "/api/users", profile("Ben", ["rowing", "trivia", "museums"]));
   await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: "copley", rideMode: true }, ana.token);
   await api<TapRes>("POST", "/api/taps", { car: "1412", destinationStop: "copley", rideMode: true }, ben.token);
   const anaSock = new Sock<ServerToRider>(`${WS_BASE}/ws/rider?token=${ana.token}`, { type: "rider.hello", client: "phone" }, "Ana phone");
   await anaSock.wait("ride.snapshot");
-  await api("POST", "/api/ride/arrived", undefined, ana.token);
-  const bonus = await anaSock.wait("mission.start");
-  if (bonus.mission.category !== "late-bonus") fail(`expected a late-bonus mission, got ${bonus.mission.category}`);
-  ok(`late-train bonus: "${bonus.mission.title}"`);
+  if (!GAMES_ONLY) {
+    await api("POST", "/api/ride/arrived", undefined, ana.token);
+    const bonus = await anaSock.wait("mission.start");
+    if (bonus.mission.category !== "late-bonus") fail(`expected a late-bonus mission, got ${bonus.mission.category}`);
+    ok(`late-train bonus: "${bonus.mission.title}"`);
+  }
 
-  // Advance the demo train two stops: Ana and Ben reach Copley and get checked out.
+  // Advance the demo train two stops to Copley, Ana and Ben's stop. With missions they get
+  // checked out there; games-only (D26) keeps a pair playing whatever stops they picked.
   await demo("advance");
   await demo("advance");
   const gone = await api<{ state: { status: string } }>("GET", "/api/ride/state", undefined, ana.token);
-  if (gone.state.status !== "off") fail(`Ana should be off at Copley, got ${gone.state.status}`);
-  ok("riders are checked out at their stop");
+  if (GAMES_ONLY) {
+    if (gone.state.status === "off") fail("games-only: Ana was checked out at her stop mid-game");
+    await api("POST", "/api/ride/end", undefined, ana.token);
+    await api("POST", "/api/ride/end", undefined, ben.token);
+    ok("games only: passing a rider's stop doesn't end their game");
+  } else {
+    if (gone.state.status !== "off") fail(`Ana should be off at Copley, got ${gone.state.status}`);
+    ok("riders are checked out at their stop");
+  }
 
   // Delete my data: signs out every device.
   await api("DELETE", "/api/me", undefined, kai.token);
