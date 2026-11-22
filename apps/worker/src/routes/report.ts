@@ -19,7 +19,7 @@ import { ReportReq, UnblockReq } from "@questline/protocol";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
 import { deleteBlock, getMatchForUser, insertBlock, insertReport } from "../db/queries";
-import type { OkRes } from "../lib/api";
+import type { OkResT as OkRes } from "../lib/api";
 import { readJson } from "../lib/http";
 import { newId } from "../lib/ids";
 import { roomFor } from "../rooms/stub";

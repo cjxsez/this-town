@@ -21,7 +21,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { readConfig, type AppEnv } from "../env";
 import { requireKiosk } from "../auth";
-import type { OkRes } from "../lib/api";
+import type { OkResT as OkRes } from "../lib/api";
 import { readJson } from "../lib/http";
 import { DEMO_DEFAULT_DELAY_SEC, DEMO_TRIP_ID } from "../mbta/demo";
 import { roomFor } from "../rooms/stub";

@@ -28,7 +28,7 @@ import {
   loginCodeTooSoon,
 } from "../db/queries";
 import { sendLoginCode } from "../email/loginCode";
-import type { AuthVerifyResT, OkRes } from "../lib/api";
+import type { AuthVerifyResT, OkResT as OkRes } from "../lib/api";
 import { readJson } from "../lib/http";
 import { hit, limitByIp, tooMany } from "../lib/rateLimit";
 

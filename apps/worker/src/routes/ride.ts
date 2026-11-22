@@ -4,30 +4,28 @@
  * Routes (all rider auth):
  * - POST /api/ride/end    -> OkRes. Check out of the current trip ("ride-end"), Ride Mode off.
  *   Partner gets match.cleared "partner-left".
- * - PUT  /api/ride/ghost  body GhostReq { ghost } -> RideState. Ghost hides you from matching
+ * - PUT  /api/ride/ghost  body GhostReq { ghost } -> OkRes. Ghost hides you from matching
  *   and kiosk counts; an active match is cleared with reason "ghost". Not riding: just saves
  *   the preference on users.ghost for the next check-in.
  * - POST /api/ride/not-now -> OkRes. REST twin of rider.notNow. The phone's "Not now" button
  *   uses it (there is no Neural Band, so the phone is the reliable path).
  * - POST /api/ride/arrived -> OkRes. REST twin of rider.arrived. Optional: tapping the
  *   meeting kiosk tag already counts as arriving.
- * - GET  /api/ride/state  -> RidePollRes { state, match, mission }. For glasses-web when
- *   WebSockets are not available in the glasses browser (decisions.md "Still open").
+ * - GET  /api/ride/state  -> RideStateRes { state, match, mission, serverNow }. For glasses-web
+ *   when WebSockets are not available in the glasses browser (decisions.md "Still open").
  *
  * Which room: the active check-in row in D1 (checkins.checked_out_at IS NULL) gives trip_id.
  *
- * Protocol types: GhostReq, RideState, MatchFoundEvent (payload), Mission.
+ * Protocol types: GhostReq, MoodReq, OkRes, RideStateRes, RideSnapshot.
  *
  * TODO:
- * - RidePollRes and the ghost/end response shapes are not in packages/protocol yet.
  * - Poll cadence guidance for glasses-web (2 s while matched, 5 s otherwise).
  */
 import { Hono } from "hono";
-import { GhostReq, MoodReq } from "@questline/protocol";
+import { GhostReq, MoodReq, type OkRes, type RideStateRes } from "@questline/protocol";
 import type { AppEnv } from "../env";
 import { requireRider } from "../auth";
 import { activeCheckin, getUser, setUserBattery, setUserGhost } from "../db/queries";
-import type { OkRes, RidePollRes } from "../lib/api";
 import { readJson } from "../lib/http";
 import { roomFor } from "../rooms/stub";
 import { offRideState } from "../rooms/state";
@@ -47,9 +45,10 @@ rideRoutes.put("/ride/ghost", requireRider, async (c) => {
   if (!body.ok) return c.json({ error: body.error, issues: body.issues }, 400);
   const userId = c.get("userId");
   const active = await activeCheckin(c.env.DB, userId);
-  if (active) return c.json(await roomFor(c.env, active.tripId).setGhost(userId, body.data.ghost));
-  await setUserGhost(c.env.DB, userId, body.data.ghost);
-  return c.json(offRideState(body.data.ghost));
+  if (active) await roomFor(c.env, active.tripId).setGhost(userId, body.data.ghost);
+  else await setUserGhost(c.env.DB, userId, body.data.ghost);
+  const res: OkRes = { ok: true };
+  return c.json(res);
 });
 
 rideRoutes.post("/ride/not-now", requireRider, async (c) => {
@@ -86,6 +85,6 @@ rideRoutes.get("/ride/state", requireRider, async (c) => {
   const active = await activeCheckin(c.env.DB, userId);
   if (active) return c.json(await roomFor(c.env, active.tripId).snapshot(userId));
   const user = await getUser(c.env.DB, userId);
-  const res: RidePollRes = { state: offRideState(user?.ghost ?? false), match: null, mission: null, serverNow: Date.now() };
+  const res: RideStateRes = { state: offRideState(user?.ghost ?? false), match: null, mission: null, serverNow: Date.now() };
   return c.json(res);
 });
