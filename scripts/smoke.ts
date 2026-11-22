@@ -200,8 +200,20 @@ async function main() {
   ok("rides ended");
 
   // History, profile edits, mood.
-  const recent = await api<{ matches: { partnerFirstName: string; color: string; stamped: boolean }[] }>("GET", "/api/matches/recent", undefined, andres.token);
+  type Recent = { matches: { matchId: string; partnerFirstName: string; color: string; stamped: boolean; stationId: string | null; blocked: boolean }[] };
+  const recent = await api<Recent>("GET", "/api/matches/recent", undefined, andres.token);
   if (recent.matches[0]?.partnerFirstName !== "Maya" || !recent.matches[0]?.stamped) fail(`recent matches: ${JSON.stringify(recent)}`);
+  if (recent.matches[0]?.stationId !== t2.stamp.stationId) fail(`recent match should say where you met (${t2.stamp.stationId}): ${JSON.stringify(recent.matches[0])}`);
+
+  // Block Maya from People, see it on the server, then unblock (later steps pair them again).
+  const metMaya = recent.matches[0]!.matchId;
+  await api("POST", "/api/report", { matchId: metMaya, reason: "Blocked from People", block: true }, andres.token);
+  const afterBlock = await api<Recent>("GET", "/api/matches/recent", undefined, andres.token);
+  if (!afterBlock.matches.find((m) => m.matchId === metMaya)?.blocked) fail("block did not show in recent matches");
+  await api("POST", "/api/unblock", { matchId: metMaya }, andres.token);
+  const afterUnblock = await api<Recent>("GET", "/api/matches/recent", undefined, andres.token);
+  if (afterUnblock.matches.find((m) => m.matchId === metMaya)?.blocked !== false) fail("unblock did not lift the block");
+  ok("People: where you met, block and unblock round-trip through the worker");
   const edited = await api<{ profile: { firstName: string; interests: string[] } }>("PATCH", "/api/me", { firstName: "Dre", interests: ["ramen", "film", "chess"] }, andres.token);
   if (edited.profile.firstName !== "Dre" || !edited.profile.interests.includes("chess")) fail(`PATCH /api/me: ${JSON.stringify(edited)}`);
   await api("POST", "/api/ride/mood", { mood: "talk" }, andres.token);
