@@ -43,4 +43,5 @@ jobs:
           cache-dependency-path: apps/kiosk-pi/pyproject.toml
       # The dev extra only: rpi_ws281x and the SPI driver don't build off a Pi.
       - run: pip install -e ".[dev]"
+      - run: shellcheck scripts/setup.sh
       - run: pytest -q
