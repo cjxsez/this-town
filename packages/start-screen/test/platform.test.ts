@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Material } from "three";
 import { CONFIG } from "../src/config";
-import { platformClock } from "../src/core/platformClock";
+import { frameView, platformClock } from "../src/core/platformClock";
 import { hexToRgb, IdAllocator } from "../src/scene/builder";
 import { buildWorld } from "../src/scene/world";
 
@@ -61,4 +61,18 @@ test("with one stop on its timetable, the train goes right round and stops in fr
   assert.ok(Math.abs(((middle() - stop + 540) % 360) - 180) > 179, "half way round, on the far side");
   world.update(12.6 + 1);
   assert.ok(Math.abs(middle() - stop) < 1e-6, "back again one lap later");
+});
+
+test("frameView: with no frame the camera sees the whole canvas", () => {
+  assert.deepEqual(frameView(400, 800, null), { aspect: 0.5, offset: null });
+});
+
+test("frameView: the scene is composed for the frame and extended above and below it", () => {
+  const v = frameView(400, 800, { top: 60, height: 320 });
+  assert.equal(v.aspect, 400 / 320, "composed as if the canvas were only the frame");
+  assert.deepEqual(v.offset, { fullWidth: 400, fullHeight: 320, x: 0, y: -60, width: 400, height: 800 });
+});
+
+test("frameView: a frame with no height falls back to the whole canvas", () => {
+  assert.deepEqual(frameView(400, 800, { top: 10, height: 0 }), { aspect: 0.5, offset: null });
 });

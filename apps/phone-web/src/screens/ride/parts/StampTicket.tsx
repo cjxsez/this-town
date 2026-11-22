@@ -27,8 +27,10 @@ function TicketShape({
   ol,
   shadow,
   rare,
+  shine,
   children,
 }: {
+  shine?: boolean;
   stub: number;
   edgeR: number;
   edgeStep: number;
@@ -61,9 +63,12 @@ function TicketShape({
           color: "var(--ink)",
           mask,
           maskComposite: "intersect",
+          position: "relative",
         }}
       >
         {children}
+        {/* A glint that sweeps across the paper now and then; clipped to the ticket by its mask. */}
+        {shine && <div className="q-ticket-shine" aria-hidden />}
       </div>
     </div>
   );
@@ -114,6 +119,7 @@ export function StampTicketLarge({
   rare,
   number,
   style,
+  shine,
 }: {
   station: string;
   lineLabel: string;
@@ -123,10 +129,12 @@ export function StampTicketLarge({
   rare: boolean;
   number?: number;
   style?: CSSProperties;
+  /** A glint sweeps across it now and then (the G2 celebration). */
+  shine?: boolean;
 }) {
   return (
     <div style={{ height: 160, filter: "var(--wob)", ...style }}>
-      <TicketShape stub={246} edgeR={6} edgeStep={20} notchR={9} ol={2} shadow="5px 7px 0" rare={rare}>
+      <TicketShape stub={246} edgeR={6} edgeStep={20} notchR={9} ol={2} shadow="5px 7px 0" rare={rare} shine={shine}>
         <div style={{ flex: "none", width: 246, boxSizing: "border-box", padding: "14px 12px 0 24px" }}>
           <div
             style={{

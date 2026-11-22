@@ -1,29 +1,12 @@
-import { LINES, LINE_STATION_COUNT, stationById } from "../../../shared/catalog";
-import type { CheckIn, GreenBranch, LineColor, Stamp } from "../../../shared/types";
+import { LINES } from "../../../shared/catalog";
+import type { LineColor } from "../../../shared/types";
+import { lineProgress } from "../../state/progress";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useApp, useRide } from "../../state/store";
 import { Body, Button, LinePill, Screen, Title, TrainPill } from "../../ui";
 import { lineName, stationFor, TrolleySprite } from "./parts/PlatformKit";
 import { PlatformScene3D, PlatformSign } from "./parts/PlatformScene3D";
-
-/** Stops per Green Line branch, trunk included (Gov't Ctr out to the end of the branch). */
-const BRANCH_STOPS: Record<GreenBranch, number> = { B: 23, C: 19, D: 19, E: 18 };
-
-/** Distinct stations stamped on this line (and branch, for the Green Line). */
-function lineProgress(stamps: Stamp[], c: CheckIn) {
-  const ids = new Set(
-    stamps
-      .filter((s) => s.line === c.line)
-      .filter((s) => {
-        if (c.line !== "green" || !c.branch) return true;
-        const st = stationById(s.stationId);
-        return !st?.branches || st.branches.includes(c.branch);
-      })
-      .map((s) => s.stationId),
-  );
-  const total = c.line === "green" && c.branch ? BRANCH_STOPS[c.branch] : LINE_STATION_COUNT[c.line];
-  return { got: ids.size, total };
-}
 
 /**
  * C4: Ride Mode is off. Confirms it, says why (your stop, you turned it off, end of the
@@ -33,10 +16,12 @@ export default function RideOver() {
   const { ride, act } = useRide();
   const { state } = useApp();
   const navigate = useNavigate();
+  const frame = useRef<HTMLDivElement>(null);
+  const [flat, setFlat] = useState(false);
   const c = ride.checkIn;
   const station = stationFor(c?.destinationId);
   const lineHex = LINES[c?.line ?? "green"].hex;
-  const progress = c ? lineProgress(state.stamps, c) : undefined;
+  const progress = c ? lineProgress(state.stamps, c.line, c.branch) : undefined;
   const why =
     ride.rideOverReason === "you"
       ? "You turned it off. Nobody can be matched with you until you tap a kiosk again."
@@ -55,6 +40,7 @@ export default function RideOver() {
       label="C4"
       tabs
       blobs={false}
+      backdrop={<PlatformScene3D line={c?.line} mode="arrive" frameRef={frame} onStatus={(s) => setFlat(s === "failed")} />}
       footer={
         <>
           <Button onClick={act.closeRideOver}>
@@ -72,19 +58,14 @@ export default function RideOver() {
         </>
       }
     >
-      <div className="q-blob" style={{ left: -40, top: 130, width: 340, height: 190, borderRadius: "46% 54% 60% 40%/55% 45% 55% 45%" }} />
-      <div className="q-blob" style={{ left: 230, top: 60, width: 230, height: 130, borderRadius: "58% 42% 45% 55%/45% 60% 40% 55%" }} />
-
       <div className="q-topbar">
         {c ? <LinePill line={c.line}>{lineName(c).toUpperCase()}</LinePill> : <span />}
         <TrainPill>RIDE MODE OFF</TrainPill>
       </div>
 
-      {/* The trolley pulls in at your stop and stays. */}
-      <div style={{ flex: "1 0 auto", minHeight: 200, position: "relative", margin: "0 calc(-1 * var(--gutter))" }}>
-        <PlatformScene3D line={c?.line} mode="arrive" fallback={<RideOverFlatScene line={c?.line} />} style={{ position: "absolute", inset: 0 }}>
-          <PlatformSign name={c?.destinationName ?? station.name} color={lineHex} style={{ right: 16, top: 12 }} />
-        </PlatformScene3D>
+      {/* Room for the trolley, which pulls in at your stop and stays (full-screen behind the page). */}
+      <div ref={frame} style={{ flex: "1 0 auto", minHeight: 220, position: "relative", margin: "0 calc(-1 * var(--gutter))" }}>
+        {flat ? <RideOverFlatScene line={c?.line} /> : <PlatformSign name={c?.destinationName ?? station.name} color={lineHex} style={{ right: 16, top: 6 }} />}
       </div>
 
       <div role="status" style={{ display: "flex", flexDirection: "column", gap: 10 }}>

@@ -12,7 +12,7 @@
  */
 import { DataTexture, Mesh, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
 import { CONFIG, type Config, type TimeOfDay } from "./config";
-import { platformClock } from "./core/platformClock";
+import { frameView, platformClock, type Frame } from "./core/platformClock";
 import { createMaterials } from "./render/materials";
 import { Pipeline } from "./render/pipeline";
 import { IdAllocator, place } from "./scene/builder";
@@ -46,6 +46,12 @@ export interface PlatformSceneHandle {
   ready: Promise<boolean>;
   /** Update when the train is due ("arrive" mode) without rebuilding the scene. */
   setArriveAt(epochMs: number | undefined): void;
+  /**
+   * Compose the scene for a band of the element (CSS px from its top) and let it
+   * extend above and below, so the element can be a full-screen background while the
+   * train still pulls in where the page leaves room. null = the whole element.
+   */
+  setFrame(frame: Frame | null): void;
   dispose(): void;
 }
 
@@ -54,13 +60,17 @@ const TAU = Math.PI * 2;
 
 export function mountPlatformScene(container: HTMLElement, options: PlatformSceneOptions = {}): PlatformSceneHandle {
   let arriveAt = options.arriveAt;
+  let frame: Frame | null = null;
   let stop: (() => void) | null = null;
+  let reframe: (() => void) | null = null;
   let disposed = false;
 
   const ready = Promise.resolve().then(() => {
     if (disposed) return false;
     try {
-      stop = start(container, options, () => arriveAt);
+      const started = start(container, options, () => arriveAt, () => frame);
+      stop = started.stop;
+      reframe = started.resize;
       return true;
     } catch (error) {
       console.warn("[platform-scene] 3D scene unavailable.", error);
@@ -73,6 +83,10 @@ export function mountPlatformScene(container: HTMLElement, options: PlatformScen
     setArriveAt(epochMs) {
       arriveAt = epochMs;
     },
+    setFrame(next) {
+      frame = next;
+      reframe?.();
+    },
     dispose() {
       disposed = true;
       stop?.();
@@ -81,8 +95,13 @@ export function mountPlatformScene(container: HTMLElement, options: PlatformScen
   };
 }
 
-/** Builds and runs the scene. Returns the function that tears it down. Throws without WebGL2. */
-function start(container: HTMLElement, o: PlatformSceneOptions, arriveAt: () => number | undefined): () => void {
+/** Builds and runs the scene. Returns how to tear it down and re-fit it. Throws without WebGL2. */
+function start(
+  container: HTMLElement,
+  o: PlatformSceneOptions,
+  arriveAt: () => number | undefined,
+  getFrame: () => Frame | null,
+): { stop: () => void; resize: () => void } {
   const P = CONFIG.platformScene;
   const timeOfDay = o.timeOfDay ?? "Day";
   const mode = o.mode ?? "loop";
@@ -172,7 +191,14 @@ function start(container: HTMLElement, o: PlatformSceneOptions, arriveAt: () => 
     renderer.setPixelRatio(dpr);
     renderer.setSize(w, h, false);
     pipeline.setSize(w, h, dpr);
-    camera.aspect = w / h;
+    const view = frameView(w, h, getFrame());
+    camera.aspect = view.aspect;
+    if (view.offset) {
+      const v = view.offset;
+      camera.setViewOffset(v.fullWidth, v.fullHeight, v.x, v.y, v.width, v.height);
+    } else {
+      camera.clearViewOffset();
+    }
     camera.updateProjectionMatrix();
     draw(performance.now());
   };
@@ -183,7 +209,7 @@ function start(container: HTMLElement, o: PlatformSceneOptions, arriveAt: () => 
   if (!reducedMotion && freeze === null) raf = requestAnimationFrame(loop);
   container.dataset.ready = "1";
 
-  return () => {
+  const stop = () => {
     cancelAnimationFrame(raf);
     observer.disconnect();
     world.dispose();
@@ -196,4 +222,5 @@ function start(container: HTMLElement, o: PlatformSceneOptions, arriveAt: () => 
     canvas.remove();
     delete container.dataset.ready;
   };
+  return { stop, resize };
 }

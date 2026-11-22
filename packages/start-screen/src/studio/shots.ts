@@ -18,7 +18,8 @@ import {
 import type { Config } from "../config";
 import { GeoBuilder, type IdAllocator, place, placeTurned } from "../scene/builder";
 import { buildWorld, carGeometry, SHADOW_LAYER, wallQuad, type SceneMaterials } from "../scene/world";
-import { figureGeometry, glassesGeometry } from "./models";
+import { PAIR_COLOR_HEX } from "@questline/protocol/colors";
+import { figureGeometry, glassesGeometry, type FigurePose, type FigureLook } from "./models";
 
 export interface StudioContext {
   config: Config;
@@ -172,6 +173,83 @@ const house = (id: string, roof: string): Shot => ({
   },
 });
 
+// ---------------------------------------------------------------- celebrations
+// The stamp and recap screens: you and your match, cheering or high-fiving, on a slice
+// of platform. You wear orange; your match wears their pair colour (blue if that is
+// orange too). Separate sprites so the app can move each one.
+
+/** Pair colours a match can wear. Orange is yours, so a match in an orange pair wears blue. */
+export const FRIEND_COLORS = ["green", "blue", "pink", "yellow", "purple"] as const;
+
+const posedRider = (id: string, look: (C: Config["colors"]) => FigureLook, pose: FigurePose, yawDeg: number): Shot => ({
+  id,
+  width: 110,
+  height: 140,
+  scale: 3,
+  background: "clear",
+  camera: { azimuthDeg: 8, elevationDeg: 7, fovDeg: 20, fill: 1 },
+  build(ctx) {
+    const figure = solid(figureGeometry(look(ctx.config.colors), ctx.config.colors, ctx.ids, pose), ctx);
+    figure.rotation.y = (yawDeg * Math.PI) / 180;
+    return { root: group(figure, groundShadow(ctx, 0.34, 0.18, 0.06, -0.05)), center: new Vector3(0, 0.56, 0), radius: 0.62 };
+  },
+});
+
+const you = (C: Config["colors"]): FigureLook => ({ shirt: C.orange, hair: C.inkSoft, badge: C.paper });
+const friend = (hex: string) => (C: Config["colors"]): FigureLook => ({ shirt: hex, hair: C.inkDeep, badge: C.paper });
+
+const celebrations: Shot[] = [
+  posedRider("cheer-you", you, { arms: [150, 158] }, 6),
+  ...FRIEND_COLORS.map((c) => posedRider(`cheer-friend-${c}`, friend(PAIR_COLOR_HEX[c]), { arms: [160, 145] }, -6)),
+  // Turned towards each other, the inner hand up for the high five.
+  posedRider("highfive-you", you, { arms: [14, 152] }, 42),
+  ...FRIEND_COLORS.map((c) => posedRider(`highfive-friend-${c}`, friend(PAIR_COLOR_HEX[c]), { arms: [152, 14] }, -42)),
+];
+
+/** A short slice of platform, yellow edge at the front, for the riders to stand on. */
+function platformSlice(ctx: StudioContext, length: number, depth: number) {
+  const C = ctx.config.colors;
+  const id = ctx.ids.next();
+  return new GeoBuilder()
+    .add(new BoxGeometry(length, 0.6, depth), place(0, 0.3, 0), (n) => (n.y > 0.5 ? C.paperLo : C.stoneDk), id)
+    .add(new BoxGeometry(length * 0.98, 0.012, 0.45), place(0, 0.606, depth / 2 - 0.3), C.yellow, id)
+    .build();
+}
+
+const stage: Shot = {
+  id: "stage-platform",
+  width: 340,
+  height: 64,
+  scale: 3,
+  background: "clear",
+  // Framed by its height (the narrow side), so the slice runs nearly edge to edge.
+  camera: { azimuthDeg: 0, elevationDeg: 14, fovDeg: 16, fill: 1 },
+  build(ctx) {
+    return { root: solid(platformSlice(ctx, 8, 2.2), ctx), center: new Vector3(0, 0.32, 0), radius: 0.86 };
+  },
+};
+
+/** The platform with the trolley standing behind it: the recap screen's backdrop. */
+const recapBackdrop: Shot = {
+  id: "recap-backdrop",
+  width: 360,
+  height: 190,
+  scale: 3,
+  background: "clear",
+  camera: { azimuthDeg: 0, elevationDeg: 9, fovDeg: 22, fill: 1.62 },
+  build(ctx) {
+    const T = ctx.config.train;
+    const step = T.carLength + T.carGap;
+    const lead = solid(carGeometry(ctx.config, ctx.ids.next(), true, false), ctx);
+    const tail = solid(carGeometry(ctx.config, ctx.ids.next(), false, true), ctx);
+    lead.position.set(step / 2 - 1.6, 0, -2.9);
+    tail.position.set(-step / 2 - 1.6, 0, -2.9);
+    const platform = solid(platformSlice(ctx, 12, 3), ctx);
+    platform.position.y = 0;
+    return { root: group(lead, tail, platform), center: new Vector3(0, 1.6, -1.2), radius: 6.4 };
+  },
+};
+
 import { CONFIG } from "../config";
 
 export const SHOTS: Shot[] = [
@@ -182,4 +260,7 @@ export const SHOTS: Shot[] = [
   tree,
   house("sprite-house-pink", "#c9a9a6"),
   house("sprite-house-red", "#d9604a"),
+  ...celebrations,
+  stage,
+  recapBackdrop,
 ];

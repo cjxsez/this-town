@@ -24,6 +24,25 @@ export interface PlatformClockInput {
   reducedMotion: boolean;
 }
 
+/** A band of the canvas, in CSS px, that the scene is composed for. */
+export interface Frame {
+  top: number;
+  height: number;
+}
+
+/**
+ * How to set the camera so the scene is composed for `frame` (as if the canvas were
+ * only that band) and simply extends above and below it. `offset` is the argument
+ * list for PerspectiveCamera.setViewOffset, or null to use the whole canvas.
+ */
+export function frameView(width: number, height: number, frame: Frame | null) {
+  if (!frame || frame.height <= 0) return { aspect: width / height, offset: null };
+  return {
+    aspect: width / frame.height,
+    offset: { fullWidth: width, fullHeight: frame.height, x: 0, y: -frame.top, width, height },
+  };
+}
+
 export function platformClock(i: PlatformClockInput, t: PlatformTiming): number {
   const standing = t.dwellSeconds / 2;
   if (i.reducedMotion) return standing;

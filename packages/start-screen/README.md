@@ -87,6 +87,7 @@ scene.dispose();
 - `mode: "arrive"`: one trolley, due at `arriveAt`. It waits out of sight, rolls in for the last seconds and stays.
 - `line` colours the trolley's stripe and the shelter roof; `riderColor` is your rider's shirt.
 - With reduced motion the trolley simply stands at the platform. `ready` resolves `false` without WebGL2, so the caller can show something else.
+- `setFrame({ top, height })` composes the scene for one band of the element and lets it extend above and below, so it can fill a whole screen while the train pulls in where the page leaves room.
 
 The camera, the rider, the timing and the sun are in `config.ts` under `platformScene`. Preview it at http://localhost:5180/platform.html (`?line=red`, `?mode=arrive&in=6`, `?clock=-1.5` to freeze, `?w=&h=`).
 
@@ -106,7 +107,7 @@ To review the buildings up close from four sides, open http://localhost:5180/stu
 It opens `studio.html` in headless Chrome (set `CHROME_PATH` if Chrome is not in the usual macOS place) and writes `apps/phone-web/public/art/<id>.webp`. The files are committed, so this only needs running after a change. To look at the shots without saving, open http://localhost:5180/studio.html while `pnpm dev:start` runs.
 
 - `src/studio/shots.ts`: the list of pictures: what is in each, its size, where the camera stands. The id is the app's `ArtSlot` id.
-- `src/studio/models.ts`: the extra models (rider, glasses).
+- `src/studio/models.ts`: the extra models (rider, glasses). Riders take a pose: each arm's angle out from the side, so they can cheer or high-five (the stamp and recap screens).
 - Pictures have a transparent background, so they sit on any time-of-day sea.
 
 ## Change how it looks and moves

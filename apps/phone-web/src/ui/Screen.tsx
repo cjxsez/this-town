@@ -35,14 +35,17 @@ export interface ScreenProps {
    * another as the doors part (default). Pass false for a screen with its own entrances.
    */
   doorsEntrance?: boolean;
+  /** Fills the whole screen behind the content, e.g. the live 3D platform. */
+  backdrop?: ReactNode;
 }
 
-export function Screen({ children, footer, tabs, blobs = "a", background, bodyStyle, className, label, doorsEntrance = true }: ScreenProps) {
+export function Screen({ children, footer, tabs, blobs = "a", background, bodyStyle, className, label, doorsEntrance = true, backdrop }: ScreenProps) {
   // Read once, when the screen mounts: are the train doors opening onto it right now?
   const [entering] = useState(() => doorsEntrance && doorsOpening());
   return (
     <div className={`q-screen${entering ? " q-screen--doors" : ""} ${className ?? ""}`} style={background ? { background } : undefined} data-screen={label}>
       {blobs && BLOBS[blobs].map((s, i) => <div key={i} className="q-blob" style={s} />)}
+      {backdrop && <div className="q-screen__backdrop">{backdrop}</div>}
       <div className="q-screen__body" style={bodyStyle}>
         {children}
       </div>

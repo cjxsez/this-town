@@ -221,6 +221,18 @@
 .q-scene3d[data-status="ready"] .q-scene3d__view { opacity: 1; scale: 1; }
 .q-scene3d__over { position: absolute; inset: 0; pointer-events: none; }
 .q-scene3d__flat { position: absolute; inset: 0; }
+/* As a full-screen backdrop: the picture runs edge to edge, and below the page's frame
+   it fades into the sea so the cards and text there sit on calm water. */
+.q-screen__backdrop { position: absolute; inset: 0; z-index: -1; }
+.q-scene3d--backdrop { position: absolute; inset: 0; }
+.q-scene3d__fade {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom,
+    transparent calc(var(--frame-bottom, 60%) - 30px),
+    color-mix(in srgb, var(--sea) 82%, transparent) calc(var(--frame-bottom, 60%) + 50px),
+    var(--sea) calc(var(--frame-bottom, 60%) + 120px));
+}
+.q-scene3d[data-status="loading"] .q-scene3d__fade { opacity: 0; }
 .q-scene3d__sign {
   position: absolute; min-width: 108px; min-height: 34px; padding: 2px 10px 0;
   display: flex; align-items: center; justify-content: center;
