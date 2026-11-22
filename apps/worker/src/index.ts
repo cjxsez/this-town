@@ -33,6 +33,7 @@ import { checkKioskKey, riderFromToken } from "./auth";
 import { activeCheckin } from "./db/queries";
 import { resolveCarTrip } from "./mbta/vehicles";
 import { forwardToRoom, INTERNAL_HEADERS, roomFor } from "./rooms/stub";
+import { authRoutes } from "./routes/auth";
 import { demoRoutes } from "./routes/demo";
 import { glassesRoutes } from "./routes/glasses";
 import { passportRoutes } from "./routes/passport";
@@ -50,6 +51,7 @@ const app = new Hono<AppEnv>();
 // ---------- REST ----------
 
 app.get("/api/health", (c) => c.json({ ok: true }));
+app.route("/api", authRoutes);
 app.route("/api", usersRoutes);
 app.route("/api", glassesRoutes);
 app.route("/api", tapsRoutes);

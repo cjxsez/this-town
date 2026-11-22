@@ -13,6 +13,8 @@ import Spots from "./screens/onboarding/Spots";
 import Battery from "./screens/onboarding/Battery";
 import Handles from "./screens/onboarding/Handles";
 import BadgeScan from "./screens/onboarding/BadgeScan";
+import SignInEmail from "./screens/signin/SignInEmail";
+import SignInCode from "./screens/signin/SignInCode";
 import Poster from "./screens/print/Poster";
 import BadgePrint from "./screens/print/BadgePrint";
 import RideRoute from "./screens/ride/RideRoute";
@@ -75,6 +77,8 @@ function Shell() {
     <div className="app-shell">
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/signin" element={<SignInEmail />} />
+        <Route path="/signin/code" element={<SignInCode />} />
         <Route path="/join/name" element={<Name />} />
         <Route path="/join/interests" element={<Interests />} />
         <Route path="/join/spots" element={<Spots />} />

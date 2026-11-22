@@ -18,6 +18,16 @@ export function takePendingTap(): string | null {
   }
 }
 
+/** The car of a tap waiting on sign-in, without using it up (for "then we'll check you in"). */
+export function peekPendingCar(): string | null {
+  try {
+    const path = sessionStorage.getItem(PENDING_KEY);
+    return path?.startsWith("/k/") ? decodeURIComponent(path.slice(3).split(/[?/]/)[0] ?? "") || null : null;
+  } catch {
+    return null;
+  }
+}
+
 // One request per tag read: the nonce is single-use, and StrictMode runs effects twice in dev.
 const inFlight = new Map<string, Promise<TapResult>>();
 
@@ -28,7 +38,9 @@ type View =
   | { step: "done" };
 
 /**
- * /k/:car?n=<nonce>: where the kiosk's NFC tag sends the phone. The worker decides what the
+ * /k/:car?n=<nonce>: where the kiosk's NFC tag sends the phone. Signed in: the tap goes
+ * straight to the worker. Not signed in: the tap is parked, the rider signs in with an email
+ * code (/signin) or onboards, and App's usePendingTap brings them back here. The worker decides what the
  * tap means (check in, move car, or stamp), so this screen only asks for a destination when
  * the worker wants one and then hands over to /ride.
  */
@@ -75,7 +87,8 @@ export default function Tap() {
     } catch {
       // Storage blocked: they tap again after joining.
     }
-    return <Navigate to="/" replace />;
+    // Not signed in: sign in with an email code (or onboard), then usePendingTap replays this.
+    return <Navigate to={backend ? "/signin" : "/"} replace />;
   }
   // The simulator has no kiosks.
   if (!backend || view.step === "done") return <Navigate to="/ride" replace />;

@@ -23,10 +23,11 @@ import { requireRider } from "../auth";
 import { createGlassesCode, linkGlassesCode, pollGlassesCode } from "../db/queries";
 import type { GlassesCodePollResT, GlassesCodeResT, GlassesLinkResT } from "../lib/api";
 import { readJson } from "../lib/http";
+import { limitByIp } from "../lib/rateLimit";
 
 export const glassesRoutes = new Hono<AppEnv>();
 
-glassesRoutes.post("/glasses/code", async (c) => {
+glassesRoutes.post("/glasses/code", limitByIp("glassesCodeIp"), async (c) => {
   const res: GlassesCodeResT = await createGlassesCode(c.env.DB, Date.now());
   return c.json(res, 201);
 });

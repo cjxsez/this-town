@@ -6,7 +6,7 @@ The screens are the "Questline screens v2" design: onboarding (B1 to B7), Ride M
 
 | Mode | Code | What it is |
 |---|---|---|
-| `mock` | `src/api/mock/` | In-browser simulator that plays the server. Needs nothing else running. Adds the demo panel and seed data. |
+| `mock` | `src/api/mock/` | In-browser simulator that plays the server. Needs nothing else running. Adds the demo panel and seed data. Email sign-in accepts code `123456` and always treats the email as new. |
 | `http` | `src/api/backend/` | The real worker in `apps/worker`: REST (`src/lib/api.ts`), the rider socket (`src/lib/socket.ts`), bearer token (`src/lib/auth.ts`). |
 
 `VITE_API_MODE` picks one. Unset, `pnpm dev` uses `mock` and a production build uses `http`.
@@ -48,9 +48,10 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 | Path | Screen |
 |---|---|
 | `/`, `/:stationId` | Landing (B1), or Ride Mode once a profile exists. `/:stationId` is what the platform poster's QR encodes. |
+| `/signin`, `/signin/code` | Email sign-in S1 (email) and S2 (6-digit code). Known email: back to the parked tap or `/ride`. New email: onboarding, then an account |
 | `/join/*` | Onboarding B2 to B7 |
 | `/ride` | Ride Mode. One URL; the screen follows the ride phase. |
-| `/k/:car?n=<nonce>` | Kiosk tag landing (`http` mode): `POST /api/taps`, destination picker, then `/ride` |
+| `/k/:car?n=<nonce>` | Kiosk tag landing (`http` mode): `POST /api/taps`, destination picker, then `/ride`. Signed out: parks the tap and goes to `/signin` first |
 | `/passport`, `/people`, `/memories`, `/me` | Collection and settings |
 | `/print/poster/:stationId`, `/print/badge/:number` | Printables |
 
@@ -73,7 +74,8 @@ This app has its own `tsconfig.json` instead of extending `tsconfig.base.json`: 
 | Ride Mode off | `POST /api/ride/end` |
 | Ghost toggle | `PUT /api/ride/ghost` |
 | Report | `POST /api/report` with the match id |
-| Onboarding done | `POST /api/users` once; token in `localStorage` |
+| Sign in with email | `POST /api/auth/email/start`, then `/verify`: a token (known email) or a signup ticket (new email, kept in `localStorage`) |
+| Onboarding done | `POST /api/users` once, with the signup ticket if there is one; token in `localStorage` |
 
 ## Frontend and worker differences
 

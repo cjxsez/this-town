@@ -46,8 +46,16 @@ new_sqlite_classes = ["TrainRoom"]
 # Non-secret config. Values are strings; src/env.ts readConfig() parses them.
 # Override any of these locally in .dev.vars (e.g. PUBLIC_ORIGIN).
 # Secrets (ANTHROPIC_API_KEY, MBTA_API_KEY, KIOSK_KEY): see .dev.vars.example.
+# Cloudflare Email Sending for the sign-in code (src/email/loginCode.ts). Simulated under
+# `wrangler dev` (the email, code included, is printed in the log). Add `remote = true` to
+# send real mail from local dev. Before deploying: `wrangler email sending enable <domain>`
+# and point EMAIL_FROM at that domain.
+[[send_email]]
+name = "EMAIL"
+
 [vars]
 PUBLIC_ORIGIN = "https://questline.example.com"
+EMAIL_FROM = "signin@questline.example.com"
 MIN_SHARED_TAGS = "1"
 LATE_BONUS_MIN_DELAY_S = "180"
 NOT_NOW_COOLDOWN_S = "600"

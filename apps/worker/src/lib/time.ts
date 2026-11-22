@@ -30,6 +30,12 @@ export const STAMP_GRACE_MS = 15 * SECOND;
 export const MET_RECENTLY_WINDOW_MS = 7 * DAY;
 /** Glasses link codes live this long. */
 export const GLASSES_CODE_TTL_MS = 5 * MINUTE;
+/** Email sign-in: how long a code works, how often one can be sent, wrong guesses allowed. */
+export const LOGIN_CODE_TTL_MS = 10 * MINUTE;
+export const LOGIN_CODE_RESEND_MS = 30 * SECOND;
+export const LOGIN_CODE_MAX_ATTEMPTS = 5;
+/** A verified new email has this long to finish onboarding. */
+export const SIGNUP_TICKET_TTL_MS = 30 * MINUTE;
 
 export function secondsUntil(deadlineMs: number, nowMs: number = Date.now()): number {
   return Math.max(0, Math.round((deadlineMs - nowMs) / SECOND));

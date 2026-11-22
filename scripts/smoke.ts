@@ -33,7 +33,8 @@ const ok = (msg: string) => console.log(`✓ ${msg}`);
 async function api<T>(method: string, path: string, body?: unknown, token?: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    // The kiosk key lets our own tooling past the per-IP rate limits (apps/worker/src/lib/rateLimit.ts).
+    headers: { "content-type": "application/json", "x-kiosk-key": KIOSK_KEY, ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();

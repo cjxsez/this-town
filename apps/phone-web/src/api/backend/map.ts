@@ -32,6 +32,30 @@ export function toInterestTags(interests: string[]): InterestTag[] {
   return interests.filter((id): id is InterestTag => InterestTag.safeParse(id).success).slice(0, 8);
 }
 
+/**
+ * The worker's profile as the phone's, for a rider signing back in on a new device. The
+ * phone-only fields (spots, handles, badge, home station, AI opt-in) aren't stored on the
+ * worker yet, so they come back as defaults.
+ */
+export function fromWireProfile(w: WireProfile, ids: { userId: string; email: string }): Profile {
+  return {
+    id: ids.userId,
+    firstName: w.firstName,
+    kind: w.status,
+    is18: w.is18Plus,
+    interests: [...w.interests],
+    spots: [],
+    askMeAbout: w.askMeAbout || undefined,
+    battery: w.socialBattery,
+    useAi: false,
+    handles: {},
+    homeStation: "kenmore",
+    hasGlasses: false,
+    createdAt: new Date().toISOString(),
+    email: ids.email,
+  };
+}
+
 /** Spots, handles, badge and the AI opt-in have no home in the worker's Profile yet. */
 export function toWireProfile(p: Profile): WireProfile {
   return {

@@ -1,7 +1,7 @@
 import { api as rest } from "../../lib/api";
-import { getToken } from "../../lib/auth";
+import { getToken, setSignupTicket, setToken } from "../../lib/auth";
 import type { QuestlineApi } from "../types";
-import { REPORT_REASON } from "./map";
+import { fromWireProfile, REPORT_REASON } from "./map";
 import { BackendRide } from "./ride";
 
 const noRoute = (what: string) => {
@@ -13,6 +13,22 @@ export function createBackendApi(): Omit<QuestlineApi, "ride"> & { ride: Backend
   const ride = new BackendRide();
   return {
     ride,
+    auth: {
+      sendCode: async (email) => {
+        await rest.authStart(email);
+      },
+      verifyCode: async (email, code) => {
+        const res = await rest.authVerify(email, code);
+        if (res.status === "signed-in") {
+          ride.signOut(); // drop any guest token and ride state on this device first
+          setSignupTicket(null);
+          setToken(res.token);
+          return { status: "signed-in", profile: fromWireProfile(res.profile, res) };
+        }
+        setSignupTicket(res.signupTicket);
+        return { status: "new-account", email: res.email };
+      },
+    },
     // Runs after onboarding and on every profile edit; only the first one reaches the worker.
     saveProfile: (p) => ride.ensureUser(p).catch((e) => console.warn("[questline] could not create the rider", e)),
     // No delete route yet: forget the token so this device is a stranger again.

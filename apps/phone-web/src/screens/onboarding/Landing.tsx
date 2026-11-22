@@ -5,15 +5,15 @@ import { useApp } from "../../state/store";
 /**
  * B1 Landing from QR. Rendered at "/" and at "/:stationId" (the poster's
  * deep link; App has already put the station into draft.homeStation).
- * Every sign-in goes to B2; a badge already in hand goes to B7.
+ * Email goes to S1 (6-digit code: returning riders sign straight back in, new ones carry on
+ * to B2 as an account). "Just play today" goes to B2 as a guest; a badge goes to B7.
  */
 export default function Landing() {
   const navigate = useNavigate();
   const { actions } = useApp();
 
-  // TODO(backend): Sign in with Apple and the email magic link are stubs.
-  // Both should authenticate first and then continue to B2 like "Just play today".
-  const signIn = (_method: "apple" | "email" | "guest") => navigate("/join/name");
+  // TODO(backend): Sign in with Apple is still a stub that continues like "Just play today".
+  const signIn = (method: "apple" | "email" | "guest") => navigate(method === "email" ? "/signin" : "/join/name");
 
   const skipSetup = () => {
     actions.useDemoProfile();
@@ -33,7 +33,7 @@ export default function Landing() {
           </ButtonRow>
           <ButtonRow>
             <Button variant="secondary" tilt={0.5} onClick={() => signIn("email")}>
-              Email me a link
+              Sign in with email
             </Button>
           </ButtonRow>
           <ButtonRow>

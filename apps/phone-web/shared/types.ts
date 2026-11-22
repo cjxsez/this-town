@@ -36,6 +36,8 @@ export interface Profile {
   homeStation: string; // station id the rider joined from (the QR poster)
   hasGlasses: boolean;
   createdAt: string;
+  /** Verified sign-in email. Absent for "Just play today" guests. */
+  email?: string;
 }
 
 export interface Station {

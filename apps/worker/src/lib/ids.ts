@@ -52,6 +52,16 @@ export function fourDigitCode(): string {
   }
 }
 
+/** Uniform 000000-999999 (rejection sampling to avoid modulo bias). Email sign-in codes. */
+export function sixDigitCode(): string {
+  const buf = new Uint32Array(1);
+  for (;;) {
+    crypto.getRandomValues(buf);
+    const v = buf[0] ?? 0;
+    if (v < 4_294_000_000) return String(v % 1_000_000).padStart(6, "0");
+  }
+}
+
 /** Sorted pair of user ids. */
 export function orderedPair(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];

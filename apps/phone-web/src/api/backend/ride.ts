@@ -10,7 +10,7 @@
 import type { MatchInfo, Mission as WireMission, Profile as WireProfile, RideSnapshot, RideState as WireRide, ServerToRider, Stamp as WireStamp } from "@questline/protocol";
 import type { CheckIn, Profile, SocialBattery } from "../../../shared/types";
 import { api as rest, ApiError, type TapBody, type TapResult } from "../../lib/api";
-import { clearToken, getToken, setToken } from "../../lib/auth";
+import { clearToken, getSignupTicket, getToken, setSignupTicket, setToken } from "../../lib/auth";
 import { connectRiderSocket, type RiderSocket } from "../../lib/socket";
 import type { ServerEvent } from "../../state/ride";
 import type { RideChannel, RideContext } from "../types";
@@ -63,12 +63,26 @@ export class BackendRide implements RideChannel {
 
   // ---- account ----
 
-  /** The worker creates riders once and has no profile update route, so this only runs without a token. */
+  /**
+   * The worker creates riders once and has no profile update route, so this only runs without
+   * a token. A rider who verified a new email sends the signup ticket, which makes the new
+   * rider an account with that email; otherwise it is a "Just play today" guest.
+   */
   ensureUser(profile: Profile): Promise<void> {
     if (getToken()) return Promise.resolve();
+    const ticket = getSignupTicket() ?? undefined;
     this.creating ??= rest
-      .createUser(toWireProfile(profile) as WireProfile)
-      .then((r) => setToken(r.token))
+      .createUser(toWireProfile(profile) as WireProfile, ticket)
+      .then((r) => {
+        setToken(r.token);
+        setSignupTicket(null);
+      })
+      .catch((e: unknown) => {
+        // Expired/used ticket or the email got an account meanwhile: drop the ticket so the
+        // next try doesn't fail the same way, and surface the error.
+        if (ticket && e instanceof ApiError && (e.status === 400 || e.status === 409)) setSignupTicket(null);
+        throw e;
+      })
       .finally(() => {
         this.creating = null;
       });

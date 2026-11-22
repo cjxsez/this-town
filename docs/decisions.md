@@ -4,6 +4,7 @@ What we changed from the v1 spec (`docs/archive/questline-spec-v1.md`) and why. 
 
 | # | Decision | Replaces (v1) | Why |
 |---|---|---|---|
+| D15 | Email accounts with a 6-digit one-time code, sent with Cloudflare Email Sending (`send_email` binding). New emails onboard and get an account; known emails sign straight back in. "Just play today" stays as an email-less guest. A signed-out kiosk tap goes through sign-in and then checks in | Device-only riders (token in `localStorage`, lost with the browser) | Riders keep their passport across phones, and the kiosk tap works for someone who isn't signed in yet. Codes beat magic links on a train: no switching apps mid-tap, and iOS offers the code from Mail |
 | D14 | One vocabulary, the phone's: its 34 interest ids are the protocol's `InterestTag`, social battery is `nod/chat/talk`, status `local/student/visiting`, and stops carry ids that match the phone's station catalog. The demo trip moved to the Green Line D branch (Kenmore to Government Ctr) to match the phone's station art | 25 worker tags folded from the phone's list; stop names only; Orange Line demo | Kenny's phone design and the worker were built from different specs. One source of truth beats an adapter that pads interests and guesses station ids |
 | D13 | Glasses work with zero input. Arrival = tapping the meeting kiosk's tag, missions auto-start, "Not now" is on the phone. Temple touch strip is a bonus | Neural Band pinch for "I'm here" / "Not now" | We don't have the Neural Band. The touch strip sends arrow keys, but which gesture sends Enter / Back isn't documented |
 | D12 | Host everything on one Cloudflare Worker: static assets for the 3 web apps, Hono API, D1, one `TrainRoom` Durable Object per trip | Separate backend | One deploy, one HTTPS origin (needed for the glasses Web App and NFC links), DOs are a natural fit for per-train live state |
@@ -20,6 +21,8 @@ What we changed from the v1 spec (`docs/archive/questline-spec-v1.md`) and why. 
 | D1 | Missions still come from a curated deck, still fit before the next stop minus 30 s | (unchanged) | Safety and latency |
 
 ## Still open
+
+- Email sending domain: onboard it (`wrangler email sending enable <domain>`) and set `EMAIL_FROM` in `wrangler.toml`. Until then local dev only simulates sending.
 
 - Domain name.
 - Can we get an NTAG I2C plus or ST25DV board this weekend, or do we ship static stickers?

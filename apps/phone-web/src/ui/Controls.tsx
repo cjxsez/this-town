@@ -127,6 +127,7 @@ export function TextField({
   autoFocus,
   inputMode,
   autoComplete,
+  type,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -135,8 +136,9 @@ export function TextField({
   label: string;
   maxLength?: number;
   autoFocus?: boolean;
-  inputMode?: "text" | "numeric";
+  inputMode?: "text" | "numeric" | "email";
   autoComplete?: string;
+  type?: "text" | "email";
 }) {
   return (
     <label className="q-field">
@@ -147,9 +149,10 @@ export function TextField({
         placeholder={placeholder}
         maxLength={maxLength}
         autoFocus={autoFocus}
+        type={type}
         inputMode={inputMode}
         autoComplete={autoComplete ?? "off"}
-        autoCapitalize={prefix === "@" ? "none" : undefined}
+        autoCapitalize={prefix === "@" || type === "email" ? "none" : undefined}
         spellCheck={false}
         onChange={(e) => onChange(e.target.value)}
       />
