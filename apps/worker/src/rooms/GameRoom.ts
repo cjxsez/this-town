@@ -9,6 +9,10 @@
  *   seat's RoomView.
  * - `act(seat, action)`: "room.next" and "room.again" on a finished game, otherwise the
  *   module's reduce().
+ * - `setLens()`, `moveTo()`, `release()`: a player moving their seat from a phone onto a
+ *   pair of glasses and back. The seat's own room remembers which glasses show it (`lens`);
+ *   the room those glasses opened for themselves points at the seat (`moved`), and the
+ *   glasses follow it. The game state never moves, so nothing can go out of step.
  * - Hooks (games/hooks.ts): prepare before a game starts, effect after each change.
  * - `sharedGet` / `sharedPut`: the instance named SHARED_ROOM keeps values that outlive a
  *   room, such as the trivia questions pairs leave for the next pair.
@@ -21,7 +25,7 @@
  * only key. Fine for a demo between two people at a table, not for anything private.
  */
 import { DurableObject } from "cloudflare:workers";
-import { GAMES, type GameCtx, type RoomView, type Seat } from "@questline/protocol/games";
+import { GAMES, type GameCtx, type RoomView, type Seat, type SeatRef } from "@questline/protocol/games";
 import type { Env } from "../env";
 import { HOOKS, type SharedStore } from "../games/hooks";
 
@@ -42,6 +46,10 @@ interface Room {
   /** Bumped whenever a game is started, so late async results for an old game are dropped. */
   run: number;
   touchedAt: number;
+  /** Per seat: the code of the glasses that seat is shown on. Missing in rooms saved before this existed. */
+  lens?: Partial<Record<Seat, string>>;
+  /** This room belongs to a pair of glasses that now play this seat of another room. */
+  moved?: SeatRef | null;
 }
 
 export class GameRoom extends DurableObject<Env> {
@@ -91,6 +99,46 @@ export class GameRoom extends DurableObject<Env> {
 
   async exists(): Promise<boolean> {
     return this.room !== null;
+  }
+
+  /** A second seat can join: the room is open and its glasses have not gone to play elsewhere. */
+  async joinable(): Promise<boolean> {
+    return this.room !== null && !this.room.moved;
+  }
+
+  /** Remember which glasses show this seat (null: back on the phone). Returns the code it had before. */
+  async setLens(seat: Seat, to: string | null): Promise<string | null> {
+    const room = this.room;
+    if (!room) return null;
+    const before = room.lens?.[seat] ?? null;
+    const lens = { ...room.lens };
+    if (to) lens[seat] = to;
+    else delete lens[seat];
+    room.lens = lens;
+    await this.save();
+    return before;
+  }
+
+  /**
+   * On the room a pair of glasses opened: point them at a seat in another room. Refused when
+   * there is no such room or a game is already being played in it. `prev` is the seat the
+   * glasses were showing until now, if any.
+   */
+  async moveTo(target: SeatRef): Promise<{ ok: boolean; prev: SeatRef | null }> {
+    const room = this.room;
+    if (!room || room.game !== null) return { ok: false, prev: null };
+    const prev = room.moved ?? null;
+    room.moved = target;
+    await this.save();
+    return { ok: true, prev };
+  }
+
+  /** Undo moveTo(), but only if these glasses still show that seat. */
+  async release(target: SeatRef): Promise<void> {
+    const moved = this.room?.moved;
+    if (!moved || moved.code !== target.code || moved.seat !== target.seat) return;
+    this.room!.moved = null;
+    await this.save();
   }
 
   private async start(index: number): Promise<void> {
@@ -152,6 +200,8 @@ export class GameRoom extends DurableObject<Env> {
       done: room.game !== null && mod.isDone(room.game),
       run: room.run,
       now,
+      lens: room.lens?.[seat] ?? null,
+      moved: room.moved ?? null,
     };
     return JSON.stringify(view);
   }
@@ -160,7 +210,7 @@ export class GameRoom extends DurableObject<Env> {
     if (!this.room) return null;
     this.seen[seat] = Date.now();
     if (this.room.game === null) {
-      if (this.seen.a && this.seen.b) await this.startOnce(0);
+      if (this.seen.a && this.seen.b && !this.room.moved) await this.startOnce(0);
     } else {
       const mod = GAMES[this.room.index]!;
       await this.commit(this.room.game, mod.tick(this.room.game, this.gameCtx()));

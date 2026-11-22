@@ -47,6 +47,7 @@ Served by the worker at `https://<domain>/g/` (Vite `base: "/g/"`).
 - Clients poll `GET /api/game/rooms/:code` every 700 ms. Timers are deadlines in server time, so both clocks agree.
 - Every game's last screen has "Next game" (focused) and "Again". Either player can press; both move.
 - `/g/?room=1234` fixes the code (handy for a demo: the phone link is then `/m?code=1234`). `/g/?join=1234` joins someone else's room as the second seat, for testing without a phone.
+- A player already in a game on a phone can move it here: they tap "Play on glasses" at `/m` and type the code this screen shows. The lens then plays their seat until the phone takes it back, and shows a fresh wait screen after.
 - The room code is kept in `sessionStorage`, so a reload rejoins the same game. If the other device stops polling for about 5 s, a "partner away" screen shows until it is back.
 - The look is the phone app's (Gaegu and Bungee, wobbly outlines, yellow primary button) redrawn for the lens: black background, outlines in place of paper cards, only the focused choice filled. Shared styles are in `src/guess.css`, scoped under `.guess`; each game adds its own CSS next to its screen. Fonts are bundled from `@fontsource`.
 - Input: scroll the temple strip to move, tap to choose. The games listen for arrow keys and Enter, and also for `wheel` and `click`. Which one the glasses send has not been checked on device: open `/g/?debug=keys` and watch the console. If scrolling moves too fast or too slow, change `WHEEL_STEP_PX` in `src/lib/input.ts`.
