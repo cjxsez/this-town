@@ -1,6 +1,8 @@
 import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router";
 import { ArtSlot, Button, ButtonRow, Screen, TextLink, Wordmark } from "../../ui";
+import { landingPitch } from "../../lib/rideModeCopy";
+import { useGamesOnly } from "../../lib/useWorkerMode";
 import { useApp } from "../../state/store";
 import { DOORS_ENTER_DELAY_MS, doorsOpening } from "../../state/doors";
 
@@ -18,6 +20,7 @@ import { DOORS_ENTER_DELAY_MS, doorsOpening } from "../../state/doors";
 export default function Landing() {
   const navigate = useNavigate();
   const { actions } = useApp();
+  const gamesOnly = useGamesOnly();
   // Read once: whether the train doors are opening onto this page right now.
   const [offset] = useState(() => (doorsOpening() ? DOORS_ENTER_DELAY_MS : 0));
   /** Entrance `ms` after the page appears (plus the doors' delay), merged with any style of its own. */
@@ -85,7 +88,7 @@ export default function Landing() {
         <Wordmark enterAt={offset + 120} />
       </h1>
       <p {...at(440, { fontSize: 21, lineHeight: 1.2, textWrap: "pretty", textAlign: "center" })}>
-        Tap the kiosk in your train car and meet one other rider who likes what you like. A short game, face to face, done before your stop.
+        {landingPitch(gamesOnly)}
       </p>
     </Screen>
   );
